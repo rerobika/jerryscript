@@ -334,9 +334,15 @@ parser_parse_enclosed_expr (parser_context_t *context_p) /**< context */
  * Parse var statement.
  */
 static void
-parser_parse_var_statement (parser_context_t *context_p) /**< context */
+parser_parse_declaration_statement (parser_context_t *context_p) /**< context */
 {
+#if ENABLED (JERRY_ES2015_LET_CONST)
+  JERRY_ASSERT (context_p->token.type == LEXER_KEYW_VAR
+                || context_p->token.type == LEXER_KEYW_LET
+                || context_p->token.type == LEXER_KEYW_CONST);
+#else /* !ENABLED (JERRY_ES2015_LET_CONST) */
   JERRY_ASSERT (context_p->token.type == LEXER_KEYW_VAR);
+#endif /* ENABLED (JERRY_ES2015_LET_CONST) */
 
   while (true)
   {
@@ -392,7 +398,7 @@ parser_parse_var_statement (parser_context_t *context_p) /**< context */
       break;
     }
   }
-} /* parser_parse_var_statement */
+} /* parser_parse_declaration_statement */
 
 /**
  * Parse function statement.
@@ -960,7 +966,9 @@ parser_parse_for_statement_start (parser_context_t *context_p) /**< context */
     parser_set_range (context_p, &start_range);
     lexer_next_token (context_p);
 
-    if (context_p->token.type == LEXER_KEYW_VAR)
+    if (context_p->token.type == LEXER_KEYW_VAR
+        || context_p->token.type == LEXER_KEYW_LET
+        || context_p->token.type == LEXER_KEYW_CONST)
     {
       uint16_t literal_index;
 
@@ -1053,8 +1061,14 @@ parser_parse_for_statement_start (parser_context_t *context_p) /**< context */
     parser_save_range (context_p, &range, context_p->source_end_p);
     parser_set_range (context_p, &start_range);
     lexer_next_token (context_p);
-
-    if (context_p->token.type == LEXER_KEYW_VAR)
+#if ENABLED (JERRY_ES2015_LET_CONST)
+      bool is_var_let_const = ((context_p->token.type == LEXER_KEYW_VAR)
+                               || (context_p->token.type == LEXER_KEYW_LET)
+                               || (context_p->token.type == LEXER_KEYW_CONST));
+#else /* !ENABLED (JERRY_ES2015_LET_CONST) */
+      bool is_var_let_const = (context_p->token.type == LEXER_KEYW_VAR);
+#endif /* ENABLED (JERRY_ES2015_LET_CONST) */
+    if (is_var_let_const)
     {
       uint16_t literal_index;
 
@@ -1130,9 +1144,16 @@ parser_parse_for_statement_start (parser_context_t *context_p) /**< context */
 
     if (context_p->token.type != LEXER_SEMICOLON)
     {
-      if (context_p->token.type == LEXER_KEYW_VAR)
+#if ENABLED (JERRY_ES2015_LET_CONST)
+      bool is_var_let_const = ((context_p->token.type == LEXER_KEYW_VAR)
+                               || (context_p->token.type == LEXER_KEYW_LET)
+                               || (context_p->token.type == LEXER_KEYW_CONST));
+#else /* !ENABLED (JERRY_ES2015_LET_CONST) */
+      bool is_var_let_const = (context_p->token.type == LEXER_KEYW_VAR);
+#endif /* ENABLED (JERRY_ES2015_LET_CONST) */
+      if (is_var_let_const)
       {
-        parser_parse_var_statement (context_p);
+        parser_parse_declaration_statement (context_p);
       }
       else
       {
@@ -2046,9 +2067,13 @@ parser_parse_export_statement (parser_context_t *context_p) /**< context */
       break;
     }
     case LEXER_KEYW_VAR:
+#if ENABLED (JERRY_ES2015_LET_CONST)
+    case LEXER_KEYW_LET:
+    case LEXER_KEYW_CONST:
+#endif /* ENABLED (JERRY_ES2015_LET_CONST) */
     {
       context_p->status_flags |= PARSER_MODULE_STORE_IDENT;
-      parser_parse_var_statement (context_p);
+      parser_parse_declaration_statement (context_p);
       ecma_string_t *name_p = ecma_new_ecma_string_from_utf8 (context_p->module_identifier_lit_p->u.char_p,
                                                               context_p->module_identifier_lit_p->prop.length);
 
@@ -2300,6 +2325,8 @@ parser_parse_statements (parser_context_t *context_p) /**< context */
         && context_p->token.type != LEXER_LEFT_BRACE
         && context_p->token.type != LEXER_RIGHT_BRACE
         && context_p->token.type != LEXER_KEYW_VAR
+        && context_p->token.type != LEXER_KEYW_LET
+        && context_p->token.type != LEXER_KEYW_CONST
         && context_p->token.type != LEXER_KEYW_FUNCTION
         && context_p->token.type != LEXER_KEYW_CASE
         && context_p->token.type != LEXER_KEYW_DEFAULT)
@@ -2319,6 +2346,8 @@ parser_parse_statements (parser_context_t *context_p) /**< context */
         && context_p->token.type != LEXER_LEFT_BRACE
         && context_p->token.type != LEXER_RIGHT_BRACE
         && context_p->token.type != LEXER_KEYW_VAR
+        && context_p->token.type != LEXER_KEYW_LET
+        && context_p->token.type != LEXER_KEYW_CONST
         && context_p->token.type != LEXER_KEYW_FUNCTION
         && context_p->token.type != LEXER_KEYW_CASE
         && context_p->token.type != LEXER_KEYW_DEFAULT)
@@ -2362,8 +2391,12 @@ parser_parse_statements (parser_context_t *context_p) /**< context */
       }
 
       case LEXER_KEYW_VAR:
+#if ENABLED (JERRY_ES2015_LET_CONST)
+      case LEXER_KEYW_LET:
+      case LEXER_KEYW_CONST:
+#endif /* ENABLED (JERRY_ES2015_LET_CONST) */
       {
-        parser_parse_var_statement (context_p);
+        parser_parse_declaration_statement (context_p);
         break;
       }
 

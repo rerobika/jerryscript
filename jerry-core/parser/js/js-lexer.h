@@ -166,7 +166,10 @@ typedef enum
   LEXER_KEYW_CLASS,              /**< class */
   LEXER_KEYW_EXTENDS,            /**< extends */
   LEXER_KEYW_SUPER,              /**< super */
+#if ENABLED (JERRY_ES2015_LET_CONST)
   LEXER_KEYW_CONST,              /**< const */
+  LEXER_KEYW_LET,                /**< let */
+#endif /* ENABLED (JERRY_ES2015_LET_CONST) */
   LEXER_KEYW_EXPORT,             /**< export */
   LEXER_KEYW_IMPORT,             /**< import */
 #if ENABLED (JERRY_ES2015)
@@ -205,8 +208,11 @@ typedef enum
 
   /* Context dependent future strict reserved words:
    * See also: ECMA-262 v6, 11.6.2.1 */
+#if !ENABLED (JERRY_ES2015_LET_CONST)
 #define LEXER_FIRST_CONTEXT_DEPENDENT_FUTURE_RESERVED_WORD LEXER_KEYW_LET
-  LEXER_KEYW_LET,                /**< let */
+  LEXER_KEYW_LET,
+#define LEXER_FIRST_CONTEXT_DEPENDENT_FUTURE_RESERVED_WORD LEXER_KEYW_YIELD
+#endif /* !ENABLED (JERRY_ES2015_LET_CONST) */
   LEXER_KEYW_YIELD,              /**< yield */
 #if !ENABLED (JERRY_ES2015)
   LEXER_KEYW_STATIC,             /**< static */
