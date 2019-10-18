@@ -249,16 +249,6 @@ ecma_builtin_number_prototype_object_to_string (ecma_number_t this_arg_number, /
                                                 const ecma_value_t *arguments_list_p, /**< arguments list */
                                                 ecma_length_t arguments_list_len) /**< number of arguments */
 {
-
-  if (arguments_list_len == 0
-      || ecma_number_is_nan (this_arg_number)
-      || ecma_number_is_infinity (this_arg_number)
-      || ecma_number_is_zero (this_arg_number)
-      || (arguments_list_len > 0 && ecma_is_value_undefined (arguments_list_p[0])))
-  {
-    ecma_string_t *ret_str_p = ecma_new_ecma_string_from_number (this_arg_number);
-    return ecma_make_string_value (ret_str_p);
-  }
   static const lit_utf8_byte_t digit_chars[36] =
   {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -282,12 +272,17 @@ ecma_builtin_number_prototype_object_to_string (ecma_number_t this_arg_number, /
     return ecma_raise_range_error (ECMA_ERR_MSG ("Radix must be between 2 and 36."));
   }
 
-  if (radix == 10)
+  if (arguments_list_len == 0
+    || ecma_number_is_nan (this_arg_number)
+    || ecma_number_is_infinity (this_arg_number)
+    || ecma_number_is_zero (this_arg_number)
+    || (arguments_list_len > 0 && ecma_is_value_undefined (arguments_list_p[0]))
+    || radix == 10)
   {
     ecma_string_t *ret_str_p = ecma_new_ecma_string_from_number (this_arg_number);
-
     return ecma_make_string_value (ret_str_p);
   }
+
   int buff_size = 0;
 
   bool is_number_negative = false;
