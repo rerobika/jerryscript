@@ -33,7 +33,9 @@
  */
 typedef struct
 {
-  ecma_property_header_t header; /**< header of the property */
+  uint8_t type_flags; /**< hashmap marker */
+  uint8_t padding; /**< unused area */
+  jmem_cpointer_t property_list_cp; /**< property list */
   uint32_t max_property_count; /**< maximum property count (power of 2) */
   uint32_t null_count; /**< number of NULLs in the map */
   uint32_t unused_count; /**< number of unused entires in the map */
@@ -67,8 +69,7 @@ typedef enum
 
 void ecma_property_hashmap_create (ecma_object_t *object_p);
 void ecma_property_hashmap_free (ecma_object_t *object_p);
-void ecma_property_hashmap_insert (ecma_object_t *object_p, ecma_string_t *name_p,
-                                   ecma_property_pair_t *property_pair_p, int property_index);
+void ecma_property_hashmap_insert (ecma_object_t *object_p, ecma_string_t *name_p, uint32_t index);
 ecma_property_hashmap_delete_status ecma_property_hashmap_delete (ecma_object_t *object_p, jmem_cpointer_t name_cp,
                                                                   ecma_property_t *property_p);
 

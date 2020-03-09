@@ -202,14 +202,12 @@ ecma_new_standard_error_with_message (ecma_standard_error_t error_type, /**< nat
 {
   ecma_object_t *new_error_obj_p = ecma_new_standard_error (error_type);
 
-  ecma_property_value_t *prop_value_p;
-  prop_value_p = ecma_create_named_data_property (new_error_obj_p,
-                                                  ecma_get_magic_string (LIT_MAGIC_STRING_MESSAGE),
-                                                  ECMA_PROPERTY_CONFIGURABLE_WRITABLE,
-                                                  NULL);
+  ecma_property_t *property_p = ecma_create_named_data_property (new_error_obj_p,
+                                                                 ecma_get_magic_string (LIT_MAGIC_STRING_MESSAGE),
+                                                                 ECMA_PROPERTY_CONFIGURABLE_WRITABLE);
 
   ecma_ref_ecma_string (message_string_p);
-  prop_value_p->value = ecma_make_string_value (message_string_p);
+  property_p->u.value = ecma_make_string_value (message_string_p);
 
   return new_error_obj_p;
 } /* ecma_new_standard_error_with_message */

@@ -98,16 +98,23 @@ ecma_string_t *ecma_alloc_string_buffer (size_t size);
 void ecma_dealloc_string_buffer (ecma_string_t *string_p, size_t size);
 
 /**
- * Allocate memory for ecma-property pair
+ * Allocate memory for an objects' property.
  *
- * @return pointer to allocated memory
+ * @return pointer to the property list.
  */
-ecma_property_pair_t *ecma_alloc_property_pair (void);
+ecma_property_t *ecma_alloc_property_list (uint32_t count);
 
 /**
- * Dealloc memory from an ecma-property pair
+ * Reallocate memory for an objects' property.
+ *
+ * @return pointer to the property list.
  */
-void ecma_dealloc_property_pair (ecma_property_pair_t *property_pair_p);
+ecma_property_t *ecma_realloc_property_list (ecma_property_t *property_list_p, ecma_property_index_t *index);
+
+/**
+ * Dealloc the objects' propery list.
+ */
+void ecma_dealloc_property_list (ecma_property_t *property_list_p);
 
 /**
  * @}

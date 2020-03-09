@@ -175,51 +175,38 @@ ecma_fast_array_convert_to_normal (ecma_object_t *object_p) /**< fast access mod
     return;
   }
 
-  uint32_t length = ext_obj_p->u.array.length;
+  const uint32_t length = (ecma_property_index_t) ext_obj_p->u.array.length;
   const uint32_t aligned_length = ECMA_FAST_ARRAY_ALIGN_LENGTH (length);
-  ecma_value_t *values_p = ECMA_GET_NON_NULL_POINTER (ecma_value_t, object_p->u1.property_list_cp);
+  const uint32_t hole_count = ecma_fast_array_get_hole_count (object_p);
+  const uint32_t prop_count = length - hole_count;
 
   ecma_ref_object (object_p);
 
-  ecma_property_pair_t *property_pair_p = NULL;
-  jmem_cpointer_t next_property_pair_cp = JMEM_CP_NULL;
+  ecma_property_t *property_list_p = ecma_alloc_property_list (prop_count);
+  ecma_property_t *property_start_p = ECMA_PROPERTY_LIST_START (property_list_p);
 
-  uint32_t prop_index = 1;
-  int32_t index = (int32_t) (length - 1);
+  ecma_value_t *values_p = ECMA_GET_NON_NULL_POINTER (ecma_value_t, object_p->u1.property_list_cp);
+  JMEM_CP_SET_NON_NULL_POINTER (object_p->u1.property_list_cp, property_list_p);
 
-  while (index >= 0)
+  for (uint32_t index = 0, property_index = 0; index < length; index++)
   {
     if (ecma_is_value_array_hole (values_p[index]))
     {
-      index--;
       continue;
     }
 
-    if (prop_index == 1)
-    {
-      property_pair_p = ecma_alloc_property_pair ();
-      property_pair_p->header.next_property_cp = next_property_pair_cp;
-      property_pair_p->names_cp[0] = LIT_INTERNAL_MAGIC_STRING_DELETED;
-      property_pair_p->header.types[0] = ECMA_PROPERTY_TYPE_DELETED;
-      ECMA_SET_NON_NULL_POINTER (next_property_pair_cp, property_pair_p);
-    }
+    JERRY_ASSERT (property_index <= ECMA_DIRECT_STRING_MAX_IMM);
 
-    JERRY_ASSERT (index <= ECMA_DIRECT_STRING_MAX_IMM);
+    property_start_p[property_index].name_cp = (jmem_cpointer_t) index;
+    property_start_p[property_index].type_flags = (uint8_t) (ECMA_PROPERTY_TYPE_NAMEDDATA
+                                                   | ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE
+                                                   | ECMA_FAST_ARRAY_UINT32_DIRECT_STRING_PROP_TYPE);
 
-    property_pair_p->names_cp[prop_index] = (jmem_cpointer_t) index;
-    property_pair_p->header.types[prop_index] = (ecma_property_t) (ECMA_PROPERTY_TYPE_NAMEDDATA
-                                                                   | ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE
-                                                                   | ECMA_FAST_ARRAY_UINT32_DIRECT_STRING_PROP_TYPE);
-
-    property_pair_p->values[prop_index].value = values_p[index];
-
-    index--;
-    prop_index = !prop_index;
+    property_start_p[property_index++].u.value = values_p[index];
   }
 
   ext_obj_p->u.array.u.length_prop = (uint8_t) (ext_obj_p->u.array.u.length_prop & ~ECMA_FAST_ARRAY_FLAG);
   jmem_heap_free_block (values_p, aligned_length * sizeof (ecma_value_t));
-  ECMA_SET_POINTER (object_p->u1.property_list_cp, property_pair_p);
 
   ecma_deref_object (object_p);
 } /* ecma_fast_array_convert_to_normal */
@@ -368,15 +355,15 @@ ecma_fast_array_extend (ecma_object_t *object_p, /**< fast access mode array obj
  */
 void
 ecma_array_object_delete_property (ecma_object_t *object_p, /**< object */
-                                   ecma_string_t *property_name_p, /**< property name */
-                                   ecma_property_value_t *prop_value_p) /**< property value reference */
+                                   ecma_string_t *property_name_p,
+                                   ecma_property_t *prop_p) /**< property value reference */
 {
   JERRY_ASSERT (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_ARRAY);
   ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) object_p;
 
   if (!ecma_op_object_is_fast_array (object_p))
   {
-    ecma_delete_property (object_p, prop_value_p);
+    ecma_delete_property (object_p, prop_p);
     return;
   }
 
@@ -800,31 +787,34 @@ ecma_delete_array_properties (ecma_object_t *object_p, /**< object */
     return new_length;
   }
 
-  ecma_property_header_t *current_prop_p;
+  ecma_property_t *property_list_p = ECMA_GET_NON_NULL_POINTER (ecma_property_t, current_prop_cp);
 
 #if ENABLED (JERRY_PROPRETY_HASHMAP)
-  current_prop_p = ECMA_GET_NON_NULL_POINTER (ecma_property_header_t, current_prop_cp);
+  bool has_hashmap = false;
 
-  if (current_prop_p->types[0] == ECMA_PROPERTY_TYPE_HASHMAP)
+  if (property_list_p->type_flags == ECMA_PROPERTY_TYPE_HASHMAP)
   {
-    current_prop_cp = current_prop_p->next_property_cp;
+    ecma_property_hashmap_t *hashmap_p = (ecma_property_hashmap_t *) property_list_p;
+    property_list_p = ECMA_GET_NON_NULL_POINTER (ecma_property_t, hashmap_p->property_list_cp);
+
+    has_hashmap = true;
   }
 #endif /* ENABLED (JERRY_PROPRETY_HASHMAP) */
 
-  while (current_prop_cp != JMEM_CP_NULL)
+  ecma_property_t *property_start_p = ECMA_PROPERTY_LIST_START (property_list_p);
+  ecma_property_index_t property_count = ECMA_PROPERTY_LIST_PROPERTY_COUNT (property_list_p);
+
+  for (ecma_property_index_t i = 0; i < property_count; i++)
   {
-    current_prop_p = ECMA_GET_NON_NULL_POINTER (ecma_property_header_t, current_prop_cp);
-    JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY_PAIR (current_prop_p));
+    ecma_property_t *curr_property_p = property_start_p + i;
+    JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
-    ecma_property_pair_t *prop_pair_p = (ecma_property_pair_t *) current_prop_p;
-
-    for (int i = 0; i < ECMA_PROPERTY_PAIR_ITEM_COUNT; i++)
+    if (curr_property_p->type_flags != ECMA_PROPERTY_TYPE_DELETED)
     {
-      if (ECMA_PROPERTY_IS_NAMED_PROPERTY (current_prop_p->types[i])
-          && !ecma_is_property_configurable (current_prop_p->types[i]))
+      if (ECMA_PROPERTY_IS_NAMED_PROPERTY (curr_property_p)
+          && !ecma_is_property_configurable (curr_property_p))
       {
-        uint32_t index = ecma_string_get_property_index (current_prop_p->types[i],
-                                                         prop_pair_p->names_cp[i]);
+        uint32_t index = ecma_string_get_property_index (curr_property_p);
 
         if (index < old_length && index >= new_length)
         {
@@ -840,42 +830,30 @@ ecma_delete_array_properties (ecma_object_t *object_p, /**< object */
         }
       }
     }
-
-    current_prop_cp = current_prop_p->next_property_cp;
   }
 
   /* Second all properties between new_length and old_length are deleted. */
-  current_prop_cp = object_p->u1.property_list_cp;
-  ecma_property_header_t *prev_prop_p = NULL;
-
 #if ENABLED (JERRY_PROPRETY_HASHMAP)
-  JERRY_ASSERT (current_prop_cp != JMEM_CP_NULL);
-
   ecma_property_hashmap_delete_status hashmap_status = ECMA_PROPERTY_HASHMAP_DELETE_NO_HASHMAP;
-  current_prop_p = ECMA_GET_NON_NULL_POINTER (ecma_property_header_t, current_prop_cp);
 
-  if (current_prop_p->types[0] == ECMA_PROPERTY_TYPE_HASHMAP)
+  if (has_hashmap)
   {
-    prev_prop_p = current_prop_p;
-    current_prop_cp = current_prop_p->next_property_cp;
     hashmap_status = ECMA_PROPERTY_HASHMAP_DELETE_HAS_HASHMAP;
   }
 #endif /* ENABLED (JERRY_PROPRETY_HASHMAP) */
 
-  while (current_prop_cp != JMEM_CP_NULL)
+  for (ecma_property_index_t i = 0; i < property_count; i++)
   {
-    current_prop_p = ECMA_GET_NON_NULL_POINTER (ecma_property_header_t, current_prop_cp);
+    ecma_property_t *curr_property_p = property_start_p + i;
 
-    JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY_PAIR (current_prop_p));
-    ecma_property_pair_t *prop_pair_p = (ecma_property_pair_t *) current_prop_p;
+    JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
-    for (int i = 0; i < ECMA_PROPERTY_PAIR_ITEM_COUNT; i++)
+    if (curr_property_p->type_flags != ECMA_PROPERTY_TYPE_DELETED)
     {
-      if (ECMA_PROPERTY_IS_NAMED_PROPERTY (current_prop_p->types[i])
-          && ecma_is_property_configurable (current_prop_p->types[i]))
+      if (ECMA_PROPERTY_IS_NAMED_PROPERTY (curr_property_p)
+          && ecma_is_property_configurable (curr_property_p))
       {
-        uint32_t index = ecma_string_get_property_index (current_prop_p->types[i],
-                                                         prop_pair_p->names_cp[i]);
+        uint32_t index = ecma_string_get_property_index (curr_property_p);
 
         if (index < old_length && index >= new_length)
         {
@@ -885,38 +863,16 @@ ecma_delete_array_properties (ecma_object_t *object_p, /**< object */
           if (hashmap_status == ECMA_PROPERTY_HASHMAP_DELETE_HAS_HASHMAP)
           {
             hashmap_status = ecma_property_hashmap_delete (object_p,
-                                                           prop_pair_p->names_cp[i],
+                                                           prop_pair_p->name_cp[i],
                                                            current_prop_p->types + i);
           }
 #endif /* ENABLED (JERRY_PROPRETY_HASHMAP) */
 
-          ecma_free_property (object_p, prop_pair_p->names_cp[i], current_prop_p->types + i);
-          current_prop_p->types[i] = ECMA_PROPERTY_TYPE_DELETED;
-          prop_pair_p->names_cp[i] = LIT_INTERNAL_MAGIC_STRING_DELETED;
+          ecma_free_property (object_p, curr_property_p);
+          curr_property_p->type_flags = ECMA_PROPERTY_TYPE_DELETED;
+          curr_property_p->name_cp = LIT_INTERNAL_MAGIC_STRING_DELETED;
         }
       }
-    }
-
-    if (current_prop_p->types[0] == ECMA_PROPERTY_TYPE_DELETED
-        && current_prop_p->types[1] == ECMA_PROPERTY_TYPE_DELETED)
-    {
-      if (prev_prop_p == NULL)
-      {
-        object_p->u1.property_list_cp = current_prop_p->next_property_cp;
-      }
-      else
-      {
-        prev_prop_p->next_property_cp = current_prop_p->next_property_cp;
-      }
-
-      jmem_cpointer_t next_prop_cp = current_prop_p->next_property_cp;
-      ecma_dealloc_property_pair ((ecma_property_pair_t *) current_prop_p);
-      current_prop_cp = next_prop_cp;
-    }
-    else
-    {
-      prev_prop_p = current_prop_p;
-      current_prop_cp = current_prop_p->next_property_cp;
     }
   }
 
@@ -997,14 +953,14 @@ ecma_op_array_object_set_length (ecma_object_t *object_p, /**< the array object 
         uint8_t new_prop_value = (uint8_t) (ext_object_p->u.array.u.length_prop & ~ECMA_PROPERTY_FLAG_WRITABLE);
         ext_object_p->u.array.u.length_prop = new_prop_value;
       }
-      else if (!ecma_is_property_writable (ext_object_p->u.array.u.length_prop))
+      else if ((ext_object_p->u.array.u.length_prop & ECMA_PROPERTY_FLAG_WRITABLE) == 0)
       {
         return ecma_reject (is_throw);
       }
     }
     return ECMA_VALUE_TRUE;
   }
-  else if (!ecma_is_property_writable (ext_object_p->u.array.u.length_prop))
+  else if ((ext_object_p->u.array.u.length_prop & ECMA_PROPERTY_FLAG_WRITABLE) == 0)
   {
     return ecma_reject (is_throw);
   }
@@ -1148,7 +1104,7 @@ ecma_op_array_object_define_own_property (ecma_object_t *object_p, /**< the arra
 
   bool update_length = (index >= ext_object_p->u.array.length);
 
-  if (update_length && !ecma_is_property_writable (ext_object_p->u.array.u.length_prop))
+  if (update_length && ((ext_object_p->u.array.u.length_prop & ECMA_PROPERTY_FLAG_WRITABLE) == 0))
   {
     return ecma_reject (property_desc_p->flags & ECMA_PROP_IS_THROW);
   }
