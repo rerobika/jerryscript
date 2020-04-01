@@ -548,9 +548,9 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
 
   if (ECMA_IS_DIRECT_STRING (name_p))
   {
-    for (ecma_property_index_t i = 0; i < property_count; i++)
+    while (property_count--)
     {
-      ecma_property_t *curr_property_p = property_start_p + i;
+      ecma_property_t *curr_property_p = property_start_p + property_count;
       JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
       ecma_string_t *curr_prop_name_p = (ecma_string_t *) ECMA_CREATE_DIRECT_STRING(ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p),
@@ -566,9 +566,9 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
   }
   else
   {
-    for (ecma_property_index_t i = 0; i < property_count; i++)
+    while (property_count--)
     {
-      ecma_property_t *curr_property_p = property_start_p + i;
+      ecma_property_t *curr_property_p = property_start_p + property_count;
       JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
       if (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR)
