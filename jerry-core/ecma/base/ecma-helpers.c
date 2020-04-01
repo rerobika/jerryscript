@@ -566,6 +566,9 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
   }
   else
   {
+    jmem_cpointer_t name_cp;
+    ECMA_SET_NON_NULL_POINTER (name_cp, name_p);
+
     while (property_count--)
     {
       ecma_property_t *curr_property_p = property_start_p + property_count;
@@ -573,6 +576,13 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
 
       if (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR)
       {
+        if (name_cp == curr_property_p->name_cp)
+        {
+          property_name_cp = name_cp;
+          property_p = curr_property_p;
+          break;
+        }
+
         property_name_cp = curr_property_p->name_cp;
         ecma_string_t *prop_name_p = ECMA_GET_NON_NULL_POINTER (ecma_string_t, property_name_cp);
 

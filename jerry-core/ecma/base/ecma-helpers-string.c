@@ -1751,13 +1751,8 @@ ecma_compare_ecma_non_direct_strings (const ecma_string_t *string1_p, /**< ecma-
                                       const ecma_string_t *string2_p) /**< ecma-string */
 {
   JERRY_ASSERT (string1_p != NULL && string2_p != NULL);
+  JERRY_ASSERT (string1_p != string2_p);
   JERRY_ASSERT (!ECMA_IS_DIRECT_STRING (string1_p) && !ECMA_IS_DIRECT_STRING (string2_p));
-
-  /* Fast paths first. */
-  if (string1_p == string2_p)
-  {
-    return true;
-  }
 
   if (string1_p->u.hash != string2_p->u.hash)
   {
