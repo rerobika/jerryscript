@@ -548,18 +548,15 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
 
   if (ECMA_IS_DIRECT_STRING (name_p))
   {
-    uint8_t prop_name_type = (uint8_t) ECMA_GET_DIRECT_STRING_TYPE (name_p);
-    property_name_cp = (jmem_cpointer_t) ECMA_GET_DIRECT_STRING_VALUE (name_p);
-
-    JERRY_ASSERT (prop_name_type > 0);
-
     for (ecma_property_index_t i = 0; i < property_count; i++)
     {
       ecma_property_t *curr_property_p = property_start_p + i;
       JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
-      if (curr_property_p->name_cp == property_name_cp
-          && ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == prop_name_type)
+      ecma_string_t *curr_prop_name_p = (ecma_string_t *) ECMA_CREATE_DIRECT_STRING(ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p),
+                                                                                    curr_property_p->name_cp);
+
+      if (name_p == curr_prop_name_p)
       {
         JERRY_ASSERT (ECMA_PROPERTY_IS_NAMED_PROPERTY (curr_property_p));
         property_p = curr_property_p;
