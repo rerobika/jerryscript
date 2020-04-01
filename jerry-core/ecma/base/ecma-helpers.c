@@ -376,7 +376,7 @@ ecma_create_property (ecma_object_t *object_p, /**< the object */
   JERRY_ASSERT (object_p != NULL);
   JERRY_ASSERT (name_p != NULL);
 
-  ecma_property_t *property_list_p = ECMA_GET_POINTER (ecma_property_t, object_p->u1.property_list_cp);
+  ecma_property_t *property_list_p;
   ecma_property_index_t index = ECMA_PROPERTY_LIST_START_INDEX;
 
 #if ENABLED (JERRY_PROPRETY_HASHMAP)
@@ -390,13 +390,13 @@ ecma_create_property (ecma_object_t *object_p, /**< the object */
   }
 #endif /* ENABLED (JERRY_PROPRETY_HASHMAP) */
 
-  if (JERRY_UNLIKELY (property_list_p == NULL))
+  if (object_p->u1.property_list_cp == JMEM_CP_NULL)
   {
     property_list_p = ecma_alloc_property_list (1);
   }
   else
   {
-    property_list_p = ecma_realloc_property_list (property_list_p, &index);
+    property_list_p = ecma_realloc_property_list (ECMA_GET_NON_NULL_POINTER (ecma_property_t, object_p->u1.property_list_cp), &index);
   }
 
   uint8_t name_type;
@@ -573,11 +573,6 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
     {
       ecma_property_t *curr_property_p = property_start_p + i;
       JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
-
-      if (curr_property_p->type_flags == ECMA_PROPERTY_TYPE_DELETED)
-      {
-        continue;
-      }
 
       if (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR)
       {
