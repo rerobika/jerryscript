@@ -544,7 +544,7 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
 #endif /* ENABLED (JERRY_PROPRETY_HASHMAP) */
 
   ecma_property_t *property_start_p = ECMA_PROPERTY_LIST_START (property_list_p);
-  ecma_property_index_t property_count = ECMA_PROPERTY_LIST_PROPERTY_COUNT (property_list_p);
+  uint32_t property_count = property_list_p[0].u.value; // force u32
 
   if (ECMA_IS_DIRECT_STRING (name_p))
   {
@@ -574,7 +574,7 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
       ecma_property_t *curr_property_p = property_start_p + property_count;
       JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
-      if (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR)
+      if (JERRY_LIKELY (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR))
       {
         if (name_cp == curr_property_p->name_cp)
         {
