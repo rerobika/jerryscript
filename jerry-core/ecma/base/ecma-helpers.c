@@ -551,15 +551,15 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
   if (ECMA_IS_DIRECT_STRING (name_p))
   {
     ecma_property_t *curr_property_p = property_start_p + last_prop_index;
+    uint8_t prop_name_type = (uint8_t) ECMA_GET_DIRECT_STRING_TYPE (name_p);
+    jmem_cpointer_t property_name_cp = (jmem_cpointer_t) ECMA_GET_DIRECT_STRING_VALUE (name_p);
 
     do
     {
       JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
-      ecma_string_t *curr_prop_name_p = (ecma_string_t *) ECMA_CREATE_DIRECT_STRING (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p),
-                                                                                     curr_property_p->name_cp);
-
-      if (name_p == curr_prop_name_p)
+      if (curr_property_p->name_cp == property_name_cp
+          && ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == prop_name_type)
       {
         JERRY_ASSERT (ECMA_PROPERTY_IS_NAMED_PROPERTY (curr_property_p));
         // TODO LCACHE insert: obj_p, curr_property_p->name_cp, curr_property_p
