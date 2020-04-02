@@ -504,7 +504,10 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
   JERRY_ASSERT (ecma_is_lexical_environment (obj_p)
                 || !ecma_op_object_is_fast_array (obj_p));
 
-  ecma_property_t *property_p = NULL;
+#if ENABLED (JERRY_LCACHE) || ENABLED (JERRY_PROPRETY_HASHMAP)
+  ecma_property_t *property_p;
+  jmem_cpointer_t property_name_cp = ECMA_NULL_POINTER;
+#endif /* ENABLED (JERRY_LCACHE) || ENABLED (JERRY_PROPRETY_HASHMAP) */
 
 #if ENABLED (JERRY_LCACHE)
   property_p = ecma_lcache_lookup (obj_p, name_p);
@@ -523,7 +526,6 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
 
   ecma_property_t *property_list_p = ECMA_GET_NON_NULL_POINTER (ecma_property_t, prop_iter_cp);
 
-  jmem_cpointer_t property_name_cp = ECMA_NULL_POINTER;
 #if ENABLED (JERRY_PROPRETY_HASHMAP)
   if (property_list_p->type_flags == ECMA_PROPERTY_TYPE_HASHMAP)
   {
@@ -544,66 +546,61 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
 #endif /* ENABLED (JERRY_PROPRETY_HASHMAP) */
 
   ecma_property_t *property_start_p = ECMA_PROPERTY_LIST_START (property_list_p);
-  uint32_t property_count = property_list_p[0].u.value; // force u32
+  uint32_t last_prop_index = (uint32_t) (property_list_p[0].u.value - 1); // force u32
 
   if (ECMA_IS_DIRECT_STRING (name_p))
   {
-    while (property_count--)
+    ecma_property_t *curr_property_p = property_start_p + last_prop_index;
+
+    do
     {
-      ecma_property_t *curr_property_p = property_start_p + property_count;
       JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
 
-      ecma_string_t *curr_prop_name_p = (ecma_string_t *) ECMA_CREATE_DIRECT_STRING(ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p),
-                                                                                    curr_property_p->name_cp);
+      ecma_string_t *curr_prop_name_p = (ecma_string_t *) ECMA_CREATE_DIRECT_STRING (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p),
+                                                                                     curr_property_p->name_cp);
 
       if (name_p == curr_prop_name_p)
       {
         JERRY_ASSERT (ECMA_PROPERTY_IS_NAMED_PROPERTY (curr_property_p));
-        property_p = curr_property_p;
-        break;
+        // TODO LCACHE insert: obj_p, curr_property_p->name_cp, curr_property_p
+        return curr_property_p;
       }
-    }
-  }
-  else
-  {
-    jmem_cpointer_t name_cp;
-    ECMA_SET_NON_NULL_POINTER (name_cp, name_p);
+      curr_property_p--;
+    } while (curr_property_p >= property_start_p);
 
-    while (property_count--)
+    return NULL;
+  }
+
+  uint32_t name_cp; //force u32
+  ECMA_SET_NON_NULL_POINTER (name_cp, name_p);
+  ecma_property_t *curr_property_p = property_start_p + last_prop_index;
+
+  do
+  {
+    JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
+
+    if (JERRY_LIKELY (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR))
     {
-      ecma_property_t *curr_property_p = property_start_p + property_count;
-      JERRY_ASSERT (ECMA_PROPERTY_IS_PROPERTY (curr_property_p));
-
-      if (JERRY_LIKELY (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR))
+      if (name_cp == curr_property_p->name_cp)
       {
-        if (name_cp == curr_property_p->name_cp)
-        {
-          property_name_cp = name_cp;
-          property_p = curr_property_p;
-          break;
-        }
+        // TODO LCACHE insert: obj_p, name_cp, curr_property_p
+        return curr_property_p;
+      }
 
-        property_name_cp = curr_property_p->name_cp;
-        ecma_string_t *prop_name_p = ECMA_GET_NON_NULL_POINTER (ecma_string_t, property_name_cp);
+      ecma_string_t *prop_name_p = ECMA_GET_NON_NULL_POINTER (ecma_string_t,
+                                                              curr_property_p->name_cp);
 
-        if (ecma_compare_ecma_non_direct_strings (name_p, prop_name_p))
-        {
-          property_p = curr_property_p;
-          break;
-        }
+      if (ecma_compare_ecma_non_direct_strings (name_p, prop_name_p))
+      {
+        // TODO LCACHE insert: obj_p, curr_property_p->name_cp, curr_property_p
+        return curr_property_p;
       }
     }
-  }
 
-#if ENABLED (JERRY_LCACHE)
-  if (property_p != NULL
-      && !ecma_is_property_lcached (property_p))
-  {
-    ecma_lcache_insert (obj_p, property_name_cp, property_p);
-  }
-#endif /* ENABLED (JERRY_LCACHE) */
+    curr_property_p--;
+  } while (curr_property_p >= property_start_p);
 
-  return property_p;
+  return NULL;
 } /* ecma_find_named_property */
 
 /**

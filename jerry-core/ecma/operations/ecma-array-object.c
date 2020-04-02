@@ -180,6 +180,15 @@ ecma_fast_array_convert_to_normal (ecma_object_t *object_p) /**< fast access mod
   const uint32_t hole_count = ecma_fast_array_get_hole_count (object_p);
   const uint32_t prop_count = length - hole_count;
 
+  if (prop_count == 0)
+  {
+    jmem_heap_free_block (ECMA_GET_NON_NULL_POINTER (ecma_value_t, object_p->u1.property_list_cp),
+                          aligned_length * sizeof (ecma_value_t));
+    ext_obj_p->u.array.u.length_prop = (uint8_t) (ext_obj_p->u.array.u.length_prop & ~ECMA_FAST_ARRAY_FLAG);
+    object_p->u1.property_list_cp = JMEM_CP_NULL;
+    return;
+  }
+
   ecma_ref_object (object_p);
 
   ecma_property_t *property_list_p = ecma_alloc_property_list (prop_count);
