@@ -571,7 +571,7 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
     return NULL;
   }
 
-  uint32_t name_cp; //force u32
+  jmem_cpointer_t name_cp;
   ECMA_SET_NON_NULL_POINTER (name_cp, name_p);
   ecma_property_t *curr_property_p = property_start_p + last_prop_index;
 
