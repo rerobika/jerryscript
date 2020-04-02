@@ -571,8 +571,6 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
     return NULL;
   }
 
-  jmem_cpointer_t name_cp;
-  ECMA_SET_NON_NULL_POINTER (name_cp, name_p);
   ecma_property_t *curr_property_p = property_start_p + last_prop_index;
 
   do
@@ -581,12 +579,6 @@ ecma_find_named_property (ecma_object_t *obj_p, /**< object to find property in 
 
     if (JERRY_LIKELY (ECMA_PROPERTY_GET_NAME_TYPE (curr_property_p) == ECMA_DIRECT_STRING_PTR))
     {
-      if (name_cp == curr_property_p->name_cp)
-      {
-        // TODO LCACHE insert: obj_p, name_cp, curr_property_p
-        return curr_property_p;
-      }
-
       ecma_string_t *prop_name_p = ECMA_GET_NON_NULL_POINTER (ecma_string_t,
                                                               curr_property_p->name_cp);
 
