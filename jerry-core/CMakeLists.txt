@@ -36,6 +36,7 @@ set(JERRY_REGEXP_DUMP_BYTE_CODE     OFF          CACHE BOOL   "Enable regexp byt
 set(JERRY_SNAPSHOT_EXEC             OFF          CACHE BOOL   "Enable executing snapshot files?")
 set(JERRY_SNAPSHOT_SAVE             OFF          CACHE BOOL   "Enable saving snapshot files?")
 set(JERRY_SYSTEM_ALLOCATOR          OFF          CACHE BOOL   "Enable system allocator?")
+set(JERRY_TEST262                   OFF          CACHE BOOL   "Enable test262?")
 set(JERRY_VALGRIND                  OFF          CACHE BOOL   "Enable Valgrind support?")
 set(JERRY_VM_EXEC_STOP              OFF          CACHE BOOL   "Enable VM execution stopping?")
 set(JERRY_GLOBAL_HEAP_SIZE          "(512)"      CACHE STRING "Size of memory heap, in kilobytes")
@@ -100,6 +101,7 @@ message(STATUS "JERRY_REGEXP_DUMP_BYTE_CODE    " ${JERRY_REGEXP_DUMP_BYTE_CODE})
 message(STATUS "JERRY_SNAPSHOT_EXEC            " ${JERRY_SNAPSHOT_EXEC} ${JERRY_SNAPSHOT_EXEC_MESSAGE})
 message(STATUS "JERRY_SNAPSHOT_SAVE            " ${JERRY_SNAPSHOT_SAVE} ${JERRY_SNAPSHOT_SAVE_MESSAGE})
 message(STATUS "JERRY_SYSTEM_ALLOCATOR         " ${JERRY_SYSTEM_ALLOCATOR})
+message(STATUS "JERRY_TEST262                  " ${JERRY_TEST262})
 message(STATUS "JERRY_VALGRIND                 " ${JERRY_VALGRIND})
 message(STATUS "JERRY_VM_EXEC_STOP             " ${JERRY_VM_EXEC_STOP})
 message(STATUS "JERRY_GLOBAL_HEAP_SIZE         " ${JERRY_GLOBAL_HEAP_SIZE})
@@ -295,6 +297,9 @@ jerry_add_define01(JERRY_SNAPSHOT_SAVE)
 
 # Enable system allocator
 jerry_add_define01(JERRY_SYSTEM_ALLOCATOR)
+
+# Enable test262
+jerry_add_define01(JERRY_TEST262)
 
 # Valgrind
 jerry_add_define01(JERRY_VALGRIND)

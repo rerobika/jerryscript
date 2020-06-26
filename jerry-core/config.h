@@ -429,6 +429,19 @@
 #endif /* !defined (JERRY_VM_EXEC_STOP) */
 
 /**
+ * Enable/Disable test262 support
+ *
+ * Allowed values:
+ *  0: Disable test262 support.
+ *  1: Enable test262 support.
+ *
+ * Default value: 0
+ */
+#ifndef JERRY_TEST262
+# define JERRY_TEST262 0
+#endif /* JERRY_TEST262 */
+
+/**
  * Advanced section configurations.
  */
 
@@ -658,6 +671,10 @@
 #if !defined (JERRY_VM_EXEC_STOP) \
 || ((JERRY_VM_EXEC_STOP != 0) && (JERRY_VM_EXEC_STOP != 1))
 # error "Invalid value for 'JERRY_VM_EXEC_STOP' macro."
+#endif
+#if !defined (JERRY_TEST262) \
+|| ((JERRY_TEST262 != 0) && (JERRY_TEST262 != 1))
+# error "Invalid value for 'JERRY_TEST262' macro."
 #endif
 
 #define ENABLED(FEATURE) ((FEATURE) == 1)

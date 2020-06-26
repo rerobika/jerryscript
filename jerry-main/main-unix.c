@@ -262,23 +262,46 @@ print_unhandled_exception (jerry_value_t error_value) /**< error value */
 } /* print_unhandled_exception */
 
 /**
+ * Report unsucessfull property registration
+ */
+static void
+register_report_error (jerry_value_t result, /**< result of the property registration */
+                       const char *name_p) /**< property name */
+{
+  if (jerry_value_is_error (result))
+  {
+    jerry_port_log (JERRY_LOG_LEVEL_WARNING, "Warning: failed to register '%s'.", name_p);
+    result = jerry_get_value_from_error (result, true);
+    print_unhandled_exception (result);
+  }
+
+  jerry_release_value (result);
+} /* register_report_error */
+
+/**
+ * Register a JavaScript function in the specified object.
+ */
+static void
+register_js_function (jerry_value_t object, /**< object to register property */
+                      const char *name_p, /**< property name */
+                      jerry_external_handler_t handler_p) /**< function callback */
+{
+  jerry_value_t result_val = jerryx_handler_register (object, (const jerry_char_t *) name_p, handler_p);
+
+  register_report_error (result_val, name_p);
+} /* register_js_function */
+
+/**
  * Register a JavaScript function in the global object.
  */
 static void
-register_js_function (const char *name_p, /**< name of the function */
-                      jerry_external_handler_t handler_p) /**< function callback */
+register_js_function_global (const char *name_p, /**< name of the function */
+                             jerry_external_handler_t handler_p) /**< function callback */
 {
-  jerry_value_t result_val = jerryx_handler_register_global ((const jerry_char_t *) name_p, handler_p);
-
-  if (jerry_value_is_error (result_val))
-  {
-    jerry_port_log (JERRY_LOG_LEVEL_WARNING, "Warning: failed to register '%s' method.", name_p);
-    result_val = jerry_get_value_from_error (result_val, true);
-    print_unhandled_exception (result_val);
-  }
-
-  jerry_release_value (result_val);
-} /* register_js_function */
+  jerry_value_t global_obj = jerry_get_global_object ();
+  register_js_function (global_obj, name_p, handler_p);
+  jerry_release_value (global_obj);
+} /* register_js_function_global */
 
 /**
  * Runs the source code received by jerry_debugger_wait_for_client_source.
@@ -427,6 +450,165 @@ context_alloc (size_t size,
 
 #endif /* defined (JERRY_EXTERNAL_CONTEXT) && (JERRY_EXTERNAL_CONTEXT == 1) */
 
+#if defined (JERRY_TEST262) && (JERRY_TEST262 == 1)
+/**
+ * $262.createRealm
+ *
+ * A function which creates a new ECMAScript Realm, defines this API on the new realm's global object,
+ * and returns the $262 property of the new realm's global object
+ *
+ * @return the $262 property of the new realm's global object
+ */
+static jerry_value_t
+test262_create_realm (const jerry_value_t func_obj_val, /**< function object */
+                      const jerry_value_t this_p, /**< this arg */
+                      const jerry_value_t args_p[], /**< function arguments */
+                      const jerry_length_t args_cnt) /**< number of function arguments */
+{
+  (void) func_obj_val; /* unused */
+  (void) this_p; /* unused */
+  (void) args_p; /* unused */
+  (void) args_cnt; /* unused */
+
+  /* TODO: support different realms */
+  jerry_value_t global_obj = jerry_get_global_object ();
+  jerry_value_t prop_name = jerry_create_string ((const jerry_char_t *) "$262");
+  jerry_value_t result = jerry_get_property (global_obj, prop_name);
+
+  jerry_release_value (prop_name);
+  jerry_release_value (global_obj);
+
+  return result;
+} /* test262_create_realm */
+
+/**
+ * $262.detachArrayBuffer
+ *
+ * A function which implements the DetachArrayBuffer abstract operation
+ *
+ * @return null value - if success
+ *         value marked with error flag - otherwise
+ */
+static jerry_value_t
+test262_detach_array_buffer (const jerry_value_t func_obj_val, /**< function object */
+                             const jerry_value_t this_p, /**< this arg */
+                             const jerry_value_t args_p[], /**< function arguments */
+                             const jerry_length_t args_cnt) /**< number of function arguments */
+{
+  (void) func_obj_val; /* unused */
+  (void) this_p; /* unused */
+
+  if (args_cnt < 1 || !jerry_value_is_arraybuffer (args_p[0]))
+  {
+    return jerry_create_error (JERRY_ERROR_TYPE, (jerry_char_t *) "Expected an ArrayBuffer object");
+  }
+
+  /* TODO: support the optional 'key' argument */
+
+  return jerry_detach_arraybuffer (args_p[0]);
+} /* test262_detach_array_buffer */
+
+/**
+ * $262.evalScript
+ *
+ * A function which accepts a string value as its first argument and executes it
+ *
+ * @return completion of the script parsing and execution.
+ */
+static jerry_value_t
+test262_eval_script (const jerry_value_t func_obj_val, /**< function object */
+                     const jerry_value_t this_p, /**< this arg */
+                     const jerry_value_t args_p[], /**< function arguments */
+                     const jerry_length_t args_cnt) /**< number of function arguments */
+{
+  (void) func_obj_val; /* unused */
+  (void) this_p; /* unused */
+
+  if (args_cnt < 1 || !jerry_value_is_string (args_p[0]))
+  {
+    return jerry_create_error (JERRY_ERROR_TYPE, (jerry_char_t *) "Expected a string");
+  }
+
+  jerry_size_t str_size = jerry_get_utf8_string_size (args_p[0]);
+  jerry_char_t *str_buf_p = jerry_heap_alloc (str_size * sizeof (jerry_char_t));
+
+  if (str_buf_p == NULL
+     || jerry_string_to_utf8_char_buffer (args_p[0], str_buf_p, str_size) != str_size)
+  {
+    return jerry_create_error (JERRY_ERROR_RANGE, (jerry_char_t *) "Internal error");
+  }
+
+  jerry_value_t ret_value = jerry_parse (NULL,
+                                         0,
+                                         str_buf_p,
+                                         str_size,
+                                         JERRY_PARSE_NO_OPTS);
+
+  if (!jerry_value_is_error (ret_value))
+  {
+    jerry_value_t func_val = ret_value;
+    ret_value = jerry_run (func_val);
+    jerry_release_value (func_val);
+  }
+
+  jerry_heap_free (str_buf_p, str_size * sizeof (jerry_char_t));
+
+  return ret_value;
+} /* test262_eval_script */
+
+/**
+ * $262.gc
+ *
+ * A function that wraps the host's garbage collection invocation mechanism, if such a capability exists.
+ *
+ * @return undefined.
+ */
+static jerry_value_t
+test262_gc (const jerry_value_t func_obj_val, /**< function object */
+            const jerry_value_t this_p, /**< this arg */
+            const jerry_value_t args_p[], /**< function arguments */
+            const jerry_length_t args_cnt) /**< number of function arguments */
+{
+  (void) func_obj_val; /* unused */
+  (void) this_p; /* unused */
+  (void) args_p; /* unused */
+  (void) args_cnt; /* unused */
+
+  jerry_gc (JERRY_GC_PRESSURE_LOW);
+  return jerry_create_undefined ();
+} /* jerryx_handler_gc */
+
+/**
+ * Init the $262 object
+ */
+static void
+register_test262 (void)
+{
+  jerry_value_t global_obj = jerry_get_global_object ();
+  jerry_value_t test262_object = jerry_create_object ();
+
+  register_js_function (test262_object, "createRealm", test262_create_realm);
+  register_js_function (test262_object, "detachArrayBuffer", test262_detach_array_buffer);
+  register_js_function (test262_object, "evalScript", test262_eval_script);
+  register_js_function (test262_object, "gc", test262_gc);
+
+  jerry_value_t prop_name = jerry_create_string ((const jerry_char_t *) "global");
+  jerry_value_t result_val = jerry_set_property (test262_object, prop_name, global_obj);
+
+  register_report_error (result_val, "global");
+  jerry_release_value (prop_name);
+
+  prop_name = jerry_create_string ((const jerry_char_t *) "$262");
+  result_val = jerry_set_property (global_obj, prop_name, test262_object);
+
+  register_report_error (result_val, "$262");
+  jerry_release_value (prop_name);
+
+  jerry_release_value (global_obj);
+  jerry_release_value (test262_object);
+} /* register_test262 */
+#endif /* defined (JERRY_TEST262) && (JERRY_TEST262 == 1) */
+
 /**
  * Inits the engine and the debugger
  */
@@ -463,10 +645,13 @@ init_engine (jerry_init_flag_t flags, /**< initialized flags for the engine */
     }
   }
 
-  register_js_function ("assert", jerryx_handler_assert);
-  register_js_function ("gc", jerryx_handler_gc);
-  register_js_function ("print", jerryx_handler_print);
-  register_js_function ("resourceName", jerryx_handler_resource_name);
+  register_js_function_global ("assert", jerryx_handler_assert);
+  register_js_function_global ("gc", jerryx_handler_gc);
+  register_js_function_global ("print", jerryx_handler_print);
+  register_js_function_global ("resourceName", jerryx_handler_resource_name);
+#if defined (JERRY_TEST262) && (JERRY_TEST262 == 1)
+  register_test262();
+#endif /* defined (JERRY_TEST262) && (JERRY_TEST262 == 1) */
 } /* init_engine */
 
 int

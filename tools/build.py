@@ -148,6 +148,8 @@ def get_arguments():
                          help='enable saving snapshot files (%(choices)s)')
     coregrp.add_argument('--system-allocator', metavar='X', choices=['ON', 'OFF'], type=str.upper,
                          help='enable system allocator (%(choices)s)')
+    coregrp.add_argument('--test262', metavar='X', choices=['ON', 'OFF'], type=str.upper,
+                         help='enable $262 object (%(choices)s)')
     coregrp.add_argument('--valgrind', metavar='X', choices=['ON', 'OFF'], type=str.upper,
                          help=devhelp('enable Valgrind support (%(choices)s)'))
     coregrp.add_argument('--vm-exec-stop', metavar='X', choices=['ON', 'OFF'], type=str.upper,
@@ -214,6 +216,7 @@ def generate_build_options(arguments):
     build_options_append('JERRY_SNAPSHOT_EXEC', arguments.snapshot_exec)
     build_options_append('JERRY_SNAPSHOT_SAVE', arguments.snapshot_save)
     build_options_append('JERRY_SYSTEM_ALLOCATOR', arguments.system_allocator)
+    build_options_append('JERRY_TEST262', arguments.test262)
     build_options_append('JERRY_VALGRIND', arguments.valgrind)
     build_options_append('JERRY_VM_EXEC_STOP', arguments.vm_exec_stop)
 
