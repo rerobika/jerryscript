@@ -501,10 +501,12 @@ ecma_op_create_promise_object (ecma_value_t executor, /**< the executor function
     JERRY_ASSERT (ecma_op_is_callable (executor));
 
     ecma_value_t argv[] = { funcs.resolve, funcs.reject };
-    completion = ecma_op_function_call (ecma_get_object_from_value (executor),
-                                        ECMA_VALUE_UNDEFINED,
-                                        argv,
-                                        2);
+
+    ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (executor),
+                                                             ECMA_VALUE_UNDEFINED,
+                                                             argv,
+                                                             2);
+    completion = ecma_op_function_call (&func_args);
   }
   else
   {
@@ -518,10 +520,12 @@ ecma_op_create_promise_object (ecma_value_t executor, /**< the executor function
   {
     /* 10.a. */
     completion = jcontext_take_exception ();
-    status = ecma_op_function_call (ecma_get_object_from_value (funcs.reject),
-                                    ECMA_VALUE_UNDEFINED,
-                                    &completion,
-                                    1);
+
+    ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (funcs.reject),
+                                                             ECMA_VALUE_UNDEFINED,
+                                                             &completion,
+                                                             1);
+    status = ecma_op_function_call (&func_args);
   }
 
   ecma_promise_free_resolving_functions (&funcs);
@@ -611,10 +615,11 @@ ecma_promise_all_handler_cb (const ecma_value_t function_obj, /**< the function 
   {
     ecma_value_t capability = executor_p->capability;
     ecma_promise_capabality_t *capability_p = (ecma_promise_capabality_t *) ecma_get_object_from_value (capability);
-    ret = ecma_op_function_call (ecma_get_object_from_value (capability_p->resolve),
-                                 ECMA_VALUE_UNDEFINED,
-                                 &executor_p->values,
-                                 1);
+    ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (capability_p->resolve),
+                                                         ECMA_VALUE_UNDEFINED,
+                                                         &executor_p->values,
+                                                         1);
+    ret = ecma_op_function_call (&func_args);
   }
 
   return ret;
@@ -711,10 +716,8 @@ ecma_promise_new_capability (ecma_value_t constructor)
 
   /* 7. */
   ecma_value_t executor = ecma_make_object_value (executor_p);
-  ecma_value_t promise = ecma_op_function_construct (constructor_obj_p,
-                                                     constructor_obj_p,
-                                                     &executor,
-                                                     1);
+  ecma_func_args_t func_args = ecma_op_make_construct_args (constructor_obj_p, &executor, 1);
+  ecma_value_t promise = ecma_op_function_construct (&func_args);
   ecma_deref_object (executor_p);
 
   if (ECMA_IS_VALUE_ERROR (promise))
@@ -799,10 +802,11 @@ ecma_promise_reject_or_resolve (ecma_value_t this_arg, /**< "this" argument */
 
   ecma_value_t func = is_resolve ? capability_p->resolve : capability_p->reject;
 
-  ecma_value_t call_ret = ecma_op_function_call (ecma_get_object_from_value (func),
-                                                 ECMA_VALUE_UNDEFINED,
-                                                 &value,
-                                                 1);
+  ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (func),
+                                                           ECMA_VALUE_UNDEFINED,
+                                                           &value,
+                                                           1);
+  ecma_value_t call_ret = ecma_op_function_call (&func_args);
 
   if (ECMA_IS_VALUE_ERROR (call_ret))
   {
@@ -1012,10 +1016,11 @@ ecma_promise_than_catch_finally_helper (ecma_value_t function_obj,  /**< the fun
   JERRY_ASSERT (ecma_op_is_callable (finally_func_obj->on_finally));
 
   /* 4. */
-  ecma_value_t result = ecma_op_function_call (ecma_get_object_from_value (finally_func_obj->on_finally),
-                                               ECMA_VALUE_UNDEFINED,
-                                               NULL,
-                                               0);
+  ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (finally_func_obj->on_finally),
+                                                       ECMA_VALUE_UNDEFINED,
+                                                       NULL,
+                                                       0);
+  ecma_value_t result = ecma_op_function_call (&func_args);
 
   if (ECMA_IS_VALUE_ERROR (result))
   {

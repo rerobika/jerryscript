@@ -2820,19 +2820,22 @@ jerry_invoke_function (bool is_invoke_as_constructor, /**< true - invoke functio
   {
     JERRY_ASSERT (jerry_value_is_constructor (func_obj_val));
 
-    return jerry_return (ecma_op_function_construct (ecma_get_object_from_value (func_obj_val),
-                                                     ecma_get_object_from_value (func_obj_val),
-                                                     args_p,
-                                                     args_count));
+    ecma_func_args_t func_args = ecma_op_make_construct_args (ecma_get_object_from_value (func_obj_val),
+                                                              args_p,
+                                                              args_count);
+
+    return jerry_return (ecma_op_function_construct (&func_args));
   }
   else
   {
     JERRY_ASSERT (jerry_value_is_function (func_obj_val));
 
-    return jerry_return (ecma_op_function_call (ecma_get_object_from_value (func_obj_val),
-                                                this_val,
-                                                args_p,
-                                                args_count));
+    ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (func_obj_val),
+                                                             this_val,
+                                                             args_p,
+                                                             args_count);
+
+    return jerry_return (ecma_op_function_call (&func_args));
   }
 } /* jerry_invoke_function */
 
@@ -3304,10 +3307,11 @@ jerry_resolve_or_reject_promise (jerry_value_t promise, /**< the promise value *
 
   ecma_value_t function = ecma_op_object_get_by_magic_id (ecma_get_object_from_value (promise), prop_name);
 
-  ecma_value_t ret = ecma_op_function_call (ecma_get_object_from_value (function),
-                                            ECMA_VALUE_UNDEFINED,
-                                            &argument,
-                                            1);
+  ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (function),
+                                                       ECMA_VALUE_UNDEFINED,
+                                                       &argument,
+                                                       1);
+  ecma_value_t ret = ecma_op_function_call (&func_args);
 
   ecma_free_value (function);
 
@@ -4522,15 +4526,19 @@ jerry_create_container (jerry_container_type_t container_type, /**< Type of the 
       return jerry_throw (ecma_raise_type_error (ECMA_ERR_MSG ("Invalid container type.")));
     }
   }
-  ecma_object_t * old_new_target_p = JERRY_CONTEXT (current_new_target);
+  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target);
 
   if (old_new_target_p == NULL)
   {
     JERRY_CONTEXT (current_new_target) = ecma_builtin_get (ctor_id);
   }
 
-  ecma_value_t container_value = ecma_op_container_create (arguments_list_p,
-                                                           arguments_list_len,
+  ecma_func_args_t func_args = ecma_op_make_construct_args_new_target (NULL,
+                                                                       JERRY_CONTEXT (current_new_target),
+                                                                       arguments_list_p,
+                                                                       arguments_list_len);
+
+  ecma_value_t container_value = ecma_op_container_create (&func_args,
                                                            lit_id,
                                                            proto_id);
 

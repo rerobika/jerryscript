@@ -90,46 +90,34 @@ enum
  */
 
 /**
- * Handle calling [[Call]] of built-in Object object
+ * Handle [[Call]]/[[Construct]] of built-in Object object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_object_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                   uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_object_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  if (arguments_list_len == 0
-      || ecma_is_value_undefined (arguments_list_p[0])
-      || ecma_is_value_null (arguments_list_p[0]))
+  if (func_args_p->new_target_p == NULL)
   {
-    return ecma_builtin_object_dispatch_construct (arguments_list_p, arguments_list_len);
+    if (func_args_p->argc == 0
+        || ecma_is_value_undefined (func_args_p->argv[0])
+        || ecma_is_value_null (func_args_p->argv[0]))
+    {
+      return ecma_make_object_value (ecma_op_create_object_object_noarg ());
+    }
+
+    return ecma_op_to_object (func_args_p->argv[0]);
   }
 
-  return ecma_op_to_object (arguments_list_p[0]);
-} /* ecma_builtin_object_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Object object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_object_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                        uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  if (arguments_list_len == 0)
+  if (func_args_p->argc == 0)
   {
-    ecma_object_t *obj_p = ecma_op_create_object_object_noarg ();
-
-    return ecma_make_object_value (obj_p);
+    return ecma_make_object_value (ecma_op_create_object_object_noarg ());
   }
 
-  return ecma_op_create_object_object_arg (arguments_list_p[0]);
-} /* ecma_builtin_object_dispatch_construct */
+  return ecma_op_create_object_object_arg (func_args_p->argv[0]);
+} /* ecma_builtin_object_dispatch */
 
 /**
  * The Object object's 'getPrototypeOf' routine

@@ -18,6 +18,7 @@
 #if ENABLED (JERRY_BUILTIN_TYPEDARRAY)
 
 #include "ecma-builtins.h"
+#include "ecma-exceptions.h"
 #include "ecma-gc.h"
 #include "ecma-objects.h"
 #include "ecma-typedarray-object.h"
@@ -26,26 +27,30 @@
 #include "ecma-builtins-internal.h"
 
 /**
- * Common implementation of the [[Construct]] call of TypedArrays.
+ * Common implementation of the [[Call]]/[[Construct]] of TypedArrays.
  *
  * @return ecma value of the new TypedArray object
  *         Returned value must be freed with ecma_free_value
  */
 ecma_value_t
-ecma_typedarray_helper_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                           uint32_t arguments_list_len, /**< number of arguments */
-                                           ecma_typedarray_type_t typedarray_id) /**< id of the typedarray */
+ecma_typedarray_helper_dispatch (ecma_func_args_t *func_arg_p, /**< function arguments */
+                                 ecma_typedarray_type_t typedarray_id) /**< id of the typedarray */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_arg_p != NULL);
+
+  if (func_arg_p->new_target_p == NULL)
+  {
+    return ecma_raise_type_error (ECMA_ERR_MSG ("TypedArray is not a constructor"));
+  }
 
   ecma_object_t *prototype_obj_p = ecma_builtin_get (ecma_typedarray_helper_get_prototype_id (typedarray_id));
-  ecma_value_t val = ecma_op_create_typedarray (arguments_list_p,
-                                                arguments_list_len,
+  ecma_value_t val = ecma_op_create_typedarray (func_arg_p->argv,
+                                                func_arg_p->argc,
                                                 prototype_obj_p,
                                                 ecma_typedarray_helper_get_shift_size (typedarray_id),
                                                 typedarray_id);
 
   return val;
-} /* ecma_typedarray_helper_dispatch_construct */
+} /* ecma_typedarray_helper_dispatch */
 
 #endif /* ENABLED (JERRY_BUILTIN_TYPEDARRAY) */

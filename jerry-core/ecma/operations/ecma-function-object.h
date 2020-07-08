@@ -70,13 +70,23 @@ ecma_op_get_prototype_from_constructor (ecma_object_t *ctor_obj_p, ecma_builtin_
 ecma_value_t
 ecma_op_function_has_instance (ecma_object_t *func_obj_p, ecma_value_t value);
 
-ecma_value_t
-ecma_op_function_call (ecma_object_t *func_obj_p, ecma_value_t this_arg_value,
-                       const ecma_value_t *arguments_list_p, uint32_t arguments_list_len);
+ecma_func_args_t
+ecma_op_make_construct_args (ecma_object_t *func_obj_p, const ecma_value_t *arguments_list_p,
+                             uint32_t arguments_list_len);
+
+ecma_func_args_t
+ecma_op_make_construct_args_new_target (ecma_object_t *func_obj_p, ecma_object_t *new_target_p,
+                                        const ecma_value_t *arguments_list_p, uint32_t arguments_list_len);
+
+ecma_func_args_t
+ecma_op_make_call_args (ecma_object_t *func_obj_p, ecma_value_t this_arg_value,
+                        const ecma_value_t *arguments_list_p, uint32_t arguments_list_len);
 
 ecma_value_t
-ecma_op_function_construct (ecma_object_t *func_obj_p, ecma_object_t *new_target_p,
-                            const ecma_value_t *arguments_list_p, uint32_t arguments_list_len);
+ecma_op_function_call (ecma_func_args_t *func_args_p);
+
+ecma_value_t
+ecma_op_function_construct (ecma_func_args_t *func_args_p);
 
 ecma_property_t *
 ecma_op_function_try_to_lazy_instantiate_property (ecma_object_t *object_p, ecma_string_t *property_name_p);

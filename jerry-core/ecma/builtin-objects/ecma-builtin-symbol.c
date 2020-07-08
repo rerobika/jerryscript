@@ -47,37 +47,25 @@
  */
 
 /**
- * Handle calling [[Call]] of built-in Symbol object.
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_symbol_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                   uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  return ecma_op_create_symbol (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_symbol_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Symbol object.
- *
- * Symbol constructor is not intended to be used
- * with the new operator or to be subclassed.
+ * Handle [[Call]]/[[Construct]] of built-in Symbol object.
  *
  * See also:
  *          ECMA-262 v6, 19.4.1
+ *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_symbol_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                        uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_symbol_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
+
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ecma_op_create_symbol (func_args_p->argv, func_args_p->argc);
+  }
 
   return ecma_raise_type_error (ECMA_ERR_MSG ("Symbol is not a constructor."));
-} /* ecma_builtin_symbol_dispatch_construct */
+} /* ecma_builtin_symbol_dispatch */
 
 /**
  * Helper function for Symbol object's 'for' and `keyFor`

@@ -192,32 +192,16 @@ ecma_builtin_regexp_dispatch_helper (const ecma_value_t *arguments_list_p, /**< 
 } /* ecma_builtin_regexp_dispatch_helper */
 
 /**
- * Handle calling [[Call]] of built-in RegExp object
+ * Handle [[Call]]/[[Construct]] of built-in RegExp object
  *
  * @return ecma value
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_regexp_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                   uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_regexp_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  return ecma_builtin_regexp_dispatch_helper (arguments_list_p,
-                                              arguments_list_len);
-} /* ecma_builtin_regexp_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in RegExp object
- *
- * @return ecma value
- *         Returned value must be freed with ecma_free_value.
- */
-ecma_value_t
-ecma_builtin_regexp_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                        uint32_t arguments_list_len) /**< number of arguments */
-{
-  return ecma_builtin_regexp_dispatch_helper (arguments_list_p,
-                                              arguments_list_len);
-} /* ecma_builtin_regexp_dispatch_construct */
+  return ecma_builtin_regexp_dispatch_helper (func_args_p->argv, func_args_p->argc);
+} /* ecma_builtin_regexp_dispatch */
 
 #if ENABLED (JERRY_ESNEXT)
 /**

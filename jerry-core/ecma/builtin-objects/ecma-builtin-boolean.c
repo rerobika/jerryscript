@@ -45,50 +45,27 @@
  */
 
 /**
- * Handle calling [[Call]] of built-in Boolean object
+ * Handle [[Call]]/[[Construct]] of built-in Boolean object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_boolean_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                    uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_boolean_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  ecma_value_t arg_value;
-
-  if (arguments_list_len == 0)
+  if (func_args_p->new_target_p == NULL)
   {
-    arg_value = ECMA_VALUE_UNDEFINED;
-  }
-  else
-  {
-    arg_value = arguments_list_p[0];
+    if (func_args_p->argc == 0)
+    {
+      return ECMA_VALUE_FALSE;
+    }
+
+    return ecma_make_boolean_value (ecma_op_to_boolean (func_args_p->argv[0]));
   }
 
-  return ecma_make_boolean_value (ecma_op_to_boolean (arg_value));
-} /* ecma_builtin_boolean_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Boolean object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_boolean_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                         uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  if (arguments_list_len == 0)
-  {
-    return ecma_op_create_boolean_object (ECMA_VALUE_FALSE);
-  }
-  else
-  {
-    return ecma_op_create_boolean_object (arguments_list_p[0]);
-  }
-} /* ecma_builtin_boolean_dispatch_construct */
+  return ecma_op_create_boolean_object (func_args_p->argc == 0 ? ECMA_VALUE_FALSE : func_args_p->argv[0]);
+} /* ecma_builtin_boolean_dispatch */
 
 /**
  * @}

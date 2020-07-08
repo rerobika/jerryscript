@@ -33,21 +33,20 @@
  */
 
 /**
- * Handle calling [[Call]] of a built-in error object
+ * Handle [[Call]]/[[Construct]] of a built-in error object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_helper_error_dispatch_call (ecma_standard_error_t error_type, /**< native error type */
-                                         const ecma_value_t *arguments_list_p, /**< arguments list */
-                                         uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_helper_error_dispatch (ecma_func_args_t *func_args_p, /**< function arguments */
+                                    ecma_standard_error_t error_type) /**< native error type */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  if (arguments_list_len != 0
-      && !ecma_is_value_undefined (arguments_list_p[0]))
+  if (func_args_p->argc != 0
+      && !ecma_is_value_undefined (func_args_p->argv[0]))
   {
-    ecma_string_t *message_string_p = ecma_op_to_string (arguments_list_p[0]);
+    ecma_string_t *message_string_p = ecma_op_to_string (func_args_p->argv[0]);
 
     if (JERRY_UNLIKELY (message_string_p == NULL))
     {
@@ -64,7 +63,7 @@ ecma_builtin_helper_error_dispatch_call (ecma_standard_error_t error_type, /**< 
   ecma_object_t *new_error_object_p = ecma_new_standard_error (error_type);
 
   return ecma_make_object_value (new_error_object_p);
-} /* ecma_builtin_helper_error_dispatch_call */
+} /* ecma_builtin_helper_error_dispatch */
 
 /**
  * @}

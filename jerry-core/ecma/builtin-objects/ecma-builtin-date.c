@@ -668,7 +668,7 @@ ecma_builtin_date_now (ecma_value_t this_arg) /**< this argument */
 } /* ecma_builtin_date_now */
 
 /**
- * Handle calling [[Call]] of built-in Date object
+ * Handle [[Call]]/[[Construct]] of built-in Date object
  *
  * See also:
  *          ECMA-262 v5, 15.9.2.1
@@ -676,34 +676,17 @@ ecma_builtin_date_now (ecma_value_t this_arg) /**< this argument */
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_date_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                 uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_date_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_UNUSED (arguments_list_p);
-  JERRY_UNUSED (arguments_list_len);
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ecma_date_value_to_string (ecma_builtin_date_now_helper ());
+  }
 
-  ecma_number_t now_val_num = ecma_builtin_date_now_helper ();
-
-  return ecma_date_value_to_string (now_val_num);
-} /* ecma_builtin_date_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Date object
- *
- * See also:
- *          ECMA-262 v5, 15.9.3.1
- *          ECMA-262 v11, 20.4.2
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_date_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                      uint32_t arguments_list_len) /**< number of arguments */
-{
 #if ENABLED (JERRY_ESNEXT)
   JERRY_ASSERT (JERRY_CONTEXT (current_new_target));
 
-  ecma_object_t *prototype_obj_p = ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target),
+  ecma_object_t *prototype_obj_p = ecma_op_get_prototype_from_constructor (func_args_p->new_target_p,
                                                                            ECMA_BUILTIN_ID_DATE_PROTOTYPE);
   if (JERRY_UNLIKELY (prototype_obj_p == NULL))
   {
@@ -727,14 +710,14 @@ ecma_builtin_date_dispatch_construct (const ecma_value_t *arguments_list_p, /**<
   ecma_number_t prim_value_num = ECMA_NUMBER_ZERO;
 
   /* 20.4.2.3 */
-  if (arguments_list_len == 0)
+  if (func_args_p->argc == 0)
   {
     prim_value_num = ecma_builtin_date_now_helper ();
   }
   /* 20.4.2.2 */
-  else if (arguments_list_len == 1)
+  else if (func_args_p->argc == 1)
   {
-    ecma_value_t argument = arguments_list_p[0];
+    ecma_value_t argument = func_args_p->argv[0];
     ecma_object_t *arg_obj = NULL;
 
     /* 4.a */
@@ -796,7 +779,7 @@ ecma_builtin_date_dispatch_construct (const ecma_value_t *arguments_list_p, /**<
   /* 20.4.2.1 */
   else
   {
-    ecma_value_t time_value = ecma_date_construct_helper (arguments_list_p, arguments_list_len);
+    ecma_value_t time_value = ecma_date_construct_helper (func_args_p->argv, func_args_p->argc);
 
     if (ECMA_IS_VALUE_ERROR (time_value))
     {
@@ -822,7 +805,7 @@ ecma_builtin_date_dispatch_construct (const ecma_value_t *arguments_list_p, /**<
   ECMA_SET_INTERNAL_VALUE_POINTER (ext_object_p->u.class_prop.u.value, date_num_p);
 
   return ecma_make_object_value (obj_p);
-} /* ecma_builtin_date_dispatch_construct */
+} /* ecma_builtin_date_dispatch */
 
 /**
  * @}

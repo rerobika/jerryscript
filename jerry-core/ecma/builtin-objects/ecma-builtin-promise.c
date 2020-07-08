@@ -67,10 +67,11 @@ ecma_builtin_promise_reject_abrupt (ecma_value_t value, /**< value */
   ecma_value_t reason = jcontext_take_exception ();
 
   ecma_promise_capabality_t *capability_p = (ecma_promise_capabality_t *) capability_obj_p;
-  ecma_value_t call_ret = ecma_op_function_call (ecma_get_object_from_value (capability_p->reject),
-                                                 ECMA_VALUE_UNDEFINED,
-                                                 &reason,
-                                                 1);
+  ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (capability_p->reject),
+                                                       ECMA_VALUE_UNDEFINED,
+                                                       &reason,
+                                                       1);
+  ecma_value_t call_ret = ecma_op_function_call (&func_args);
   ecma_free_value (reason);
 
   if (ECMA_IS_VALUE_ERROR (call_ret))
@@ -249,10 +250,11 @@ ecma_builtin_promise_perform_all (ecma_value_t iterator, /**< iteratorRecord */
       if (ecma_promise_remaining_inc_or_dec (remaining, false) == 0)
       {
         /* 2. */
-        ecma_value_t resolve_result = ecma_op_function_call (ecma_get_object_from_value (capability_p->resolve),
+        ecma_func_args_t func_args = ecma_op_make_call_args (ecma_get_object_from_value (capability_p->resolve),
                                                              ECMA_VALUE_UNDEFINED,
                                                              &values_array,
                                                              1);
+        ecma_value_t resolve_result = ecma_op_function_call (&func_args);
         /* 3. */
         if (ECMA_IS_VALUE_ERROR (resolve_result))
         {
@@ -443,7 +445,7 @@ ecma_builtin_promise_all (ecma_value_t this_arg, /**< 'this' argument */
 } /* ecma_builtin_promise_all */
 
 /**
- * Handle calling [[Call]] of built-in Promise object.
+ * Handle [[Call]]/[[Construct]] of built-in Promise object.
  *
  * ES2015 25.4.3 Promise is not intended to be called
  * as a function and will throw an exception when called
@@ -452,32 +454,22 @@ ecma_builtin_promise_all (ecma_value_t this_arg, /**< 'this' argument */
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_promise_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                    uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_promise_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor Promise requires 'new'."));
-} /* ecma_builtin_promise_dispatch_call */
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor Promise requires 'new'."));
+  }
 
-/**
- * Handle calling [[Construct]] of built-in Promise object.
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_promise_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                         uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  if (arguments_list_len == 0 || !ecma_op_is_callable (arguments_list_p[0]))
+  if (func_args_p->argc == 0 || !ecma_op_is_callable (func_args_p->argv[0]))
   {
     return ecma_raise_type_error (ECMA_ERR_MSG ("First parameter must be callable."));
   }
 
-  return ecma_op_create_promise_object (arguments_list_p[0], ECMA_PROMISE_EXECUTOR_FUNCTION);
-} /* ecma_builtin_promise_dispatch_construct */
+  return ecma_op_create_promise_object (func_args_p->argv[0], ECMA_PROMISE_EXECUTOR_FUNCTION);
+} /* ecma_builtin_promise_dispatch */
 
 /**
  * 25.4.4.6 get Promise [ @@species ] accessor

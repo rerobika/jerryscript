@@ -700,9 +700,9 @@ ecma_op_typedarray_from_helper (ecma_value_t this_val, /**< this_arg for the abo
   {
     /* 17.d 17.f */
     ecma_value_t current_index = ecma_make_uint32_value (index);
-    ecma_value_t call_args[] = { current_value, current_index };
-
-    ecma_value_t cb_value = ecma_op_function_call (func_object_p, this_val, call_args, 2);
+    ecma_value_t args[] = { current_value, current_index };
+    ecma_func_args_t func_args = ecma_op_make_call_args (func_object_p, this_val, args, 2);
+    ecma_value_t cb_value = ecma_op_function_call (&func_args);
 
     ecma_free_value (current_index);
     ecma_free_value (current_value);

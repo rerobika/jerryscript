@@ -37,30 +37,22 @@
  */
 
 /**
- * Handle calling [[Call]] of built-in DataView object
+ * Handle [[Call]]/[[Construct]] of built-in DataView object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_dataview_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                     uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_dataview_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor DataView requires 'new'."));
-} /* ecma_builtin_dataview_dispatch_call */
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor DataView requires 'new'."));
+  }
 
-/**
- * Handle calling [[Construct]] of built-in DataView object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_dataview_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                          uint32_t arguments_list_len) /**< number of arguments */
-{
-  return ecma_op_dataview_create (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_dataview_dispatch_construct */
+  return ecma_op_dataview_create (func_args_p->argv, func_args_p->argc);
+} /* ecma_builtin_dataview_dispatch */
 
 /**
  * @}

@@ -45,28 +45,15 @@
  */
 
 /**
- * Handle calling [[Call]] of built-in ReferenceError object
+ * Handle [[Call]]/[[Construct]] of built-in ReferenceError object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_reference_error_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                            uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_reference_error_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  return ecma_builtin_helper_error_dispatch_call (ECMA_ERROR_REFERENCE, arguments_list_p, arguments_list_len);
-} /* ecma_builtin_reference_error_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in ReferenceError object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_reference_error_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                                 uint32_t arguments_list_len) /**< number of arguments */
-{
-  return ecma_builtin_reference_error_dispatch_call (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_reference_error_dispatch_construct */
+  return ecma_builtin_helper_error_dispatch (func_args_p, ECMA_ERROR_REFERENCE);
+} /* ecma_builtin_reference_error_dispatch */
 
 /**
  * @}

@@ -49,10 +49,9 @@ typedef ecma_value_t (*ecma_builtin_dispatch_routine_t) (uint16_t builtin_routin
                                                          const ecma_value_t arguments_list[],
                                                          uint32_t arguments_number);
 /**
- * Definition of built-in dispatch call function pointer.
+ * Definition of built-in dispatch function pointer.
  */
-typedef ecma_value_t (*ecma_builtin_dispatch_call_t) (const ecma_value_t arguments_list[],
-                                                      uint32_t arguments_number);
+typedef ecma_value_t (*ecma_builtin_dispatch_function_t) (ecma_func_args_t *func_args_p);
 /**
  * Definition of a builtin descriptor which contains the builtin object's:
  * - prototype objects's id (13-bits)
@@ -178,7 +177,7 @@ static const ecma_builtin_dispatch_routine_t ecma_builtin_routines[] =
 /**
  * List of the built-in call functions.
  */
-static const ecma_builtin_dispatch_call_t ecma_builtin_call_functions[] =
+static const ecma_builtin_dispatch_function_t ecma_builtin_functions[] =
 {
 /** @cond doxygen_suppress */
 #define BUILTIN(a, b, c, d, e)
@@ -187,26 +186,7 @@ static const ecma_builtin_dispatch_call_t ecma_builtin_call_functions[] =
                         object_prototype_builtin_id, \
                         is_extensible, \
                         lowercase_name) \
-  ecma_builtin_ ## lowercase_name ## _dispatch_call,
-#include "ecma-builtins.inc.h"
-#undef BUILTIN_ROUTINE
-#undef BUILTIN
-/** @endcond */
-};
-
-/**
- * List of the built-in construct functions.
- */
-static const ecma_builtin_dispatch_call_t ecma_builtin_construct_functions[] =
-{
-/** @cond doxygen_suppress */
-#define BUILTIN(a, b, c, d, e)
-#define BUILTIN_ROUTINE(builtin_id, \
-                        object_type, \
-                        object_prototype_builtin_id, \
-                        is_extensible, \
-                        lowercase_name) \
-  ecma_builtin_ ## lowercase_name ## _dispatch_construct,
+  ecma_builtin_ ## lowercase_name ## _dispatch,
 #include "ecma-builtins.inc.h"
 #undef BUILTIN_ROUTINE
 #undef BUILTIN
@@ -1145,112 +1125,65 @@ ecma_builtin_list_lazy_property_names (ecma_object_t *object_p, /**< a built-in 
  * @return ecma value
  *         Returned value must be freed with ecma_free_value.
  */
-static ecma_value_t
-ecma_builtin_dispatch_routine (ecma_extended_object_t *func_obj_p, /**< builtin object */
-                               ecma_value_t this_arg_value, /**< 'this' argument value */
-                               const ecma_value_t *arguments_list_p, /**< list of arguments passed to routine */
-                               uint32_t arguments_list_len) /**< length of arguments' list */
+ecma_value_t
+ecma_builtin_dispatch_routine (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (ecma_builtin_function_is_routine ((ecma_object_t *) func_obj_p));
+  JERRY_ASSERT (ecma_builtin_function_is_routine (func_args_p->func_obj_p));
 
   ecma_value_t padded_arguments_list_p[3] = { ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED };
+  const ecma_value_t *argv;
 
-  if (arguments_list_len <= 2)
+  if (func_args_p->argc <= 2)
   {
-    switch (arguments_list_len)
+    argv = padded_arguments_list_p;
+    switch (func_args_p->argc)
     {
       case 2:
       {
-        padded_arguments_list_p[1] = arguments_list_p[1];
+        padded_arguments_list_p[1] = func_args_p->argv[1];
         /* FALLTHRU */
       }
       case 1:
       {
-        padded_arguments_list_p[0] = arguments_list_p[0];
+        padded_arguments_list_p[0] = func_args_p->argv[0];
         break;
       }
       default:
       {
-        JERRY_ASSERT (arguments_list_len == 0);
+        JERRY_ASSERT (func_args_p->argc == 0);
       }
     }
-
-    arguments_list_p = padded_arguments_list_p;
+  }
+  else
+  {
+    argv = func_args_p->argv;
   }
 
-  return ecma_builtin_routines[func_obj_p->u.built_in.id] (func_obj_p->u.built_in.routine_id,
-                                                           this_arg_value,
-                                                           arguments_list_p,
-                                                           arguments_list_len);
+  ecma_extended_object_t *ext_func_obj_p = (ecma_extended_object_t *) func_args_p->func_obj_p;
+  /* [[TODO]]: Rework builtin dispatchers */
+  return ecma_builtin_routines[ext_func_obj_p->u.built_in.id] (ext_func_obj_p->u.built_in.routine_id,
+                                                               func_args_p->this_value,
+                                                               argv,
+                                                               func_args_p->argc);
 } /* ecma_builtin_dispatch_routine */
 
 /**
- * Handle calling [[Call]] of built-in object
+ * Handle [[Call]]/[[Construct]] of built-in object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_dispatch_call (ecma_object_t *obj_p, /**< built-in object */
-                            ecma_value_t this_arg_value, /**< 'this' argument value */
-                            const ecma_value_t *arguments_list_p, /**< arguments list */
-                            uint32_t arguments_list_len) /**< arguments list length */
+ecma_builtin_dispatch_function (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_FUNCTION);
-  JERRY_ASSERT (ecma_get_object_is_builtin (obj_p));
+  JERRY_ASSERT (ecma_get_object_type (func_args_p->func_obj_p) == ECMA_OBJECT_TYPE_FUNCTION);
+  JERRY_ASSERT (ecma_get_object_is_builtin (func_args_p->func_obj_p));
+  JERRY_ASSERT (!ecma_builtin_function_is_routine (func_args_p->func_obj_p));
 
-  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
-
-  if (ecma_builtin_function_is_routine (obj_p))
-  {
-    return ecma_builtin_dispatch_routine (ext_obj_p,
-                                          this_arg_value,
-                                          arguments_list_p,
-                                          arguments_list_len);
-  }
-
+  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) func_args_p->func_obj_p;
   ecma_builtin_id_t builtin_object_id = ext_obj_p->u.built_in.id;
-  JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_call_functions) / sizeof (ecma_builtin_dispatch_call_t));
-  return ecma_builtin_call_functions[builtin_object_id] (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_dispatch_construct (ecma_object_t *obj_p, /**< built-in object */
-                                 ecma_object_t *new_target_p, /**< new target */
-                                 const ecma_value_t *arguments_list_p, /**< arguments list */
-                                 uint32_t arguments_list_len) /**< arguments list length */
-{
-  JERRY_ASSERT (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_FUNCTION);
-  JERRY_ASSERT (ecma_get_object_is_builtin (obj_p));
-
-  if (ecma_builtin_function_is_routine (obj_p))
-  {
-    return ecma_raise_type_error (ECMA_ERR_MSG ("Built-in routines have no constructor."));
-  }
-
-  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
-  ecma_builtin_id_t builtin_object_id = ext_obj_p->u.built_in.id;
-  JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_construct_functions) / sizeof (ecma_builtin_dispatch_call_t));
-
-#if ENABLED (JERRY_ESNEXT)
-  ecma_object_t *old_new_target = JERRY_CONTEXT (current_new_target);
-  JERRY_CONTEXT (current_new_target) = new_target_p;
-#else /* !ENABLED (JERRY_ESNEXT) */
-  JERRY_UNUSED (new_target_p);
-#endif /* ENABLED (JERRY_ESNEXT) */
-
-  ecma_value_t ret_value = ecma_builtin_construct_functions[builtin_object_id] (arguments_list_p, arguments_list_len);
-
-#if ENABLED (JERRY_ESNEXT)
-  JERRY_CONTEXT (current_new_target) = old_new_target;
-#endif /* ENABLED (JERRY_ESNEXT) */
-
-  return ret_value;
-} /* ecma_builtin_dispatch_construct */
+  JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_functions) / sizeof (ecma_builtin_dispatch_function_t));
+  return ecma_builtin_functions[builtin_object_id] (func_args_p);
+} /* ecma_builtin_dispatch_function */
 
 /**
  * @}

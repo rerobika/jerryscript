@@ -336,7 +336,7 @@ ecma_builtin_string_object_from_code_point (ecma_value_t this_arg, /**< 'this' a
 #endif /* ENABLED (JERRY_ESNEXT) */
 
 /**
- * Handle calling [[Call]] of built-in String object
+ * Handle [[Call]]/[[Construct]] of built-in String object
  *
  * See also:
  *          ECMA-262 v6, 21.1.1.1
@@ -344,53 +344,39 @@ ecma_builtin_string_object_from_code_point (ecma_value_t this_arg, /**< 'this' a
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_string_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                   uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_string_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  ecma_value_t ret_value = ECMA_VALUE_EMPTY;
-
-  /* 1. */
-  if (arguments_list_len == 0)
+  if (func_args_p->new_target_p == NULL)
   {
-    ret_value = ecma_make_magic_string_value (LIT_MAGIC_STRING__EMPTY);
-  }
+    /* 1. */
+    if (func_args_p->argc == 0)
+    {
+      return ecma_make_magic_string_value (LIT_MAGIC_STRING__EMPTY);
+    }
+
 #if ENABLED (JERRY_ESNEXT)
-  /* 2.a */
-  else if (ecma_is_value_symbol (arguments_list_p[0]))
-  {
-    ret_value = ecma_get_symbol_descriptive_string (arguments_list_p[0]);
-  }
+    /* 2.a */
+    if (ecma_is_value_symbol (func_args_p->argv[0]))
+    {
+      return ecma_get_symbol_descriptive_string (func_args_p->argv[0]);
+    }
 #endif /* ENABLED (JERRY_ESNEXT) */
-  /* 2.b */
-  else
-  {
-    ecma_string_t *str_p = ecma_op_to_string (arguments_list_p[0]);
+    /* 2.b */
+
+    ecma_string_t *str_p = ecma_op_to_string (func_args_p->argv[0]);
+
     if (JERRY_UNLIKELY (str_p == NULL))
     {
       return ECMA_VALUE_ERROR;
     }
 
-    ret_value = ecma_make_string_value (str_p);
+    return ecma_make_string_value (str_p);
   }
 
-  return ret_value;
-} /* ecma_builtin_string_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in String object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_string_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                        uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  return ecma_op_create_string_object (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_string_dispatch_construct */
+  return ecma_op_create_string_object (func_args_p->argv, func_args_p->argc);
+} /* ecma_builtin_string_dispatch */
 
 /**
  * @}

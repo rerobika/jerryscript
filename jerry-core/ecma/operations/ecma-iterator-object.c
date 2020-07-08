@@ -225,7 +225,8 @@ ecma_op_get_iterator (ecma_value_t value, /**< value to get iterator from */
   }
 
   ecma_object_t *method_obj_p = ecma_get_object_from_value (method);
-  ecma_value_t iterator = ecma_op_function_call (method_obj_p, value, NULL, 0);
+  ecma_func_args_t func_args = ecma_op_make_call_args (method_obj_p, value, NULL, 0);
+  ecma_value_t iterator = ecma_op_function_call (&func_args);
 
   if (use_default_method)
   {
@@ -306,16 +307,18 @@ ecma_op_iterator_next_old (ecma_value_t iterator, /**< iterator value */
   ecma_object_t *next_obj_p = ecma_get_object_from_value (func_next);
 
   bool has_value = !ecma_is_value_empty (value);
+  ecma_func_args_t func_args;
 
-  ecma_value_t result;
   if (has_value)
   {
-    result = ecma_op_function_call (next_obj_p, iterator, &value, 1);
+    func_args = ecma_op_make_call_args (next_obj_p, iterator, &value, 1);
   }
   else
   {
-    result = ecma_op_function_call (next_obj_p, iterator, NULL, 0);
+    func_args = ecma_op_make_call_args (next_obj_p, iterator, NULL, 0);
   }
+
+  ecma_value_t result = ecma_op_function_call (&func_args);
 
   ecma_free_value (func_next);
 
@@ -351,12 +354,18 @@ ecma_op_iterator_next (ecma_value_t iterator, /**< iterator value */
 
   bool has_value = !ecma_is_value_empty (value);
 
+  ecma_func_args_t func_args;
+
   if (has_value)
   {
-    return ecma_op_function_call (next_method_obj_p, iterator, &value, 1);
+    func_args = ecma_op_make_call_args (next_method_obj_p, iterator, &value, 1);
+  }
+  else
+  {
+    func_args = ecma_op_make_call_args (next_method_obj_p, iterator, NULL, 0);
   }
 
-  return ecma_op_function_call (next_method_obj_p, iterator, NULL, 0);
+  return ecma_op_function_call (&func_args);
 } /* ecma_op_iterator_next */
 
 /**
@@ -397,7 +406,8 @@ ecma_op_iterator_return (ecma_value_t iterator, /**< iterator value */
 
   ecma_object_t *return_obj_p = ecma_get_object_from_value (func_return);
 
-  ecma_value_t result = ecma_op_function_call (return_obj_p, iterator, &value, 1);
+  ecma_func_args_t func_args = ecma_op_make_call_args (return_obj_p, iterator, &value, 1);
+  ecma_value_t result = ecma_op_function_call (&func_args);
   ecma_free_value (func_return);
 
   return result;
@@ -448,8 +458,8 @@ ecma_op_iterator_throw (ecma_value_t iterator, /**< iterator value */
   }
 
   ecma_object_t *return_obj_p = ecma_get_object_from_value (func_throw);
-
-  ecma_value_t result = ecma_op_function_call (return_obj_p, iterator, &value, 1);
+  ecma_func_args_t func_args = ecma_op_make_call_args (return_obj_p, iterator, &value, 1);
+  ecma_value_t result = ecma_op_function_call (&func_args);
   ecma_free_value (func_throw);
 
   return result;
@@ -523,7 +533,8 @@ ecma_op_iterator_close (ecma_value_t iterator) /**< iterator value */
 
   /* 6. */
   ecma_object_t *return_obj_p = ecma_get_object_from_value (return_method);
-  ecma_value_t inner_result = ecma_op_function_call (return_obj_p, iterator, NULL, 0);
+  ecma_func_args_t func_args = ecma_op_make_call_args (return_obj_p, iterator, NULL, 0);
+  ecma_value_t inner_result = ecma_op_function_call (&func_args);
   ecma_deref_object (return_obj_p);
 
   /* 7. */

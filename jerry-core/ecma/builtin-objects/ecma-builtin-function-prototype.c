@@ -102,7 +102,8 @@ ecma_builtin_function_prototype_object_apply (ecma_object_t *func_obj_p, /**< th
   /* 2. */
   if (ecma_is_value_null (arg2) || ecma_is_value_undefined (arg2))
   {
-    return  ecma_op_function_call (func_obj_p, arg1, NULL, 0);
+    ecma_func_args_t func_args = ecma_op_make_call_args (func_obj_p, arg1, NULL, 0);
+    return ecma_op_function_call (&func_args);
   }
 
   /* 3. */
@@ -149,10 +150,9 @@ ecma_builtin_function_prototype_object_apply (ecma_object_t *func_obj_p, /**< th
   if (ecma_is_value_empty (ret_value))
   {
     JERRY_ASSERT (index == length);
-    ret_value = ecma_op_function_call (func_obj_p,
-                                       arg1,
-                                       arguments_list_p,
-                                       (uint32_t) length);
+
+    ecma_func_args_t func_args = ecma_op_make_call_args (func_obj_p, arg1, arguments_list_p, (uint32_t) length);
+    ret_value = ecma_op_function_call (&func_args);
   }
 
   for (uint32_t remove_index = 0; remove_index < index; remove_index++)
@@ -179,19 +179,22 @@ ecma_builtin_function_prototype_object_call (ecma_object_t *func_obj_p , /**< th
                                              const ecma_value_t *arguments_list_p, /**< list of arguments */
                                              uint32_t arguments_number) /**< number of arguments */
 {
+  ecma_func_args_t func_args;
+
   if (arguments_number == 0)
   {
     /* Even a 'this' argument is missing. */
-    return ecma_op_function_call (func_obj_p,
-                                  ECMA_VALUE_UNDEFINED,
-                                  NULL,
-                                  0);
+    func_args = ecma_op_make_call_args (func_obj_p, ECMA_VALUE_UNDEFINED, NULL, 0);
+  }
+  else
+  {
+    func_args = ecma_op_make_call_args (func_obj_p,
+                                        arguments_list_p[0],
+                                        arguments_list_p + 1,
+                                        (ecma_length_t) (arguments_number - 1u));
   }
 
-  return ecma_op_function_call (func_obj_p,
-                                arguments_list_p[0],
-                                arguments_list_p + 1,
-                                (uint32_t) (arguments_number - 1u));
+  return ecma_op_function_call (&func_args);
 } /* ecma_builtin_function_prototype_object_call */
 
 /**
@@ -384,32 +387,22 @@ ecma_builtin_function_prototype_object_bind (ecma_object_t *this_arg_obj_p , /**
 } /* ecma_builtin_function_prototype_object_bind */
 
 /**
- * Handle calling [[Call]] of built-in Function.prototype object
+ * Handle [[Call]]/[[Construct]] of built-in Function.prototype object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_function_prototype_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                               uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_function_prototype_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  return ECMA_VALUE_UNDEFINED;
-} /* ecma_builtin_function_prototype_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Function.prototype object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_function_prototype_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                                    uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ECMA_VALUE_UNDEFINED;
+  }
 
   return ecma_raise_type_error (ECMA_ERR_MSG ("'Function.prototype' is not a constructor."));
-} /* ecma_builtin_function_prototype_dispatch_construct */
+} /* ecma_builtin_function_prototype_dispatch */
 
 /**
  * Dispatcher of the built-in's routines

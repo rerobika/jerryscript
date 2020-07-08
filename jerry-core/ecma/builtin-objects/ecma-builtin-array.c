@@ -128,8 +128,8 @@ ecma_builtin_array_object_from (ecma_value_t this_arg, /**< 'this' argument */
     if (ecma_is_constructor (constructor))
     {
       ecma_object_t *constructor_obj_p = ecma_get_object_from_value (constructor);
-
-      array = ecma_op_function_construct (constructor_obj_p, constructor_obj_p, NULL, 0);
+      ecma_func_args_t func_args = ecma_op_make_construct_args (constructor_obj_p, NULL, 0);
+      array = ecma_op_function_construct (&func_args);
 
       if (ecma_is_value_undefined (array) || ecma_is_value_null (array))
       {
@@ -220,7 +220,9 @@ ecma_builtin_array_object_from (ecma_value_t this_arg, /**< 'this' argument */
         /* 6.g.vii.1 */
         ecma_value_t args_p[2] = { next_value, ecma_make_uint32_value (k) };
         /* 6.g.vii.3 */
-        mapped_value = ecma_op_function_call (mapfn_obj_p, call_this_arg, args_p, 2);
+
+        ecma_func_args_t func_args = ecma_op_make_call_args (mapfn_obj_p, call_this_arg, args_p, 2);
+        mapped_value = ecma_op_function_call (&func_args);
         ecma_free_value (args_p[1]);
         ecma_free_value (next_value);
 
@@ -292,8 +294,8 @@ iterator_cleanup:
   if (ecma_is_constructor (constructor))
   {
     ecma_object_t *constructor_obj_p = ecma_get_object_from_value (constructor);
-
-    array = ecma_op_function_construct (constructor_obj_p, constructor_obj_p, &len_value, 1);
+    ecma_func_args_t func_args = ecma_op_make_construct_args (constructor_obj_p, &len_value, 1);
+    array = ecma_op_function_construct (&func_args);
 
     if (ecma_is_value_undefined (array) || ecma_is_value_null (array))
     {
@@ -339,7 +341,8 @@ iterator_cleanup:
     {
       /* 16.d.i */
       ecma_value_t args_p[2] = { k_value, ecma_make_length_value (k) };
-      mapped_value = ecma_op_function_call (mapfn_obj_p, call_this_arg, args_p, 2);
+      ecma_func_args_t func_args = ecma_op_make_call_args (mapfn_obj_p, call_this_arg, args_p, 2);
+      mapped_value = ecma_op_function_call (&func_args);
       ecma_free_value (args_p[1]);
       ecma_free_value (k_value);
 
@@ -416,11 +419,8 @@ ecma_builtin_array_object_of (ecma_value_t this_arg, /**< 'this' argument */
   }
 
   ecma_value_t len = ecma_make_uint32_value (arguments_list_len);
-
-  ecma_value_t ret_val = ecma_op_function_construct (ecma_get_object_from_value (this_arg),
-                                                     ecma_get_object_from_value (this_arg),
-                                                     &len,
-                                                     1);
+  ecma_func_args_t func_args = ecma_op_make_construct_args (ecma_get_object_from_value (this_arg), &len, 1);
+  ecma_value_t ret_val = ecma_op_function_construct (&func_args);
 
   if (ECMA_IS_VALUE_ERROR (ret_val))
   {
@@ -479,34 +479,24 @@ ecma_builtin_array_species_get (ecma_value_t this_value) /**< This Value */
 #endif /* ENABLED (JERRY_ESNEXT) */
 
 /**
- * Handle calling [[Call]] of built-in Array object
+ * Handle [[Call]]/[[Construct]] of built-in Array object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_array_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                  uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_array_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  return ecma_op_create_array_object (arguments_list_p, arguments_list_len, true);
-} /* ecma_builtin_array_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Array object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_array_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                       uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
 #if !ENABLED (JERRY_ESNEXT)
-  return ecma_op_create_array_object (arguments_list_p, arguments_list_len, true);
+  return ecma_op_create_array_object (func_args_p->argv, func_args_p->argc, true);
 #else /* ENABLED (JERRY_ESNEXT) */
-  ecma_object_t *proto_p = ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target),
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ecma_op_create_array_object (func_args_p->argv, func_args_p->argc, true);
+  }
+
+  ecma_object_t *proto_p = ecma_op_get_prototype_from_constructor (func_args_p->new_target_p,
                                                                    ECMA_BUILTIN_ID_ARRAY_PROTOTYPE);
 
   if (proto_p == NULL)
@@ -514,7 +504,7 @@ ecma_builtin_array_dispatch_construct (const ecma_value_t *arguments_list_p, /**
     return ECMA_VALUE_ERROR;
   }
 
-  ecma_value_t result = ecma_op_create_array_object (arguments_list_p, arguments_list_len, true);
+  ecma_value_t result = ecma_op_create_array_object (func_args_p->argv, func_args_p->argc, true);
 
   if (ECMA_IS_VALUE_ERROR (result))
   {
@@ -526,8 +516,8 @@ ecma_builtin_array_dispatch_construct (const ecma_value_t *arguments_list_p, /**
   ECMA_SET_NON_NULL_POINTER (object_p->u2.prototype_cp, proto_p);
   ecma_deref_object (proto_p);
   return result;
-#endif /* ENABLED (JERRY_ESNEXT) */
-} /* ecma_builtin_array_dispatch_construct */
+#endif /* !ENABLED (JERRY_ESNEXT) */
+} /* ecma_builtin_array_dispatch */
 
 /**
  * @}

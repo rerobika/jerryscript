@@ -67,25 +67,7 @@ ecma_builtin_proxy_object_revocable (ecma_value_t this_arg, /**< 'this' argument
 } /* ecma_builtin_proxy_object_revocable */
 
 /**
- * Handle calling [[Call]] of built-in Proxy object
- *
- * See also:
- *          ES2015 26.2.2
- *
- * @return raised error
- */
-ecma_value_t
-ecma_builtin_proxy_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                  uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  /* 1. */
-  return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor Proxy requires 'new'"));
-} /* ecma_builtin_proxy_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in proxy object
+ * Handle [[Call]]/[[Construct]] of built-in Proxy object
  *
  * See also:
  *          ES2015 26.2.2
@@ -94,14 +76,19 @@ ecma_builtin_proxy_dispatch_call (const ecma_value_t *arguments_list_p, /**< arg
  *         new proxy object - otherwise
  */
 ecma_value_t
-ecma_builtin_proxy_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                       uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_proxy_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
+
+  /* 1. */
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor Proxy requires 'new'"));
+  }
 
   /* 2. */
-  ecma_object_t *proxy_p = ecma_proxy_create (arguments_list_len > 0 ? arguments_list_p[0] : ECMA_VALUE_UNDEFINED,
-                                              arguments_list_len > 1 ? arguments_list_p[1] : ECMA_VALUE_UNDEFINED);
+  ecma_object_t *proxy_p = ecma_proxy_create (func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED,
+                                              func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED);
 
   if (JERRY_UNLIKELY (proxy_p == NULL))
   {
@@ -109,7 +96,7 @@ ecma_builtin_proxy_dispatch_construct (const ecma_value_t *arguments_list_p, /**
   }
 
   return ecma_make_object_value (proxy_p);
-} /* ecma_builtin_proxy_dispatch_construct */
+} /* ecma_builtin_proxy_dispatch */
 
 /**
  * @}

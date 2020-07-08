@@ -42,33 +42,17 @@
  */
 
 /**
- * Handle calling [[Call]] of built-in Function object
+ * Handle [[Call]]/[[Construct]] of built-in Function object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_function_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                     uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_function_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  return ecma_builtin_function_dispatch_construct (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_function_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Function object
- *
- * See also:
- *          ECMA-262 v5, 15.3.
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_function_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                          uint32_t arguments_list_len) /**< number of arguments */
-{
-  return ecma_op_create_dynamic_function (arguments_list_p, arguments_list_len, ECMA_PARSE_NO_OPTS);
-} /* ecma_builtin_function_dispatch_construct */
+  return ecma_op_create_dynamic_function (func_args_p->argv, func_args_p->argc, ECMA_PARSE_NO_OPTS);
+} /* ecma_builtin_function_dispatch */
 
 /**
  * @}

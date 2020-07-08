@@ -183,7 +183,7 @@ ecma_builtin_typedarray_of (ecma_value_t this_arg, /**< 'this' argument */
 } /* ecma_builtin_typedarray_of */
 
 /**
- * Handle calling [[Call]] of built-in %TypedArray% object
+ * Handle [[Call]]/[[Construct]] of built-in %TypedArray% object
  *
  * ES2015 22.2.1 If %TypedArray% is directly called or
  * called as part of a new expression an exception is thrown
@@ -191,30 +191,12 @@ ecma_builtin_typedarray_of (ecma_value_t this_arg, /**< 'this' argument */
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_typedarray_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                       uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_typedarray_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  return ecma_raise_type_error (ECMA_ERR_MSG ("TypedArray intrinstic cannot be directly called"));
-} /* ecma_builtin_typedarray_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in %TypedArray% object
- *
- * ES2015 22.2.1 If %TypedArray% is directly called or
- * called as part of a new expression an exception is thrown
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_typedarray_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                            uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  return ecma_raise_type_error (ECMA_ERR_MSG ("TypedArray intrinstic cannot be called by a 'new' expression"));
-} /* ecma_builtin_typedarray_dispatch_construct */
+  return ecma_raise_type_error (ECMA_ERR_MSG ("TypedArray intrinstic cannot be directly called or invoked."));
+} /* ecma_builtin_typedarray_dispatch */
 
 /**
  * 22.2.2.4 get %TypedArray% [ @@species ] accessor

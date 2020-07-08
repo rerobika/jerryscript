@@ -997,11 +997,11 @@ ecma_op_implicit_constructor_handler_heritage_cb (const ecma_value_t function_ob
   }
 
   ecma_object_t *super_ctor_p = ecma_get_object_from_value (super_ctor);
-
-  ecma_value_t result = ecma_op_function_construct (super_ctor_p,
-                                                    JERRY_CONTEXT (current_new_target),
-                                                    args_p,
-                                                    args_count);
+  ecma_func_args_t func_args = ecma_op_make_construct_args_new_target (super_ctor_p,
+                                                                       JERRY_CONTEXT (current_new_target),
+                                                                       args_p,
+                                                                       args_count);
+  ecma_value_t result = ecma_op_function_construct (&func_args);
 
   if (ecma_is_value_object (result))
   {

@@ -47,51 +47,32 @@
  */
 
 /**
- * Handle calling [[Call]] of built-in Number object
+ * Handle [[Call]]/[[Construct]] of built-in Number object
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_number_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                   uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_number_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  ecma_value_t ret_value = ECMA_VALUE_EMPTY;
-
-  if (arguments_list_len == 0)
+  if (func_args_p->new_target_p == NULL)
   {
-    ret_value = ecma_make_integer_value (0);
-  }
-  else
-  {
-    ret_value = ecma_op_to_number (arguments_list_p[0]);
+    if (func_args_p->argc == 0)
+    {
+      return ecma_make_integer_value (0);
+    }
+
+    return ecma_op_to_number (func_args_p->argv[0]);
   }
 
-  return ret_value;
-} /* ecma_builtin_number_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in Number object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_number_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                        uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  if (arguments_list_len == 0)
+  if (func_args_p->argc == 0)
   {
-    ecma_value_t completion = ecma_op_create_number_object (ecma_make_integer_value (0));
-    return completion;
+    return ecma_op_create_number_object (ecma_make_integer_value (0));
   }
-  else
-  {
-    return ecma_op_create_number_object (arguments_list_p[0]);
-  }
-} /* ecma_builtin_number_dispatch_construct */
+
+  return ecma_op_create_number_object (func_args_p->argv[0]);
+} /* ecma_builtin_number_dispatch */
 
 #if ENABLED (JERRY_ESNEXT)
 

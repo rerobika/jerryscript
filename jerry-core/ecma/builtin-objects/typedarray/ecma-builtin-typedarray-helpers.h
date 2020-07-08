@@ -27,9 +27,7 @@
  */
 
 ecma_value_t
-ecma_typedarray_helper_dispatch_construct (const ecma_value_t *arguments_list_p,
-                                           uint32_t arguments_list_len,
-                                           ecma_typedarray_type_t typedarray_id);
+ecma_typedarray_helper_dispatch (ecma_func_args_t *func_arg_p, ecma_typedarray_type_t typedarray_id);
 
 /**
  * @}

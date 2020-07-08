@@ -96,16 +96,10 @@ ecma_collection_t *
 ecma_proxy_object_own_property_keys (ecma_object_t *obj_p);
 
 ecma_value_t
-ecma_proxy_object_call (ecma_object_t *obj_p,
-                        ecma_value_t this_argument,
-                        const ecma_value_t *args_p,
-                        uint32_t argc);
+ecma_proxy_object_call (ecma_func_args_t *func_args_p);
 
 ecma_value_t
-ecma_proxy_object_construct (ecma_object_t *obj_p,
-                             ecma_object_t *new_target_p,
-                             const ecma_value_t *args_p,
-                             uint32_t argc);
+ecma_proxy_object_construct (ecma_func_args_t *func_args_p);
 
 #endif /* ENABLED (JERRY_BUILTIN_PROXY) */
 

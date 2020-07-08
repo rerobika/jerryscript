@@ -43,33 +43,17 @@
  */
 
 /**
- * Handle calling [[Call]] of Uint32Array
+ * Handle [[Call]]/[[Construct]] of Uint32Array
  *
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_uint32array_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                        uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_uint32array_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  return ecma_raise_type_error (ECMA_ERR_MSG ("Uint32Array cannot be directly called"));
-} /* ecma_builtin_uint32array_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of Uint32Array
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_uint32array_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                             uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  return ecma_typedarray_helper_dispatch_construct (arguments_list_p, arguments_list_len,
-                                                    ECMA_UINT32_ARRAY);
-} /* ecma_builtin_uint32array_dispatch_construct */
+  return ecma_typedarray_helper_dispatch (func_args_p, ECMA_UINT32_ARRAY);
+} /* ecma_builtin_uint32array_dispatch */
 
 /**
   * @}

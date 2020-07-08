@@ -219,10 +219,11 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
       return ECMA_VALUE_ERROR;
     }
 
-    ecma_value_t ret_value = ecma_op_function_construct (target_p,
-                                                         new_target_p,
-                                                         coll_p->buffer_p,
-                                                         coll_p->item_count);
+    ecma_func_args_t func_args = ecma_op_make_construct_args_new_target (target_p,
+                                                                         new_target_p,
+                                                                         coll_p->buffer_p,
+                                                                         coll_p->item_count);
+    ecma_value_t ret_value = ecma_op_function_construct (&func_args);
 
     ecma_collection_free (coll_p);
     return ret_value;

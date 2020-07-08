@@ -713,10 +713,8 @@ ecma_op_array_species_create (ecma_object_t *original_array_p, /**< The object f
 
   ecma_value_t len_val = ecma_make_length_value (length);
   ecma_object_t *ctor_object_p = ecma_get_object_from_value (constructor);
-  ecma_value_t ret_val = ecma_op_function_construct (ctor_object_p,
-                                                     ctor_object_p,
-                                                     &len_val,
-                                                     1);
+  ecma_func_args_t func_args = ecma_op_make_construct_args (ctor_object_p, &len_val, 1);
+  ecma_value_t ret_val = ecma_op_function_construct (&func_args);
 
   ecma_deref_object (ctor_object_p);
   ecma_free_value (len_val);
@@ -1206,7 +1204,8 @@ ecma_array_object_to_string (ecma_value_t this_arg) /**< this argument */
     /* 4. */
     ecma_object_t *join_func_obj_p = ecma_get_object_from_value (join_value);
 
-    ret_value = ecma_op_function_call (join_func_obj_p, this_arg, NULL, 0);
+    ecma_func_args_t func_args = ecma_op_make_call_args (join_func_obj_p, this_arg, NULL, 0);
+    ret_value = ecma_op_function_call (&func_args);
   }
 
   ecma_free_value (join_value);

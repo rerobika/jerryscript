@@ -62,7 +62,7 @@ ecma_builtin_arraybuffer_object_is_view (ecma_value_t this_arg, /**< 'this' argu
 } /* ecma_builtin_arraybuffer_object_is_view */
 
 /**
- * Handle calling [[Call]] of built-in ArrayBuffer object
+ * Handle [[Call]]/[[Construct]] of built-in ArrayBuffer object
  *
  * ES2015 24.1.2 ArrayBuffer is not intended to be called as
  * a function and will throw an exception when called in
@@ -71,27 +71,17 @@ ecma_builtin_arraybuffer_object_is_view (ecma_value_t this_arg, /**< 'this' argu
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_arraybuffer_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                        uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_arraybuffer_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_ASSERT (func_args_p != NULL);
 
-  return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor ArrayBuffer requires 'new'"));
-} /* ecma_builtin_arraybuffer_dispatch_call */
+  if (func_args_p->new_target_p == NULL)
+  {
+    return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor ArrayBuffer requires 'new'"));
+  }
 
-/**
- * Handle calling [[Construct]] of built-in ArrayBuffer object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_arraybuffer_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                             uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  return ecma_op_create_arraybuffer_object (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_arraybuffer_dispatch_construct */
+  return ecma_op_create_arraybuffer_object (func_args_p->argv, func_args_p->argc);
+} /* ecma_builtin_arraybuffer_dispatch */
 
 /**
  * 24.1.3.3 get ArrayBuffer [ @@species ] accessor

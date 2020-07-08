@@ -42,7 +42,7 @@
  */
 
 /**
- * Handle calling [[Call]] of built-in [[ThrowTypeError]] object
+ * Handle [[Call]]/[[Construct]] of built-in [[ThrowTypeError]] object
  *
  * See also:
  *          ECMA-262 v5, 13.2.3
@@ -50,31 +50,13 @@
  * @return ecma value
  */
 ecma_value_t
-ecma_builtin_type_error_thrower_dispatch_call (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                               uint32_t arguments_list_len) /**< number of arguments */
+ecma_builtin_type_error_thrower_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
+  JERRY_UNUSED (func_args_p);
 
   return ecma_raise_type_error (ECMA_ERR_MSG ("'caller', 'callee', and 'arguments' properties may not be accessed"
                                               " on strict mode functions or the arguments objects for calls to them"));
-} /* ecma_builtin_type_error_thrower_dispatch_call */
-
-/**
- * Handle calling [[Construct]] of built-in [[ThrowTypeError]] object
- *
- * See also:
- *          ECMA-262 v5, 13.2.3
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_type_error_thrower_dispatch_construct (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                                    uint32_t arguments_list_len) /**< number of arguments */
-{
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-
-  return ecma_builtin_type_error_thrower_dispatch_call (arguments_list_p, arguments_list_len);
-} /* ecma_builtin_type_error_thrower_dispatch_construct */
+} /* ecma_builtin_type_error_thrower_dispatch */
 
 /**
  * @}
