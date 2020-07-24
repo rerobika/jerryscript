@@ -1,0 +1,25 @@
+name: Conformance
+
+on:
+  push:
+    branches: [ master, gh_actions ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  RUNNER: tools/run-tests.py
+
+jobs:
+  Conformance_Tests_ES5_1:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: Test262 - ES5.1
+        run: $RUNNER --test262
+
+  Conformance_Tests_ES2015:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: Test262 - ES2015
+        run: $RUNNER --test262-es2015 update
