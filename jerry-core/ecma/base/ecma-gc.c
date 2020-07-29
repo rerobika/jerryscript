@@ -434,9 +434,10 @@ ecma_gc_mark_executable_object (ecma_object_t *object_p) /**< object */
 
   ecma_gc_set_object_visited (executable_object_p->frame_ctx.lex_env_p);
 
-  if (ecma_is_value_object (executable_object_p->frame_ctx.this_binding))
+  ecma_value_t this_binding = executable_object_p->frame_ctx.call_frame.func_args_p->this_value;
+  if (ecma_is_value_object (this_binding))
   {
-    ecma_gc_set_object_visited (ecma_get_object_from_value (executable_object_p->frame_ctx.this_binding));
+    ecma_gc_set_object_visited (ecma_get_object_from_value (this_binding));
   }
 
   const ecma_compiled_code_t *bytecode_header_p = executable_object_p->frame_ctx.bytecode_header_p;
@@ -942,6 +943,8 @@ ecma_gc_free_executable_object (ecma_object_t *object_p) /**< object */
 
   ecma_bytecode_deref ((ecma_compiled_code_t *) bytecode_header_p);
 
+  ecma_value_t this_binding = executable_object_p->frame_ctx.call_frame.func_args_p->this_value;
+
   if (executable_object_p->extended_object.u.class_prop.extra_info & ECMA_ASYNC_GENERATOR_CALLED)
   {
     ecma_value_t task = executable_object_p->extended_object.u.class_prop.u.head;
@@ -959,12 +962,14 @@ ecma_gc_free_executable_object (ecma_object_t *object_p) /**< object */
     }
   }
 
+  jmem_heap_free_block (executable_object_p->frame_ctx.call_frame.func_args_p, sizeof (ecma_func_args_t));
+
   if (executable_object_p->extended_object.u.class_prop.extra_info & ECMA_EXECUTABLE_OBJECT_COMPLETED)
   {
     return size;
   }
 
-  ecma_free_value_if_not_object (executable_object_p->frame_ctx.this_binding);
+  ecma_free_value_if_not_object (this_binding);
 
   ecma_value_t *register_p = VM_GET_REGISTERS (&executable_object_p->frame_ctx);
   ecma_value_t *register_end_p = register_p + register_end;

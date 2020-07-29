@@ -1599,17 +1599,7 @@ jerry_create_promise (void)
   jerry_assert_api_available ();
 
 #if ENABLED (JERRY_BUILTIN_PROMISE)
-  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target);
-
-  if (old_new_target_p == NULL)
-  {
-    JERRY_CONTEXT (current_new_target) = ecma_builtin_get (ECMA_BUILTIN_ID_PROMISE);
-  }
-
-  ecma_value_t promise_value = ecma_op_create_promise_object (ECMA_VALUE_EMPTY, ECMA_PROMISE_EXECUTOR_EMPTY);
-
-  JERRY_CONTEXT (current_new_target) = old_new_target_p;
-  return promise_value;
+  return ecma_op_create_promise_object (ECMA_VALUE_EMPTY, ECMA_PROMISE_EXECUTOR_EMPTY);
 #else /* !ENABLED (JERRY_BUILTIN_PROMISE) */
   return jerry_throw (ecma_raise_type_error (ECMA_ERR_MSG ("Promise not supported.")));
 #endif /* ENABLED (JERRY_BUILTIN_PROMISE) */
@@ -3586,9 +3576,17 @@ jerry_get_resource_name (const jerry_value_t value) /**< jerry api value */
 #if ENABLED (JERRY_RESOURCE_NAME)
   if (ecma_is_value_undefined (value))
   {
-    if (JERRY_CONTEXT (vm_top_context_p) != NULL)
+    if (JERRY_CONTEXT (call_stack_p))
     {
-      return ecma_copy_value (ecma_get_resource_name (JERRY_CONTEXT (vm_top_context_p)->bytecode_header_p));
+      ecma_call_stack_t *current_p = JERRY_CONTEXT (call_stack_p);
+      ecma_object_t *func_obj_p = current_p->func_args_p->func_obj_p;
+
+      if (ecma_get_object_type (func_obj_p) == ECMA_OBJECT_TYPE_FUNCTION
+          && !ecma_get_object_is_builtin (func_obj_p))
+      {
+        vm_frame_ctx_t *frame_ctx_p = (vm_frame_ctx_t *) current_p;
+        return ecma_copy_value (ecma_get_resource_name (frame_ctx_p->bytecode_header_p));
+      }
     }
   }
   else if (ecma_is_value_object (value))
@@ -3625,7 +3623,7 @@ jerry_value_t
 jerry_get_new_target (void)
 {
 #if ENABLED (JERRY_ESNEXT)
-  ecma_object_t *current_new_target = JERRY_CONTEXT (current_new_target);
+  ecma_object_t *current_new_target = JERRY_CONTEXT (call_stack_p)->func_args_p->new_target_p;
 
   if (current_new_target == NULL)
   {
@@ -3963,15 +3961,10 @@ jerry_create_dataview (const jerry_value_t array_buffer, /**< arraybuffer to cre
     ecma_make_uint32_value (byte_offset),
     ecma_make_uint32_value (byte_length)
   };
-  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target);
-  if (old_new_target_p == NULL)
-  {
-    JERRY_CONTEXT (current_new_target) = ecma_builtin_get (ECMA_BUILTIN_ID_DATAVIEW);
-  }
 
-  ecma_value_t dataview_value = ecma_op_dataview_create (arguments_p, 3);
-  JERRY_CONTEXT (current_new_target) = old_new_target_p;
-  return jerry_return (dataview_value);
+  ecma_func_args_t func_args = ecma_op_make_construct_args (NULL, arguments_p, 3);
+
+  return jerry_return (ecma_op_dataview_create (&func_args));
 #else /* !ENABLED (JERRY_BUILTIN_DATAVIEW) */
   JERRY_UNUSED (array_buffer);
   JERRY_UNUSED (byte_offset);
@@ -4526,24 +4519,13 @@ jerry_create_container (jerry_container_type_t container_type, /**< Type of the 
       return jerry_throw (ecma_raise_type_error (ECMA_ERR_MSG ("Invalid container type.")));
     }
   }
-  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target);
-
-  if (old_new_target_p == NULL)
-  {
-    JERRY_CONTEXT (current_new_target) = ecma_builtin_get (ctor_id);
-  }
 
   ecma_func_args_t func_args = ecma_op_make_construct_args_new_target (NULL,
-                                                                       JERRY_CONTEXT (current_new_target),
+                                                                       ecma_builtin_get (ctor_id),
                                                                        arguments_list_p,
                                                                        arguments_list_len);
 
-  ecma_value_t container_value = ecma_op_container_create (&func_args,
-                                                           lit_id,
-                                                           proto_id);
-
-  JERRY_CONTEXT (current_new_target) = old_new_target_p;
-  return container_value;
+  return ecma_op_container_create (&func_args, lit_id, proto_id);
 #else /* !ENABLED (JERRY_BUILTIN_CONTAINER) */
   JERRY_UNUSED (arguments_list_p);
   JERRY_UNUSED (arguments_list_len);

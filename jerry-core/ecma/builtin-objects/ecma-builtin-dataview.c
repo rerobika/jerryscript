@@ -51,7 +51,7 @@ ecma_builtin_dataview_dispatch (ecma_func_args_t *func_args_p) /**< function arg
     return ecma_raise_type_error (ECMA_ERR_MSG ("Constructor DataView requires 'new'."));
   }
 
-  return ecma_op_dataview_create (func_args_p->argv, func_args_p->argc);
+  return ecma_op_dataview_create (func_args_p);
 } /* ecma_builtin_dataview_dispatch */
 
 /**

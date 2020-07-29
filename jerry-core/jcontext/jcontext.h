@@ -152,7 +152,7 @@ struct jerry_context_t
   ecma_module_context_t *module_top_context_p; /**< top (current) module parser context */
 #endif /* ENABLED (JERRY_MODULE_SYSTEM) */
 
-  vm_frame_ctx_t *vm_top_context_p; /**< top (current) interpreter context */
+  ecma_call_stack_t *call_stack_p;
   jerry_context_data_header_t *context_data_p; /**< linked list of user-provided context-specific pointers */
   size_t ecma_gc_objects_number; /**< number of currently allocated objects */
   size_t ecma_gc_new_objects; /**< number of newly allocated objects since last GC session */
@@ -226,9 +226,7 @@ struct jerry_context_t
    * * NULL (0x0): the current "new.target" is undefined, that is the execution is inside a normal method.
    * * Any other valid function object pointer: the current "new.target" is valid and it is constructor call.
    */
-  ecma_object_t *current_new_target;
-  ecma_object_t *current_function_obj_p; /** currently invoked function object
-                                             (Note: currently used only in generator functions) */
+  ecma_object_t *EXTERNAL_new_target;
 #endif /* ENABLED (JERRY_ESNEXT) */
 };
 

@@ -70,13 +70,6 @@ vm_var_decl (ecma_object_t *lex_env_p, /**< target lexical environment */
                                                                     is_configurable_bindings);
 
     JERRY_ASSERT (ecma_is_value_empty (completion_value));
-
-    /* Skipping SetMutableBinding as we have already checked that there were not
-     * any binding with specified name in current lexical environment
-     * and CreateMutableBinding sets the created binding's value to undefined */
-    JERRY_ASSERT (ecma_is_value_undefined (ecma_op_get_binding_value (lex_env_p,
-                                                                      var_name_str_p,
-                                                                      vm_is_strict_mode ())));
   }
 
   return ECMA_VALUE_EMPTY;
@@ -670,7 +663,8 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
       class_id = LIT_MAGIC_STRING_ASYNC_GENERATOR_UL;
     }
 
-    proto_p = ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_function_obj_p), default_proto_id);
+    proto_p = ecma_op_get_prototype_from_constructor (frame_ctx_p->call_frame.func_args_p->func_obj_p,
+                                                      default_proto_id);
   }
 
   ecma_object_t *object_p = ecma_create_object (proto_p,
@@ -692,6 +686,10 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
 
   vm_frame_ctx_t *new_frame_ctx_p = &(executable_object_p->frame_ctx);
   *new_frame_ctx_p = *frame_ctx_p;
+
+  ecma_func_args_t *func_args_p = (ecma_func_args_t *) jmem_heap_alloc_block (sizeof (ecma_func_args_t));
+  *func_args_p = *frame_ctx_p->call_frame.func_args_p;
+  new_frame_ctx_p->call_frame.func_args_p = func_args_p;
 
   /* The old register values are discarded. */
   ecma_value_t *new_registers_p = VM_GET_REGISTERS (new_frame_ctx_p);
@@ -734,9 +732,10 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
 
   JERRY_ASSERT (new_frame_ctx_p->block_result == ECMA_VALUE_UNDEFINED);
 
-  new_frame_ctx_p->this_binding = ecma_copy_value_if_not_object (new_frame_ctx_p->this_binding);
+  ecma_value_t this_binding = new_frame_ctx_p->call_frame.func_args_p->this_value;
+  new_frame_ctx_p->call_frame.func_args_p->this_value = ecma_copy_value_if_not_object (this_binding);
 
-  JERRY_CONTEXT (vm_top_context_p) = new_frame_ctx_p->prev_context_p;
+  JERRY_CONTEXT (call_stack_p) = new_frame_ctx_p->call_frame.prev_p;
 
   return executable_object_p;
 } /* opfunc_create_executable_object */
@@ -815,16 +814,14 @@ opfunc_resume_executable_object (vm_executable_object_t *executable_object_p, /*
 
   executable_object_p->extended_object.u.class_prop.extra_info |= ECMA_EXECUTABLE_OBJECT_RUNNING;
 
-  executable_object_p->frame_ctx.prev_context_p = JERRY_CONTEXT (vm_top_context_p);
-  JERRY_CONTEXT (vm_top_context_p) = &executable_object_p->frame_ctx;
+  executable_object_p->frame_ctx.call_frame.prev_p = JERRY_CONTEXT (call_stack_p);
+  // executable_object_p->frame_ctx.call_frame.func_args_p = ;
+  JERRY_CONTEXT (call_stack_p) = &executable_object_p->frame_ctx.call_frame;
 
   /* inside the generators the "new.target" is always "undefined" as it can't be invoked with "new" */
-  ecma_object_t *old_new_target = JERRY_CONTEXT (current_new_target);
-  JERRY_CONTEXT (current_new_target) = NULL;
-
+  JERRY_ASSERT (executable_object_p->frame_ctx.call_frame.func_args_p->new_target_p == NULL);
   ecma_value_t result = vm_execute (&executable_object_p->frame_ctx);
 
-  JERRY_CONTEXT (current_new_target) = old_new_target;
   executable_object_p->extended_object.u.class_prop.extra_info &= (uint16_t) ~ECMA_EXECUTABLE_OBJECT_RUNNING;
 
   if (executable_object_p->frame_ctx.call_operation != VM_EXEC_RETURN)
@@ -836,7 +833,7 @@ opfunc_resume_executable_object (vm_executable_object_t *executable_object_p, /*
     return result;
   }
 
-  JERRY_CONTEXT (vm_top_context_p) = executable_object_p->frame_ctx.prev_context_p;
+  JERRY_CONTEXT (call_stack_p) = executable_object_p->frame_ctx.call_frame.prev_p;
 
   register_p = VM_GET_REGISTERS (&executable_object_p->frame_ctx);
   stack_top_p = executable_object_p->frame_ctx.stack_top_p;
@@ -931,15 +928,11 @@ opfunc_async_create_and_await (vm_frame_ctx_t *frame_ctx_p, /**< frame context *
   ecma_deref_object ((ecma_object_t *) executable_object_p);
   ecma_free_value (result);
 
-  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target);
-  JERRY_CONTEXT (current_new_target) = promise_p;
-
   result = ecma_op_create_promise_object (ECMA_VALUE_EMPTY, ECMA_PROMISE_EXECUTOR_EMPTY);
 
   JERRY_ASSERT (ecma_is_value_object (result));
   executable_object_p->frame_ctx.block_result = result;
 
-  JERRY_CONTEXT (current_new_target) = old_new_target_p;
   return result;
 } /* opfunc_async_create_and_await */
 
@@ -959,7 +952,7 @@ ecma_op_implicit_constructor_handler_cb (const ecma_value_t function_obj, /**< t
 {
   JERRY_UNUSED_4 (function_obj, this_val, args_p, args_count);
 
-  if (JERRY_CONTEXT (current_new_target) == NULL)
+  if (JERRY_CONTEXT (EXTERNAL_new_target) == NULL)
   {
     return ecma_raise_type_error (ECMA_ERR_MSG ("Class constructor cannot be invoked without 'new'."));
   }
@@ -983,7 +976,7 @@ ecma_op_implicit_constructor_handler_heritage_cb (const ecma_value_t function_ob
 {
   JERRY_UNUSED_4 (function_obj, this_val, args_p, args_count);
 
-  if (JERRY_CONTEXT (current_new_target) == NULL)
+  if (JERRY_CONTEXT (EXTERNAL_new_target) == NULL)
   {
     return ecma_raise_type_error (ECMA_ERR_MSG ("Class constructor cannot be invoked without 'new'."));
   }
@@ -998,14 +991,14 @@ ecma_op_implicit_constructor_handler_heritage_cb (const ecma_value_t function_ob
 
   ecma_object_t *super_ctor_p = ecma_get_object_from_value (super_ctor);
   ecma_func_args_t func_args = ecma_op_make_construct_args_new_target (super_ctor_p,
-                                                                       JERRY_CONTEXT (current_new_target),
+                                                                       JERRY_CONTEXT (EXTERNAL_new_target),
                                                                        args_p,
                                                                        args_count);
   ecma_value_t result = ecma_op_function_construct (&func_args);
 
   if (ecma_is_value_object (result))
   {
-    ecma_value_t proto_value = ecma_op_object_get_by_magic_id (JERRY_CONTEXT (current_new_target),
+    ecma_value_t proto_value = ecma_op_object_get_by_magic_id (JERRY_CONTEXT (EXTERNAL_new_target),
                                                                LIT_MAGIC_STRING_PROTOTYPE);
     if (ECMA_IS_VALUE_ERROR (proto_value))
     {
@@ -1403,7 +1396,8 @@ opfunc_form_super_reference (ecma_value_t **vm_stack_top_p, /**< current vm stac
     return ECMA_VALUE_ERROR;
   }
 
-  ecma_value_t result = ecma_op_object_get_with_receiver (parent_p, prop_name_p, frame_ctx_p->this_binding);
+  ecma_value_t this_binding = frame_ctx_p->call_frame.func_args_p->this_value;
+  ecma_value_t result = ecma_op_object_get_with_receiver (parent_p, prop_name_p, this_binding);
   ecma_deref_ecma_string (prop_name_p);
   ecma_deref_object (parent_p);
 
@@ -1414,7 +1408,7 @@ opfunc_form_super_reference (ecma_value_t **vm_stack_top_p, /**< current vm stac
 
   if (opcode == CBC_EXT_SUPER_PROP_LITERAL_REFERENCE || opcode == CBC_EXT_SUPER_PROP_REFERENCE)
   {
-    *stack_top_p++ = ecma_copy_value (frame_ctx_p->this_binding);
+    *stack_top_p++ = ecma_copy_value (this_binding);
     *stack_top_p++ = ECMA_VALUE_UNDEFINED;
   }
 
@@ -1455,10 +1449,11 @@ opfunc_assign_super_reference (ecma_value_t **vm_stack_top_p, /**< vm stack top 
 
   bool is_strict = (frame_ctx_p->bytecode_header_p->status_flags & CBC_CODE_FLAGS_STRICT_MODE) != 0;
 
+  ecma_value_t this_binding = frame_ctx_p->call_frame.func_args_p->this_value;
   ecma_value_t result = ecma_op_object_put_with_receiver (base_obj_p,
                                                           prop_name_p,
                                                           stack_top_p[-1],
-                                                          frame_ctx_p->this_binding,
+                                                          this_binding,
                                                           is_strict);
 
   ecma_deref_ecma_string (prop_name_p);

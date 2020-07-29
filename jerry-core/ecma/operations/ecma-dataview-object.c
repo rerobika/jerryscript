@@ -43,13 +43,12 @@
  *         raised error - otherwise
  */
 ecma_value_t
-ecma_op_dataview_create (const ecma_value_t *arguments_list_p, /**< arguments list */
-                         uint32_t arguments_list_len) /**< number of arguments */
+ecma_op_dataview_create (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-  JERRY_ASSERT (JERRY_CONTEXT (current_new_target));
+  JERRY_ASSERT (func_args_p != NULL);
+  JERRY_ASSERT (func_args_p->new_target_p || func_args_p->func_obj_p == NULL);
 
-  ecma_value_t buffer = arguments_list_len > 0 ? arguments_list_p[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t buffer = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
 
   /* 2. */
   if (!ecma_is_value_object (buffer))
@@ -68,14 +67,14 @@ ecma_op_dataview_create (const ecma_value_t *arguments_list_p, /**< arguments li
   /* 4 - 6. */
   uint32_t offset = 0;
 
-  if (arguments_list_len > 1)
+  if (func_args_p->argc > 1)
   {
     ecma_number_t number_offset, offset_num;
-    if (ECMA_IS_VALUE_ERROR (ecma_get_number (arguments_list_p[1], &number_offset)))
+    if (ECMA_IS_VALUE_ERROR (ecma_get_number (func_args_p->argv[1], &number_offset)))
     {
       return ECMA_VALUE_ERROR;
     }
-    if (ECMA_IS_VALUE_ERROR (ecma_op_to_integer (arguments_list_p[1], &offset_num)))
+    if (ECMA_IS_VALUE_ERROR (ecma_op_to_integer (func_args_p->argv[1], &offset_num)))
     {
       return ECMA_VALUE_ERROR;
     }
@@ -106,11 +105,11 @@ ecma_op_dataview_create (const ecma_value_t *arguments_list_p, /**< arguments li
 
   /* 11 - 12. */
   uint32_t view_byte_length;
-  if (arguments_list_len > 2 && !ecma_is_value_undefined (arguments_list_p[2]))
+  if (func_args_p->argc > 2 && !ecma_is_value_undefined (func_args_p->argv[2]))
   {
     /* 12.a */
     ecma_length_t view_byte_to_length;
-    ecma_value_t byte_length_value = ecma_op_to_length (arguments_list_p[2], &view_byte_to_length);
+    ecma_value_t byte_length_value = ecma_op_to_length (func_args_p->argv[2], &view_byte_to_length);
 
     /* 12.b */
     if (ECMA_IS_VALUE_ERROR (byte_length_value))
@@ -134,7 +133,9 @@ ecma_op_dataview_create (const ecma_value_t *arguments_list_p, /**< arguments li
   }
 
   /* 13. */
-  ecma_object_t *prototype_obj_p = ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target),
+  ecma_object_t *ctor_p = (func_args_p->func_obj_p == NULL ? ecma_builtin_get (ECMA_BUILTIN_ID_DATAVIEW)
+                                                           : func_args_p->new_target_p);
+  ecma_object_t *prototype_obj_p = ecma_op_get_prototype_from_constructor (ctor_p,
                                                                            ECMA_BUILTIN_ID_DATAVIEW_PROTOTYPE);
   if (JERRY_UNLIKELY (prototype_obj_p == NULL))
   {

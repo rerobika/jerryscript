@@ -40,14 +40,13 @@
  */
 typedef struct vm_frame_ctx_t
 {
+  ecma_call_stack_t call_frame;                       /**< [[TODO]] */
   const ecma_compiled_code_t *bytecode_header_p;      /**< currently executed byte-code data */
   const uint8_t *byte_code_p;                         /**< current byte code pointer */
   const uint8_t *byte_code_start_p;                   /**< byte code start pointer */
   ecma_value_t *stack_top_p;                          /**< stack top pointer */
   ecma_value_t *literal_start_p;                      /**< literal list start pointer */
   ecma_object_t *lex_env_p;                           /**< current lexical environment */
-  struct vm_frame_ctx_t *prev_context_p;              /**< previous context */
-  ecma_value_t this_binding;                          /**< this binding */
   ecma_value_t block_result;                          /**< block result */
 #if ENABLED (JERRY_LINE_INFO)
   uint32_t current_line;                              /**< currently executed line */

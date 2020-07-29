@@ -684,8 +684,6 @@ ecma_builtin_date_dispatch (ecma_func_args_t *func_args_p) /**< function argumen
   }
 
 #if ENABLED (JERRY_ESNEXT)
-  JERRY_ASSERT (JERRY_CONTEXT (current_new_target));
-
   ecma_object_t *prototype_obj_p = ecma_op_get_prototype_from_constructor (func_args_p->new_target_p,
                                                                            ECMA_BUILTIN_ID_DATE_PROTOTYPE);
   if (JERRY_UNLIKELY (prototype_obj_p == NULL))

@@ -14,42 +14,11 @@
  */
 
 #include "ecma-array-object.h"
+#include "ecma-builtins.h"
 #include "ecma-helpers.h"
 #include "jcontext.h"
 #include "lit-char-helpers.h"
 #include "vm.h"
-
-/**
- * Check whether currently executed code is strict mode code
- *
- * @return true - current code is executed in strict mode,
- *         false - otherwise
- */
-bool
-vm_is_strict_mode (void)
-{
-  JERRY_ASSERT (JERRY_CONTEXT (vm_top_context_p) != NULL);
-
-  return JERRY_CONTEXT (vm_top_context_p)->bytecode_header_p->status_flags & CBC_CODE_FLAGS_STRICT_MODE;
-} /* vm_is_strict_mode */
-
-/**
- * Check whether currently performed call (on top of call-stack) is performed in form,
- * meeting conditions of 'Direct Call to Eval' (see also: ECMA-262 v5, 15.1.2.1.1)
- *
- * Warning:
- *         the function should only be called from implementation
- *         of built-in 'eval' routine of Global object
- *
- * @return true - currently performed call is performed through 'eval' identifier,
- *                without 'this' argument,
- *         false - otherwise
- */
-inline bool JERRY_ATTR_ALWAYS_INLINE
-vm_is_direct_eval_form_call (void)
-{
-  return (JERRY_CONTEXT (status_flags) & ECMA_STATUS_DIRECT_EVAL) != 0;
-} /* vm_is_direct_eval_form_call */
 
 /**
  * Get backtrace. The backtrace is an array of strings where
@@ -69,36 +38,60 @@ vm_get_backtrace (uint32_t max_depth) /**< maximum backtrace depth, 0 = unlimite
     max_depth = UINT32_MAX;
   }
 
-  vm_frame_ctx_t *context_p = JERRY_CONTEXT (vm_top_context_p);
+  ecma_call_stack_t *call_stack_p = JERRY_CONTEXT (call_stack_p);
   ecma_object_t *array_p = ecma_get_object_from_value (result_array);
   JERRY_ASSERT (ecma_op_object_is_fast_array (array_p));
   uint32_t index = 0;
 
-  while (context_p != NULL)
+  while (call_stack_p != NULL)
   {
-    ecma_value_t resource_name = ecma_get_resource_name (context_p->bytecode_header_p);
-    ecma_string_t *str_p = ecma_get_string_from_value (resource_name);
     ecma_stringbuilder_t builder = ecma_stringbuilder_create ();
+    ecma_object_t *func_obj_p = call_stack_p->func_args_p->func_obj_p;
 
-    if (ecma_string_is_empty (str_p))
+    if (ecma_get_object_type (func_obj_p) == ECMA_OBJECT_TYPE_EXTERNAL_FUNCTION)
     {
-      ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *)"<unknown>:", 10);
+      ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *) "<external callback>", 19);
+    }
+    else if (func_obj_p == ecma_builtin_get_global ())
+    {
+      ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *) "<global>", 8);
     }
     else
     {
-      ecma_stringbuilder_append (&builder, str_p);
-      ecma_stringbuilder_append_byte (&builder, LIT_CHAR_COLON);
-    }
+      JERRY_ASSERT (ecma_get_object_type (func_obj_p) == ECMA_OBJECT_TYPE_FUNCTION);
 
-    ecma_string_t *line_str_p = ecma_new_ecma_string_from_uint32 (context_p->current_line);
-    ecma_stringbuilder_append (&builder, line_str_p);
-    ecma_deref_ecma_string (line_str_p);
+      if (ecma_get_object_is_builtin (func_obj_p))
+      {
+        ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *) "<native function>", 17);
+      }
+      else
+      {
+        vm_frame_ctx_t *call_frame_p = (vm_frame_ctx_t *) call_stack_p;
+
+        ecma_value_t resource_name = ecma_get_resource_name (call_frame_p->bytecode_header_p);
+        ecma_string_t *str_p = ecma_get_string_from_value (resource_name);
+
+        if (ecma_string_is_empty (str_p))
+        {
+          ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *) "<unknown>:", 10);
+        }
+        else
+        {
+          ecma_stringbuilder_append (&builder, str_p);
+          ecma_stringbuilder_append_byte (&builder, LIT_CHAR_COLON);
+        }
+
+        ecma_string_t *line_str_p = ecma_new_ecma_string_from_uint32 (call_frame_p->current_line);
+        ecma_stringbuilder_append (&builder, line_str_p);
+        ecma_deref_ecma_string (line_str_p);
+      }
+    }
 
     ecma_string_t *builder_str_p = ecma_stringbuilder_finalize (&builder);
     ecma_fast_array_set_property (array_p, index, ecma_make_string_value (builder_str_p));
     ecma_deref_ecma_string (builder_str_p);
 
-    context_p = context_p->prev_context_p;
+    call_stack_p = call_stack_p->prev_p;
     index++;
 
     if (index >= max_depth)

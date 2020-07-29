@@ -463,9 +463,6 @@ ecma_value_t vm_run (const ecma_compiled_code_t *bytecode_header_p, ecma_object_
                      ecma_func_args_t *func_args_p);
 ecma_value_t vm_execute (vm_frame_ctx_t *frame_ctx_p);
 
-bool vm_is_strict_mode (void);
-bool vm_is_direct_eval_form_call (void);
-
 ecma_value_t vm_get_backtrace (uint32_t max_depth);
 
 /**

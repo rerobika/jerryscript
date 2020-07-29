@@ -1160,11 +1160,22 @@ ecma_builtin_dispatch_routine (ecma_func_args_t *func_args_p) /**< function argu
   }
 
   ecma_extended_object_t *ext_func_obj_p = (ecma_extended_object_t *) func_args_p->func_obj_p;
-  /* [[TODO]]: Rework builtin dispatchers */
-  return ecma_builtin_routines[ext_func_obj_p->u.built_in.id] (ext_func_obj_p->u.built_in.routine_id,
-                                                               func_args_p->this_value,
-                                                               argv,
-                                                               func_args_p->argc);
+
+  ecma_call_stack_t frame =
+  {
+    .func_args_p = func_args_p,
+    .prev_p = JERRY_CONTEXT (call_stack_p)
+  };
+
+  JERRY_CONTEXT (call_stack_p) = &frame;
+
+  ecma_value_t ret_value = ecma_builtin_routines[ext_func_obj_p->u.built_in.id] (ext_func_obj_p->u.built_in.routine_id,
+                                                                                 func_args_p->this_value,
+                                                                                 argv,
+                                                                                 func_args_p->argc);
+  JERRY_CONTEXT (call_stack_p) = frame.prev_p;
+
+  return ret_value;
 } /* ecma_builtin_dispatch_routine */
 
 /**
@@ -1182,7 +1193,19 @@ ecma_builtin_dispatch_function (ecma_func_args_t *func_args_p) /**< function arg
   ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) func_args_p->func_obj_p;
   ecma_builtin_id_t builtin_object_id = ext_obj_p->u.built_in.id;
   JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_functions) / sizeof (ecma_builtin_dispatch_function_t));
-  return ecma_builtin_functions[builtin_object_id] (func_args_p);
+
+  ecma_call_stack_t frame =
+  {
+    .func_args_p = func_args_p,
+    .prev_p = JERRY_CONTEXT (call_stack_p)
+  };
+
+  JERRY_CONTEXT (call_stack_p) = &frame;
+  ecma_value_t ret_value = ecma_builtin_functions[builtin_object_id] (func_args_p);
+
+  JERRY_CONTEXT (call_stack_p) = frame.prev_p;
+
+  return ret_value;
 } /* ecma_builtin_dispatch_function */
 
 /**

@@ -450,10 +450,20 @@ ecma_value_t
 ecma_op_create_promise_object (ecma_value_t executor, /**< the executor function or object */
                                ecma_promise_executor_type_t type) /**< indicates the type of executor */
 {
-  JERRY_ASSERT (JERRY_CONTEXT (current_new_target) != NULL);
   /* 3. */
-  ecma_object_t *proto_p = ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target),
-                                                                   ECMA_BUILTIN_ID_PROMISE_PROTOTYPE);
+  ecma_object_t *ctor_p;
+
+  if (type == ECMA_PROMISE_EXECUTOR_EMPTY)
+  {
+    ctor_p = ecma_builtin_get (ECMA_BUILTIN_ID_PROMISE);
+  }
+  else
+  {
+    ctor_p = JERRY_CONTEXT (call_stack_p)->func_args_p->new_target_p;
+    JERRY_ASSERT (ctor_p != NULL);
+  }
+
+  ecma_object_t *proto_p = ecma_op_get_prototype_from_constructor (ctor_p, ECMA_BUILTIN_ID_PROMISE_PROTOTYPE);
 
   if (JERRY_UNLIKELY (proto_p == NULL))
   {

@@ -348,16 +348,21 @@ ecma_value_t
 vm_run_eval (ecma_compiled_code_t *bytecode_data_p, /**< byte-code data */
              uint32_t parse_opts) /**< ecma_parse_opts_t option bits */
 {
-  ecma_value_t this_binding;
   ecma_object_t *lex_env_p;
-  ecma_value_t *argv = NULL;
+  ecma_func_args_t func_args;
+  ecma_value_t this_binding;
+  func_args.argc = 0;
 
   /* ECMA-262 v5, 10.4.2 */
   if (parse_opts & ECMA_PARSE_DIRECT_EVAL)
   {
-    this_binding = ecma_copy_value (JERRY_CONTEXT (vm_top_context_p)->this_binding);
-    lex_env_p = JERRY_CONTEXT (vm_top_context_p)->lex_env_p;
-    argv = VM_DIRECT_EVAL;
+    vm_frame_ctx_t *frame_ctx_p = (vm_frame_ctx_t *) JERRY_CONTEXT (call_stack_p)->prev_p;
+    this_binding = ecma_copy_value (frame_ctx_p->call_frame.func_args_p->this_value);
+    func_args.func_obj_p = frame_ctx_p->call_frame.func_args_p->func_obj_p;
+    func_args.new_target_p = frame_ctx_p->call_frame.func_args_p->new_target_p;
+    func_args.argv = VM_DIRECT_EVAL;
+
+    lex_env_p = frame_ctx_p->lex_env_p;
 
 #if ENABLED (JERRY_DEBUGGER)
     uint32_t chain_index = parse_opts >> ECMA_PARSE_CHAIN_INDEX_SHIFT;
@@ -385,8 +390,13 @@ vm_run_eval (ecma_compiled_code_t *bytecode_data_p, /**< byte-code data */
     ecma_object_t *global_obj_p = ecma_builtin_get_global ();
     ecma_ref_object (global_obj_p);
     this_binding = ecma_make_object_value (global_obj_p);
+    func_args.func_obj_p = global_obj_p;
+    func_args.new_target_p = NULL;
+    func_args.argv = NULL;
     lex_env_p = ecma_get_global_scope ();
   }
+
+  func_args.this_value = this_binding;
 
   ecma_ref_object (lex_env_p);
 
@@ -406,8 +416,6 @@ vm_run_eval (ecma_compiled_code_t *bytecode_data_p, /**< byte-code data */
     ecma_deref_object (lex_env_p);
     lex_env_p = lex_block_p;
   }
-
-  ecma_func_args_t func_args = ecma_op_make_call_args (NULL, this_binding, argv, 0);
 
   ecma_value_t completion_value = vm_run (bytecode_data_p, lex_env_p, &func_args);
 
@@ -475,7 +483,7 @@ vm_construct_literal_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
   {
     func_obj_p = ecma_op_create_arrow_function_object (frame_ctx_p->lex_env_p,
                                                        bytecode_p,
-                                                       frame_ctx_p->this_binding);
+                                                       frame_ctx_p->call_frame.func_args_p->this_value);
   }
   else
   {
@@ -571,16 +579,16 @@ vm_super_call (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
   else
   {
     ecma_object_t *func_obj_p = ecma_get_object_from_value (func_value);
+    ecma_object_t *new_target_p = frame_ctx_p->call_frame.func_args_p->new_target_p;
     ecma_func_args_t func_args = ecma_op_make_construct_args_new_target (func_obj_p,
-                                                                         JERRY_CONTEXT (current_new_target),
+                                                                         new_target_p,
                                                                          arguments_p,
                                                                          arguments_list_len);
     completion_value = ecma_op_function_construct (&func_args);
 
     if (ecma_is_value_object (completion_value))
     {
-      ecma_value_t proto_value = ecma_op_object_get_by_magic_id (JERRY_CONTEXT (current_new_target),
-                                                                 LIT_MAGIC_STRING_PROTOTYPE);
+      ecma_value_t proto_value = ecma_op_object_get_by_magic_id (new_target_p, LIT_MAGIC_STRING_PROTOTYPE);
       if (ECMA_IS_VALUE_ERROR (proto_value))
       {
         ecma_free_value (completion_value);
@@ -618,7 +626,7 @@ vm_super_call (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
   else
   {
     ecma_op_bind_this_value (prop_p, completion_value);
-    frame_ctx_p->this_binding = completion_value;
+    frame_ctx_p->call_frame.func_args_p->this_value = completion_value;
 
     frame_ctx_p->byte_code_p = byte_code_p;
     uint32_t opcode_data = vm_decode_table[(CBC_END + 1) + opcode];
@@ -1052,7 +1060,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
               JERRY_ASSERT (operands == VM_OC_GET_THIS_LITERAL);
 
               right_value = left_value;
-              left_value = ecma_copy_value (frame_ctx_p->this_binding);
+              left_value = ecma_copy_value (frame_ctx_p->call_frame.func_args_p->this_value);
               break;
             }
           }
@@ -1190,7 +1198,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PUSH_THIS:
         {
-          *stack_top_p++ = ecma_copy_value (frame_ctx_p->this_binding);
+          *stack_top_p++ = ecma_copy_value (frame_ctx_p->call_frame.func_args_p->this_value);
           continue;
         }
         case VM_OC_PUSH_0:
@@ -1951,7 +1959,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PUSH_SUPER_CONSTRUCTOR:
         {
-          result = ecma_op_function_get_super_constructor (JERRY_CONTEXT (current_function_obj_p));
+          result = ecma_op_function_get_super_constructor (frame_ctx_p->call_frame.func_args_p->func_obj_p);
 
           if (ECMA_IS_VALUE_ERROR (result))
           {
@@ -2350,12 +2358,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
           if (result == ECMA_VALUE_UNDEFINED)
           {
-            ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target);
-            JERRY_CONTEXT (current_new_target) = ecma_builtin_get (ECMA_BUILTIN_ID_PROMISE);
-
             result = ecma_op_create_promise_object (ECMA_VALUE_EMPTY, ECMA_PROMISE_EXECUTOR_EMPTY);
-
-            JERRY_CONTEXT (current_new_target) = old_new_target_p;
           }
 
           vm_stack_context_type_t context_type = VM_GET_CONTEXT_TYPE (stack_top_p[-1]);
@@ -2422,7 +2425,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PUSH_NEW_TARGET:
         {
-          ecma_object_t *new_target_object = JERRY_CONTEXT (current_new_target);
+          ecma_object_t *new_target_object = frame_ctx_p->call_frame.func_args_p->new_target_p;
           if (new_target_object == NULL)
           {
             *stack_top_p++ = ECMA_VALUE_UNDEFINED;
@@ -2753,7 +2756,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         case VM_OC_ASSIGN_PROP_THIS:
         {
           result = stack_top_p[-1];
-          stack_top_p[-1] = ecma_copy_value (frame_ctx_p->this_binding);
+          stack_top_p[-1] = ecma_copy_value (frame_ctx_p->call_frame.func_args_p->this_value);
           *stack_top_p++ = left_value;
           left_value = ECMA_VALUE_UNDEFINED;
           break;
@@ -4573,7 +4576,6 @@ vm_init_exec (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
               const ecma_value_t *arg_p, /**< arguments list */
               uint32_t arg_list_len) /**< length of arguments list */
 {
-  frame_ctx_p->prev_context_p = JERRY_CONTEXT (vm_top_context_p);
   frame_ctx_p->block_result = ECMA_VALUE_UNDEFINED;
 #if ENABLED (JERRY_LINE_INFO)
   frame_ctx_p->current_line = 0;
@@ -4654,7 +4656,7 @@ vm_init_exec (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
 #endif /* ENABLED (JERRY_ESNEXT) */
 
   JERRY_CONTEXT (status_flags) &= (uint32_t) ~ECMA_STATUS_DIRECT_EVAL;
-  JERRY_CONTEXT (vm_top_context_p) = frame_ctx_p;
+  JERRY_CONTEXT (call_stack_p) = (ecma_call_stack_t *) frame_ctx_p;
 } /* vm_init_exec */
 
 /**
@@ -4729,7 +4731,7 @@ vm_execute (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
 #endif /* ENABLED (JERRY_DEBUGGER) */
 
-        JERRY_CONTEXT (vm_top_context_p) = frame_ctx_p->prev_context_p;
+        JERRY_CONTEXT (call_stack_p) = frame_ctx_p->call_frame.prev_p;
         return completion_value;
       }
     }
@@ -4768,10 +4770,10 @@ vm_run (const ecma_compiled_code_t *bytecode_header_p, /**< byte-code data heade
 
   frame_ctx_p = (vm_frame_ctx_t *) stack;
 
+  frame_ctx_p->call_frame.func_args_p = func_args_p;
+  frame_ctx_p->call_frame.prev_p = JERRY_CONTEXT (call_stack_p);
   frame_ctx_p->bytecode_header_p = bytecode_header_p;
   frame_ctx_p->lex_env_p = lex_env_p;
-  /* [[TODO]]: Store call args instead of only the this binding */
-  frame_ctx_p->this_binding = func_args_p->this_value;
 
   vm_init_exec (frame_ctx_p, func_args_p->argv, func_args_p->argc);
   return vm_execute (frame_ctx_p);

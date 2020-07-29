@@ -91,21 +91,26 @@ ecma_builtin_global_object_eval (ecma_value_t x) /**< routine's first argument *
     return ecma_copy_value (x);
   }
 
-  uint32_t parse_opts = vm_is_direct_eval_form_call () ? ECMA_PARSE_DIRECT_EVAL : ECMA_PARSE_NO_OPTS;
+  uint32_t parse_opts = ECMA_PARSE_NO_OPTS;
 
   /* See also: ECMA-262 v5, 10.1.1 */
-  if (parse_opts && vm_is_strict_mode ())
+  if (JERRY_CONTEXT (status_flags) & ECMA_STATUS_DIRECT_EVAL)
   {
-    JERRY_ASSERT (parse_opts & ECMA_PARSE_DIRECT_EVAL);
-    parse_opts |= ECMA_PARSE_STRICT_MODE;
-  }
+    parse_opts |= ECMA_PARSE_DIRECT_EVAL;
+
+    vm_frame_ctx_t *call_frame_p = (vm_frame_ctx_t *) JERRY_CONTEXT (call_stack_p)->prev_p;
+
+    if (call_frame_p->bytecode_header_p->status_flags & CBC_CODE_FLAGS_STRICT_MODE)
+    {
+      parse_opts |= ECMA_PARSE_STRICT_MODE;
+    }
 
 #if ENABLED (JERRY_ESNEXT)
-  if (vm_is_direct_eval_form_call ())
-  {
+    ecma_object_t *caller_new_target_p = JERRY_CONTEXT (call_stack_p)->prev_p->func_args_p->new_target_p;
+    JERRY_CONTEXT (call_stack_p)->func_args_p->new_target_p = caller_new_target_p;
     parse_opts |= ECMA_GET_LOCAL_PARSE_OPTS ();
-  }
 #endif /* ENABLED (JERRY_ESNEXT) */
+  }
 
   /* steps 2 to 8 */
   return ecma_op_eval (ecma_get_string_from_value (x), parse_opts);

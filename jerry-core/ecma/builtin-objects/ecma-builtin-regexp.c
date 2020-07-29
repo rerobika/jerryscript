@@ -43,28 +43,33 @@
  * @{
  */
 
-static ecma_value_t
-ecma_builtin_regexp_dispatch_helper (const ecma_value_t *arguments_list_p, /**< arguments list */
-                                     uint32_t arguments_list_len) /**< number of arguments */
+/**
+ * Handle [[Call]]/[[Construct]] of built-in RegExp object
+ *
+ * @return ecma value
+ *         Returned value must be freed with ecma_free_value.
+ */
+ecma_value_t
+ecma_builtin_regexp_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  ecma_value_t pattern_value = ECMA_VALUE_UNDEFINED;
+    ecma_value_t pattern_value = ECMA_VALUE_UNDEFINED;
   ecma_value_t flags_value = ECMA_VALUE_UNDEFINED;
 #if ENABLED (JERRY_ESNEXT)
   bool create_regexp_from_bc = false;
   bool free_arguments = false;
-  ecma_object_t *new_target_p = JERRY_CONTEXT (current_new_target);
+  ecma_object_t *new_target_p = func_args_p->new_target_p;
 #else /* !ENABLED (JERRY_ESNEXT) */
   ecma_object_t *new_target_p = NULL;
 #endif /* ENABLED (JERRY_ESNEXT) */
 
-  if (arguments_list_len > 0)
+  if (func_args_p->argc > 0)
   {
     /* pattern string or RegExp object */
-    pattern_value = arguments_list_p[0];
+    pattern_value = func_args_p->argv[0];
 
-    if (arguments_list_len > 1)
+    if (func_args_p->argc > 1)
     {
-      flags_value = arguments_list_p[1];
+      flags_value = func_args_p->argv[1];
     }
   }
 
@@ -189,18 +194,6 @@ ecma_builtin_regexp_dispatch_helper (const ecma_value_t *arguments_list_p, /**< 
 #endif /* ENABLED (JERRY_ESNEXT) */
 
   return ret_value;
-} /* ecma_builtin_regexp_dispatch_helper */
-
-/**
- * Handle [[Call]]/[[Construct]] of built-in RegExp object
- *
- * @return ecma value
- *         Returned value must be freed with ecma_free_value.
- */
-ecma_value_t
-ecma_builtin_regexp_dispatch (ecma_func_args_t *func_args_p) /**< function arguments */
-{
-  return ecma_builtin_regexp_dispatch_helper (func_args_p->argv, func_args_p->argc);
 } /* ecma_builtin_regexp_dispatch */
 
 #if ENABLED (JERRY_ESNEXT)

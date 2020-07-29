@@ -1332,7 +1332,7 @@ scanner_scope_find_let_declaration (parser_context_t *context_p, /**< context */
     scanner_free (destination_p, literal_p->length);
   }
 
-  ecma_object_t *lex_env_p = JERRY_CONTEXT (vm_top_context_p)->lex_env_p;
+  ecma_object_t *lex_env_p = ((vm_frame_ctx_t *) JERRY_CONTEXT (call_stack_p)->prev_p)->lex_env_p;
 
   while (lex_env_p->type_flags_refs & ECMA_OBJECT_FLAG_BLOCK)
   {

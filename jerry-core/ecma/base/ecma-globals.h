@@ -2114,6 +2114,12 @@ typedef struct
   ecma_value_t this_value; /**< this value to invoke the function */
 } ecma_func_args_t;
 
+typedef struct ecma_call_stack
+{
+  ecma_func_args_t *func_args_p;
+  struct ecma_call_stack *prev_p;
+} ecma_call_stack_t;
+
 /**
  * @}
  * @}
