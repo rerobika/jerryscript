@@ -45,18 +45,10 @@
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_map_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                           *   identifier */
-                                             ecma_value_t this_arg, /**< 'this' argument value */
-                                             const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                     *   passed to routine */
-                                             uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_map_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                             uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (arguments_number);
-  return ecma_builtin_container_dispatch_routine (builtin_routine_id,
-                                                  this_arg,
-                                                  arguments_list_p,
-                                                  LIT_MAGIC_STRING_MAP_UL);
+  return ecma_builtin_container_dispatch_routine (func_args_p, builtin_routine_id, LIT_MAGIC_STRING_MAP_UL);
 } /* ecma_builtin_map_prototype_dispatch_routine */
 /**
  * @}

@@ -77,27 +77,20 @@ enum
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                     *   identifier */
-                                       ecma_value_t this_arg, /**< 'this' argument value */
-                                       const ecma_value_t arguments_list[], /**< list of arguments
-                                                                             *   passed to routine */
-                                       uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_reflect_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                       uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (this_arg);
-  JERRY_UNUSED (arguments_number);
-
   if (builtin_routine_id < ECMA_REFLECT_OBJECT_CONSTRUCT)
   {
     /* 1. */
-    if (arguments_number == 0 || !ecma_is_value_object (arguments_list[0]))
+    if (func_args_p->argc == 0 || !ecma_is_value_object (func_args_p->argv[0]))
     {
       return ecma_raise_type_error (ECMA_ERR_MSG ("Argument is not an Object."));
     }
 
     /* 2. */
-    ecma_string_t *name_str_p = ecma_op_to_property_key (((arguments_number > 1) ? arguments_list[1]
-                                                                                 : ECMA_VALUE_UNDEFINED));
+    ecma_string_t *name_str_p = ecma_op_to_property_key (((func_args_p->argc > 1) ? func_args_p->argv[1]
+                                                                                  : ECMA_VALUE_UNDEFINED));
 
     /* 3. */
     if (name_str_p == NULL)
@@ -106,17 +99,17 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
     }
 
     ecma_value_t ret_value;
-    ecma_object_t *target_p = ecma_get_object_from_value (arguments_list[0]);
+    ecma_object_t *target_p = ecma_get_object_from_value (func_args_p->argv[0]);
     switch (builtin_routine_id)
     {
       case ECMA_REFLECT_OBJECT_GET:
       {
-        ecma_value_t receiver = arguments_list[0];
+        ecma_value_t receiver = func_args_p->argv[0];
 
         /* 4. */
-        if (arguments_number > 2)
+        if (func_args_p->argc > 2)
         {
-          receiver = arguments_list[2];
+          receiver = func_args_p->argv[2];
         }
 
         ret_value = ecma_op_object_get_with_receiver (target_p, name_str_p, receiver);
@@ -139,14 +132,15 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
       {
         JERRY_ASSERT (builtin_routine_id == ECMA_REFLECT_OBJECT_SET);
 
-        ecma_value_t receiver = arguments_list[0];
+        ecma_value_t receiver = func_args_p->argv[0];
+        ecma_value_t value = func_args_p->argc > 2 ? func_args_p->argv[2] : ECMA_VALUE_UNDEFINED;
 
-        if (arguments_number > 3)
+        if (func_args_p->argc > 3)
         {
-          receiver = arguments_list[3];
+          receiver = func_args_p->argv[3];
         }
 
-        ret_value = ecma_op_object_put_with_receiver (target_p, name_str_p, arguments_list[2], receiver, false);
+        ret_value = ecma_op_object_put_with_receiver (target_p, name_str_p, value, receiver, false);
         break;
       }
     }
@@ -155,15 +149,17 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
     return ret_value;
   }
 
+  ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+
   if (builtin_routine_id == ECMA_REFLECT_OBJECT_OWN_KEYS)
   {
     /* 1. */
-    if (arguments_number == 0 || !ecma_is_value_object (arguments_list[0]))
+    if (func_args_p->argc == 0 || !ecma_is_value_object (arg_1))
     {
       return ecma_raise_type_error (ECMA_ERR_MSG ("Argument is not an Object."));
     }
 
-    ecma_object_t *target_p = ecma_get_object_from_value (arguments_list[0]);
+    ecma_object_t *target_p = ecma_get_object_from_value (arg_1);
 
     /* 2. */
     ecma_collection_t *prop_names = ecma_op_object_own_property_keys (target_p);
@@ -185,34 +181,34 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
   if (builtin_routine_id == ECMA_REFLECT_OBJECT_CONSTRUCT)
   {
     /* 1. */
-    if (arguments_number < 1 || !ecma_is_constructor (arguments_list[0]))
+    if (func_args_p->argc < 1 || !ecma_is_constructor (func_args_p->argv[0]))
     {
       return ecma_raise_type_error (ECMA_ERR_MSG ("Target is not a constructor"));
     }
 
-    ecma_object_t *target_p = ecma_get_object_from_value (arguments_list[0]);
+    ecma_object_t *target_p = ecma_get_object_from_value (func_args_p->argv[0]);
 
     /* 2. */
     ecma_object_t *new_target_p = target_p;
 
-    if (arguments_number > 2)
+    if (func_args_p->argc > 2)
     {
       /* 3. */
-      if (!ecma_is_constructor (arguments_list[2]))
+      if (!ecma_is_constructor (func_args_p->argv[2]))
       {
         return ecma_raise_type_error (ECMA_ERR_MSG ("Target is not a constructor"));
       }
 
-      new_target_p = ecma_get_object_from_value (arguments_list[2]);
+      new_target_p = ecma_get_object_from_value (func_args_p->argv[2]);
     }
 
     /* 4. */
-    if (arguments_number < 2)
+    if (func_args_p->argc < 2)
     {
       return ecma_raise_type_error (ECMA_ERR_MSG ("Reflect.construct requires the second argument be an object"));
     }
 
-    ecma_collection_t *coll_p = ecma_op_create_list_from_array_like (arguments_list[1], false);
+    ecma_collection_t *coll_p = ecma_op_create_list_from_array_like (func_args_p->argv[1], false);
 
     if (coll_p == NULL)
     {
@@ -229,7 +225,9 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
     return ret_value;
   }
 
-  if (!ecma_is_value_object (arguments_list[0]))
+  ecma_value_t arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
+
+  if (!ecma_is_value_object (arg_1))
   {
     return ecma_raise_type_error (ECMA_ERR_MSG ("Argument is not an Object."));
   }
@@ -238,45 +236,46 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
   {
     case ECMA_REFLECT_OBJECT_GET_PROTOTYPE_OF:
     {
-      return ecma_builtin_object_object_get_prototype_of (ecma_get_object_from_value (arguments_list[0]));
+      return ecma_builtin_object_object_get_prototype_of (ecma_get_object_from_value (arg_1));
     }
     case ECMA_REFLECT_OBJECT_SET_PROTOTYPE_OF:
     {
-      if (!ecma_is_value_object (arguments_list[1]) && !ecma_is_value_null (arguments_list[1]))
+      if (!ecma_is_value_object (arg_2) && !ecma_is_value_null (arg_2))
       {
         return ecma_raise_type_error (ECMA_ERR_MSG ("proto is neither Object nor Null."));
       }
 
-      ecma_object_t *obj_p = ecma_get_object_from_value (arguments_list[0]);
+      ecma_object_t *obj_p = ecma_get_object_from_value (arg_1);
       ecma_value_t status;
 
 #if ENABLED (JERRY_BUILTIN_PROXY)
       if (ECMA_OBJECT_IS_PROXY (obj_p))
       {
-        status = ecma_proxy_object_set_prototype_of (obj_p, arguments_list[1]);
+        status = ecma_proxy_object_set_prototype_of (obj_p, arg_2);
       }
       else
 #endif /* ENABLED (JERRY_BUILTIN_PROXY) */
       {
-        status = ecma_op_ordinary_object_set_prototype_of (obj_p, arguments_list[1]);
+        status = ecma_op_ordinary_object_set_prototype_of (obj_p, arg_2);
       }
 
       return status;
     }
     case ECMA_REFLECT_OBJECT_APPLY:
     {
-      if (!ecma_op_is_callable (arguments_list[0]))
+      if (!ecma_op_is_callable (arg_1))
       {
         return ecma_raise_type_error (ECMA_ERR_MSG ("Argument 'this' is not a function."));
       }
 
-      ecma_object_t *func_obj_p = ecma_get_object_from_value (arguments_list[0]);
-      return ecma_builtin_function_prototype_object_apply (func_obj_p, arguments_list[1], arguments_list[2]);
+      ecma_object_t *func_obj_p = ecma_get_object_from_value (arg_1);
+      ecma_value_t arg_3 = func_args_p->argc > 2 ? func_args_p->argv[2] : ECMA_VALUE_UNDEFINED;
+      return ecma_builtin_function_prototype_object_apply (func_obj_p, arg_2, arg_3);
     }
     case ECMA_REFLECT_OBJECT_DEFINE_PROPERTY:
     {
-      ecma_object_t *obj_p = ecma_get_object_from_value (arguments_list[0]);
-      ecma_string_t *name_str_p = ecma_op_to_property_key (arguments_list[1]);
+      ecma_object_t *obj_p = ecma_get_object_from_value (arg_1);
+      ecma_string_t *name_str_p = ecma_op_to_property_key (arg_2);
 
       if (name_str_p == NULL)
       {
@@ -284,7 +283,8 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
       }
 
       ecma_property_descriptor_t prop_desc;
-      ecma_value_t conv_result = ecma_op_to_property_descriptor (arguments_list[2], &prop_desc);
+      ecma_value_t arg_3 = func_args_p->argc > 2 ? func_args_p->argv[2] : ECMA_VALUE_UNDEFINED;
+      ecma_value_t conv_result = ecma_op_to_property_descriptor (arg_3, &prop_desc);
 
       if (ECMA_IS_VALUE_ERROR (conv_result))
       {
@@ -310,8 +310,8 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
     }
     case ECMA_REFLECT_OBJECT_GET_OWN_PROPERTY_DESCRIPTOR:
     {
-      ecma_object_t *obj_p = ecma_get_object_from_value (arguments_list[0]);
-      ecma_string_t *name_str_p = ecma_op_to_property_key (arguments_list[1]);
+      ecma_object_t *obj_p = ecma_get_object_from_value (arg_1);
+      ecma_string_t *name_str_p = ecma_op_to_property_key (arg_2);
 
       if (name_str_p == NULL)
       {
@@ -324,13 +324,13 @@ ecma_builtin_reflect_dispatch_routine (uint16_t builtin_routine_id, /**< built-i
     }
     case ECMA_REFLECT_OBJECT_IS_EXTENSIBLE:
     {
-      ecma_object_t *obj_p = ecma_get_object_from_value (arguments_list[0]);
+      ecma_object_t *obj_p = ecma_get_object_from_value (arg_1);
       return ecma_builtin_object_object_is_extensible (obj_p);
     }
     default:
     {
       JERRY_ASSERT (builtin_routine_id == ECMA_REFLECT_OBJECT_PREVENT_EXTENSIONS);
-      ecma_object_t *obj_p = ecma_get_object_from_value (arguments_list[0]);
+      ecma_object_t *obj_p = ecma_get_object_from_value (arg_1);
 
 #if ENABLED (JERRY_BUILTIN_PROXY)
       if (ECMA_OBJECT_IS_PROXY (obj_p))

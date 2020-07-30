@@ -1149,45 +1149,45 @@ ecma_op_container_iterator_next (ecma_value_t this_val, /**< this argument */
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_container_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                       *   identifier */
-                                         ecma_value_t this_arg, /**< 'this' argument value */
-                                         const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                 *   passed to routine */
+ecma_builtin_container_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                         uint16_t builtin_routine_id, /**< builtin-routine ID */
                                          lit_magic_string_id_t lit_id) /**< internal class id */
 {
-  ecma_extended_object_t *map_object_p = ecma_op_container_get_object (this_arg, lit_id);
+  ecma_extended_object_t *map_object_p = ecma_op_container_get_object (func_args_p->this_value, lit_id);
 
   if (map_object_p == NULL)
   {
     return ECMA_VALUE_ERROR;
   }
 
+  ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
+
   switch (builtin_routine_id)
   {
     case ECMA_CONTAINER_ROUTINE_DELETE:
     {
-      return ecma_op_container_delete (map_object_p, arguments_list_p[0], lit_id);
+      return ecma_op_container_delete (map_object_p, arg_1, lit_id);
     }
     case ECMA_CONTAINER_ROUTINE_DELETE_WEAK:
     {
-      return ecma_op_container_delete_weak (map_object_p, arguments_list_p[0], lit_id);
+      return ecma_op_container_delete_weak (map_object_p, arg_1, lit_id);
     }
     case ECMA_CONTAINER_ROUTINE_GET:
     {
-      return ecma_op_container_get (map_object_p, arguments_list_p[0], lit_id);
+      return ecma_op_container_get (map_object_p, arg_1, lit_id);
     }
     case ECMA_CONTAINER_ROUTINE_SET:
     {
-      return ecma_op_container_set (map_object_p, arguments_list_p[0], arguments_list_p[1], lit_id);
+      return ecma_op_container_set (map_object_p, arg_1, arg_2, lit_id);
     }
     case ECMA_CONTAINER_ROUTINE_HAS:
     {
-      return ecma_op_container_has (map_object_p, arguments_list_p[0], lit_id);
+      return ecma_op_container_has (map_object_p, arg_1, lit_id);
     }
     case ECMA_CONTAINER_ROUTINE_FOREACH:
     {
-      return ecma_op_container_foreach (map_object_p, arguments_list_p[0], arguments_list_p[1], lit_id);
+      return ecma_op_container_foreach (map_object_p, arg_1, arg_2, lit_id);
     }
     case ECMA_CONTAINER_ROUTINE_SIZE_GETTER:
     {
@@ -1195,7 +1195,7 @@ ecma_builtin_container_dispatch_routine (uint16_t builtin_routine_id, /**< built
     }
     case ECMA_CONTAINER_ROUTINE_ADD:
     {
-      return ecma_op_container_set (map_object_p, arguments_list_p[0], arguments_list_p[0], lit_id);
+      return ecma_op_container_set (map_object_p, arg_1, arg_1, lit_id);
     }
     case ECMA_CONTAINER_ROUTINE_CLEAR:
     {
@@ -1216,7 +1216,7 @@ ecma_builtin_container_dispatch_routine (uint16_t builtin_routine_id, /**< built
 
       ecma_iterator_kind_t kind = (ecma_iterator_kind_t) (builtin_routine_id - ECMA_CONTAINER_ROUTINE_KEYS);
 
-      return ecma_op_container_create_iterator (this_arg,
+      return ecma_op_container_create_iterator (func_args_p->this_value,
                                                 builtin_iterator_prototype,
                                                 iterator_type,
                                                 kind);

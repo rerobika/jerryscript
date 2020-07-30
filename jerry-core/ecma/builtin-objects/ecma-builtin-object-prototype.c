@@ -210,34 +210,30 @@ ecma_builtin_object_prototype_object_property_is_enumerable (ecma_object_t *obj_
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_object_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                              *   identifier */
-                                                ecma_value_t this_arg, /**< 'this' argument value */
-                                                const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                      *   passed to routine */
-                                                uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_object_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (arguments_number);
-
   /* no specialization */
   if (builtin_routine_id <= ECMA_OBJECT_PROTOTYPE_VALUE_OF)
   {
     if (builtin_routine_id == ECMA_OBJECT_PROTOTYPE_TO_STRING)
     {
-      return ecma_builtin_object_prototype_object_to_string (this_arg);
+      return ecma_builtin_object_prototype_object_to_string (func_args_p->this_value);
     }
 
     JERRY_ASSERT (builtin_routine_id <= ECMA_OBJECT_PROTOTYPE_VALUE_OF);
 
-    return ecma_builtin_object_prototype_object_value_of (this_arg);
+    return ecma_builtin_object_prototype_object_value_of (func_args_p->this_value);
   }
+
+  ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
 
   if (builtin_routine_id <= ECMA_OBJECT_PROTOTYPE_IS_PROTOTYPE_OF)
   {
     if (builtin_routine_id == ECMA_OBJECT_PROTOTYPE_IS_PROTOTYPE_OF)
     {
       /* 15.2.4.6.1. */
-      if (!ecma_is_value_object (arguments_list_p[0]))
+      if (!ecma_is_value_object (arg_1))
       {
         return ECMA_VALUE_FALSE;
       }
@@ -245,10 +241,10 @@ ecma_builtin_object_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
 
     if (builtin_routine_id == ECMA_OBJECT_PROTOTYPE_TO_LOCALE_STRING)
     {
-      return ecma_builtin_object_prototype_object_to_locale_string (this_arg);
+      return ecma_builtin_object_prototype_object_to_locale_string (func_args_p->this_value);
     }
 
-    ecma_value_t to_object = ecma_op_to_object (this_arg);
+    ecma_value_t to_object = ecma_op_to_object (func_args_p->this_value);
 
     if (ECMA_IS_VALUE_ERROR (to_object))
     {
@@ -267,7 +263,7 @@ ecma_builtin_object_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
     else
 #endif /* ENABLED (JERRY_ESNEXT)*/
     {
-      ret_value = ecma_builtin_object_prototype_object_is_prototype_of (obj_p, arguments_list_p[0]);
+      ret_value = ecma_builtin_object_prototype_object_is_prototype_of (obj_p, arg_1);
     }
 
     ecma_deref_object (obj_p);
@@ -280,18 +276,18 @@ ecma_builtin_object_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
 #if ENABLED (JERRY_ESNEXT)
   if (builtin_routine_id == ECMA_OBJECT_PROTOTYPE_SET_PROTO)
   {
-    return ecma_builtin_object_object_set_proto (this_arg, arguments_list_p[0]);
+    return ecma_builtin_object_object_set_proto (func_args_p->this_value, arg_1);
   }
 #endif /* ENABLED (JERRY_ESNEXT)*/
 
-  ecma_string_t *prop_name_p = ecma_op_to_property_key (arguments_list_p[0]);
+  ecma_string_t *prop_name_p = ecma_op_to_property_key (arg_1);
 
   if (prop_name_p == NULL)
   {
     return ECMA_VALUE_ERROR;
   }
 
-  ecma_value_t to_object = ecma_op_to_object (this_arg);
+  ecma_value_t to_object = ecma_op_to_object (func_args_p->this_value);
 
   if (ECMA_IS_VALUE_ERROR (to_object))
   {

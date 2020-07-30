@@ -138,13 +138,10 @@ ecma_builtin_dataview_prototype_object_getters (ecma_value_t this_arg, /**< this
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_dataview_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine identifier */
-                                                  ecma_value_t this_arg, /**< 'this' argument value */
-                                                  const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                          *   passed to routine */
-                                                  uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_dataview_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                  uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  ecma_value_t byte_offset = arguments_number > 0 ? arguments_list_p[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t byte_offset = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
 
   switch (builtin_routine_id)
   {
@@ -152,7 +149,7 @@ ecma_builtin_dataview_prototype_dispatch_routine (uint16_t builtin_routine_id, /
     case ECMA_DATAVIEW_PROTOTYPE_BYTE_LENGTH_GETTER:
     case ECMA_DATAVIEW_PROTOTYPE_BYTE_OFFSET_GETTER:
     {
-      return ecma_builtin_dataview_prototype_object_getters (this_arg, builtin_routine_id);
+      return ecma_builtin_dataview_prototype_object_getters (func_args_p->this_value, builtin_routine_id);
     }
     case ECMA_DATAVIEW_PROTOTYPE_GET_FLOAT32:
 #if ENABLED (JERRY_NUMBER_TYPE_FLOAT64)
@@ -163,10 +160,10 @@ ecma_builtin_dataview_prototype_dispatch_routine (uint16_t builtin_routine_id, /
     case ECMA_DATAVIEW_PROTOTYPE_GET_UINT16:
     case ECMA_DATAVIEW_PROTOTYPE_GET_UINT32:
     {
-      ecma_value_t little_endian = arguments_number > 1 ? arguments_list_p[1] : ECMA_VALUE_FALSE;
+      ecma_value_t little_endian = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_FALSE;
       ecma_typedarray_type_t id = (ecma_typedarray_type_t) (builtin_routine_id - ECMA_DATAVIEW_PROTOTYPE_GET_INT8);
 
-      return ecma_op_dataview_get_set_view_value (this_arg, byte_offset, little_endian, ECMA_VALUE_EMPTY, id);
+      return ecma_op_dataview_get_set_view_value (func_args_p->this_value, byte_offset, little_endian, ECMA_VALUE_EMPTY, id);
     }
     case ECMA_DATAVIEW_PROTOTYPE_SET_FLOAT32:
 #if ENABLED (JERRY_NUMBER_TYPE_FLOAT64)
@@ -177,27 +174,39 @@ ecma_builtin_dataview_prototype_dispatch_routine (uint16_t builtin_routine_id, /
     case ECMA_DATAVIEW_PROTOTYPE_SET_UINT16:
     case ECMA_DATAVIEW_PROTOTYPE_SET_UINT32:
     {
-      ecma_value_t value_to_set = arguments_number > 1 ? arguments_list_p[1] : ECMA_VALUE_UNDEFINED;
-      ecma_value_t little_endian = arguments_number > 2 ? arguments_list_p[2] : ECMA_VALUE_FALSE;
+      ecma_value_t value_to_set = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
+      ecma_value_t little_endian = func_args_p->argc > 2 ? func_args_p->argv[2] : ECMA_VALUE_FALSE;
       ecma_typedarray_type_t id = (ecma_typedarray_type_t) (builtin_routine_id - ECMA_DATAVIEW_PROTOTYPE_SET_INT8);
 
-      return ecma_op_dataview_get_set_view_value (this_arg, byte_offset, little_endian, value_to_set, id);
+      return ecma_op_dataview_get_set_view_value (func_args_p->this_value,
+                                                  byte_offset,
+                                                  little_endian,
+                                                  value_to_set,
+                                                  id);
     }
     case ECMA_DATAVIEW_PROTOTYPE_GET_INT8:
     case ECMA_DATAVIEW_PROTOTYPE_GET_UINT8:
     {
       ecma_typedarray_type_t id = (ecma_typedarray_type_t) (builtin_routine_id - ECMA_DATAVIEW_PROTOTYPE_GET_INT8);
 
-      return ecma_op_dataview_get_set_view_value (this_arg, byte_offset, ECMA_VALUE_FALSE, ECMA_VALUE_EMPTY, id);
+      return ecma_op_dataview_get_set_view_value (func_args_p->this_value,
+                                                  byte_offset,
+                                                  ECMA_VALUE_FALSE,
+                                                  ECMA_VALUE_EMPTY,
+                                                  id);
     }
     default:
     {
       JERRY_ASSERT (builtin_routine_id == ECMA_DATAVIEW_PROTOTYPE_SET_INT8
                     || builtin_routine_id == ECMA_DATAVIEW_PROTOTYPE_SET_UINT8);
-      ecma_value_t value_to_set = arguments_number > 1 ? arguments_list_p[1] : ECMA_VALUE_UNDEFINED;
+      ecma_value_t value_to_set = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
       ecma_typedarray_type_t id = (ecma_typedarray_type_t) (builtin_routine_id - ECMA_DATAVIEW_PROTOTYPE_SET_INT8);
 
-      return ecma_op_dataview_get_set_view_value (this_arg, byte_offset, ECMA_VALUE_FALSE, value_to_set, id);
+      return ecma_op_dataview_get_set_view_value (func_args_p->this_value,
+                                                  byte_offset,
+                                                  ECMA_VALUE_FALSE,
+                                                  value_to_set,
+                                                  id);
     }
   }
 } /* ecma_builtin_dataview_prototype_dispatch_routine */

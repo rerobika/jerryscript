@@ -2620,6 +2620,8 @@ ecma_builtin_array_prototype_includes (const ecma_value_t args[], /**< arguments
     }
   }
 
+  ecma_value_t search_element = args_number > 0 ? args[0] : ECMA_VALUE_UNDEFINED;
+
   /* Fast array path */
   if (ecma_op_object_is_fast_array (obj_p))
   {
@@ -2635,7 +2637,7 @@ ecma_builtin_array_prototype_includes (const ecma_value_t args[], /**< arguments
 
         while (from_index < len)
         {
-          if (ecma_op_same_value_zero (buffer_p[from_index], args[0]))
+          if (ecma_op_same_value_zero (buffer_p[from_index], search_element))
           {
             return ECMA_VALUE_TRUE;
           }
@@ -2658,7 +2660,7 @@ ecma_builtin_array_prototype_includes (const ecma_value_t args[], /**< arguments
       return element;
     }
 
-    if (ecma_op_same_value_zero (element, args[0]))
+    if (ecma_op_same_value_zero (element, search_element))
     {
       ecma_free_value (element);
       return ECMA_VALUE_TRUE;
@@ -2680,14 +2682,10 @@ ecma_builtin_array_prototype_includes (const ecma_value_t args[], /**< arguments
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                            *   identifier */
-                                               ecma_value_t this_arg, /**< 'this' argument value */
-                                               const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                    *   passed to routine */
-                                               uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_array_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                               uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  ecma_value_t obj_this = ecma_op_to_object (this_arg);
+  ecma_value_t obj_this = ecma_op_to_object (func_args_p->this_value);
 
   if (ECMA_IS_VALUE_ERROR (obj_this))
   {
@@ -2709,8 +2707,8 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
 #endif /* !ENABLED (JERRY_ESNEXT) */
     {
       JERRY_ASSERT (builtin_routine_id == ECMA_ARRAY_PROTOTYPE_CONCAT);
-      ret_value = ecma_builtin_array_prototype_object_concat (arguments_list_p,
-                                                              arguments_number,
+      ret_value = ecma_builtin_array_prototype_object_concat (func_args_p->argv,
+                                                              func_args_p->argc,
                                                               obj_p);
     }
 
@@ -2749,8 +2747,8 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
   }
 
   ecma_value_t ret_value;
-  ecma_value_t routine_arg_1 = arguments_list_p[0];
-  ecma_value_t routine_arg_2 = arguments_list_p[1];
+  ecma_value_t routine_arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t routine_arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
 
   switch (builtin_routine_id)
   {
@@ -2771,15 +2769,15 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
     }
     case ECMA_ARRAY_PROTOTYPE_PUSH:
     {
-      ret_value = ecma_builtin_array_prototype_object_push (arguments_list_p,
-                                                            arguments_number,
+      ret_value = ecma_builtin_array_prototype_object_push (func_args_p->argv,
+                                                            func_args_p->argc,
                                                             obj_p,
                                                             length);
       break;
     }
     case ECMA_ARRAY_PROTOTYPE_REVERSE:
     {
-      ret_value = ecma_builtin_array_prototype_object_reverse (this_arg, obj_p, length);
+      ret_value = ecma_builtin_array_prototype_object_reverse (func_args_p->this_value, obj_p, length);
       break;
     }
     case ECMA_ARRAY_PROTOTYPE_SHIFT:
@@ -2797,7 +2795,7 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
     }
     case ECMA_ARRAY_PROTOTYPE_SORT:
     {
-      ret_value = ecma_builtin_array_prototype_object_sort (this_arg,
+      ret_value = ecma_builtin_array_prototype_object_sort (func_args_p->this_value,
                                                             routine_arg_1,
                                                             obj_p,
                                                             length);
@@ -2805,32 +2803,32 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
     }
     case ECMA_ARRAY_PROTOTYPE_SPLICE:
     {
-      ret_value = ecma_builtin_array_prototype_object_splice (arguments_list_p,
-                                                              arguments_number,
+      ret_value = ecma_builtin_array_prototype_object_splice (func_args_p->argv,
+                                                              func_args_p->argc,
                                                               obj_p,
                                                               length);
       break;
     }
     case ECMA_ARRAY_PROTOTYPE_UNSHIFT:
     {
-      ret_value = ecma_builtin_array_prototype_object_unshift (arguments_list_p,
-                                                               arguments_number,
+      ret_value = ecma_builtin_array_prototype_object_unshift (func_args_p->argv,
+                                                               func_args_p->argc,
                                                                obj_p,
                                                                length);
       break;
     }
     case ECMA_ARRAY_PROTOTYPE_INDEX_OF:
     {
-      ret_value = ecma_builtin_array_prototype_object_index_of (arguments_list_p,
-                                                                arguments_number,
+      ret_value = ecma_builtin_array_prototype_object_index_of (func_args_p->argv,
+                                                                func_args_p->argc,
                                                                 obj_p,
                                                                 length);
       break;
     }
     case ECMA_ARRAY_PROTOTYPE_LAST_INDEX_OF:
     {
-      ret_value = ecma_builtin_array_prototype_object_last_index_of (arguments_list_p,
-                                                                     arguments_number,
+      ret_value = ecma_builtin_array_prototype_object_last_index_of (func_args_p->argv,
+                                                                     func_args_p->argc,
                                                                      obj_p,
                                                                      length);
       break;
@@ -2857,8 +2855,8 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
     case ECMA_ARRAY_PROTOTYPE_REDUCE:
     case ECMA_ARRAY_PROTOTYPE_REDUCE_RIGHT:
     {
-      ret_value = ecma_builtin_array_reduce_from (arguments_list_p,
-                                                  arguments_number,
+      ret_value = ecma_builtin_array_reduce_from (func_args_p->argv,
+                                                  func_args_p->argc,
                                                   builtin_routine_id == ECMA_ARRAY_PROTOTYPE_REDUCE,
                                                   obj_p,
                                                   length);
@@ -2867,8 +2865,8 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
 #if ENABLED (JERRY_ESNEXT)
     case ECMA_ARRAY_PROTOTYPE_COPY_WITHIN:
     {
-      ret_value = ecma_builtin_array_prototype_object_copy_within (arguments_list_p,
-                                                                   arguments_number,
+      ret_value = ecma_builtin_array_prototype_object_copy_within (func_args_p->argv,
+                                                                   func_args_p->argc,
                                                                    obj_p,
                                                                    length);
       break;
@@ -2885,17 +2883,18 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
     }
     case ECMA_ARRAY_PROTOTYPE_FILL:
     {
+      ecma_value_t routine_arg_3 = func_args_p->argc > 2 ? func_args_p->argv[2] : ECMA_VALUE_UNDEFINED;
       ret_value = ecma_builtin_array_prototype_fill (routine_arg_1,
                                                      routine_arg_2,
-                                                     arguments_list_p[2],
+                                                     routine_arg_3,
                                                      obj_p,
                                                      length);
       break;
     }
     case ECMA_ARRAY_PROTOTYPE_INCLUDES:
     {
-      ret_value = ecma_builtin_array_prototype_includes (arguments_list_p,
-                                                         arguments_number,
+      ret_value = ecma_builtin_array_prototype_includes (func_args_p->argv,
+                                                         func_args_p->argc,
                                                          obj_p,
                                                          length);
       break;

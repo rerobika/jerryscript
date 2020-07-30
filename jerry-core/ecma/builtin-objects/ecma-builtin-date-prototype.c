@@ -336,13 +336,9 @@ ecma_builtin_date_prototype_dispatch_get (uint16_t builtin_routine_id, /**< buil
  *         Returned value must be freed with ecma_free_value.
  */
 static ecma_value_t
-ecma_builtin_date_prototype_dispatch_set (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                        *   identifier */
-                                          ecma_extended_object_t *ext_object_p, /**< date extended object */
-                                          ecma_number_t date_num, /**< date converted to number */
-                                          const ecma_value_t arguments_list[], /**< list of arguments
-                                                                                *   passed to routine */
-                                          uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_date_prototype_dispatch_set (ecma_func_args_t *func_args_p, /**< function arguments */
+                                          uint16_t builtin_routine_id, /**< builtin-routine ID */
+                                          ecma_number_t date_num) /**< date converted to number */
 {
   ecma_number_t converted_number[4];
   uint32_t conversions = 0;
@@ -389,14 +385,14 @@ ecma_builtin_date_prototype_dispatch_set (uint16_t builtin_routine_id, /**< buil
     }
   }
 
-  if (conversions > arguments_number)
+  if (conversions > func_args_p->argc)
   {
-    conversions = arguments_number;
+    conversions = func_args_p->argc;
   }
 
   for (uint32_t i = 0; i < conversions; i++)
   {
-    ecma_value_t value = ecma_op_to_number (arguments_list[i]);
+    ecma_value_t value = ecma_op_to_number (func_args_p->argv[i]);
 
     if (ECMA_IS_VALUE_ERROR (value))
     {
@@ -574,6 +570,8 @@ ecma_builtin_date_prototype_dispatch_set (uint16_t builtin_routine_id, /**< buil
 
   full_date = ecma_date_time_clip (full_date);
 
+  ecma_extended_object_t *ext_object_p;
+  ext_object_p = (ecma_extended_object_t *) ecma_get_object_from_value (func_args_p->this_value);
   *ECMA_GET_INTERNAL_VALUE_POINTER (ecma_number_t, ext_object_p->u.class_prop.u.value) = full_date;
 
   return ecma_make_number_value (full_date);
@@ -588,33 +586,30 @@ ecma_builtin_date_prototype_dispatch_set (uint16_t builtin_routine_id, /**< buil
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_date_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                            *   identifier */
-                                              ecma_value_t this_arg, /**< 'this' argument value */
-                                              const ecma_value_t arguments_list[], /**< list of arguments
-                                                                                    *   passed to routine */
-                                              uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_date_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                              uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
   if (JERRY_UNLIKELY (builtin_routine_id == ECMA_DATE_PROTOTYPE_TO_JSON))
   {
-    return ecma_builtin_date_prototype_to_json (this_arg);
+    return ecma_builtin_date_prototype_to_json (func_args_p->this_value);
   }
 
 #if ENABLED (JERRY_ESNEXT)
   if (JERRY_UNLIKELY (builtin_routine_id == ECMA_DATE_PROTOTYPE_TO_PRIMITIVE))
   {
-    ecma_value_t argument = arguments_number > 0 ? arguments_list[0] : ECMA_VALUE_UNDEFINED;
-    return ecma_builtin_date_prototype_to_primitive (this_arg, argument);
+    ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+    return ecma_builtin_date_prototype_to_primitive (func_args_p->this_value, arg_1);
   }
 #endif /* ENABLED (JERRY_ESNEXT) */
 
-  if (!ecma_is_value_object (this_arg)
-      || !ecma_object_class_is (ecma_get_object_from_value (this_arg), LIT_MAGIC_STRING_DATE_UL))
+  if (!ecma_is_value_object (func_args_p->this_value)
+      || !ecma_object_class_is (ecma_get_object_from_value (func_args_p->this_value), LIT_MAGIC_STRING_DATE_UL))
   {
     return ecma_raise_type_error (ECMA_ERR_MSG ("'this' is not a Date object"));
   }
 
-  ecma_extended_object_t *ext_object_p = (ecma_extended_object_t *) ecma_get_object_from_value (this_arg);
+  ecma_extended_object_t *ext_object_p;
+  ext_object_p = (ecma_extended_object_t *) ecma_get_object_from_value (func_args_p->this_value);
   ecma_number_t *prim_value_p = ECMA_GET_INTERNAL_VALUE_POINTER (ecma_number_t,
                                                                  ext_object_p->u.class_prop.u.value);
 
@@ -628,7 +623,8 @@ ecma_builtin_date_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< 
     ecma_value_t ret_value = ECMA_VALUE_EMPTY;
 
     /* 1. */
-    ECMA_OP_TO_NUMBER_TRY_CATCH (time_num, arguments_list[0], ret_value);
+    ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+    ECMA_OP_TO_NUMBER_TRY_CATCH (time_num, arg_1, ret_value);
     *prim_value_p = ecma_date_time_clip (time_num);
 
     ret_value = ecma_make_number_value (time_num);
@@ -651,11 +647,9 @@ ecma_builtin_date_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< 
       return ecma_builtin_date_prototype_dispatch_get (builtin_routine_id, this_num);
     }
 
-    return ecma_builtin_date_prototype_dispatch_set (builtin_routine_id,
-                                                     ext_object_p,
-                                                     this_num,
-                                                     arguments_list,
-                                                     arguments_number);
+    return ecma_builtin_date_prototype_dispatch_set (func_args_p,
+                                                     builtin_routine_id,
+                                                     this_num);
   }
 
   if (builtin_routine_id == ECMA_DATE_PROTOTYPE_TO_ISO_STRING)

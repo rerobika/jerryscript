@@ -44,10 +44,8 @@ typedef const ecma_builtin_property_descriptor_t *ecma_builtin_property_list_ref
 /**
  * Definition of built-in dispatch routine function pointer.
  */
-typedef ecma_value_t (*ecma_builtin_dispatch_routine_t) (uint16_t builtin_routine_id,
-                                                         ecma_value_t this_arg,
-                                                         const ecma_value_t arguments_list[],
-                                                         uint32_t arguments_number);
+typedef ecma_value_t (*ecma_builtin_dispatch_routine_t) (ecma_func_args_t *func_args_p,
+                                                         uint16_t builtin_routine_id);
 /**
  * Definition of built-in dispatch function pointer.
  */
@@ -1130,35 +1128,6 @@ ecma_builtin_dispatch_routine (ecma_func_args_t *func_args_p) /**< function argu
 {
   JERRY_ASSERT (ecma_builtin_function_is_routine (func_args_p->func_obj_p));
 
-  ecma_value_t padded_arguments_list_p[3] = { ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED };
-  const ecma_value_t *argv;
-
-  if (func_args_p->argc <= 2)
-  {
-    argv = padded_arguments_list_p;
-    switch (func_args_p->argc)
-    {
-      case 2:
-      {
-        padded_arguments_list_p[1] = func_args_p->argv[1];
-        /* FALLTHRU */
-      }
-      case 1:
-      {
-        padded_arguments_list_p[0] = func_args_p->argv[0];
-        break;
-      }
-      default:
-      {
-        JERRY_ASSERT (func_args_p->argc == 0);
-      }
-    }
-  }
-  else
-  {
-    argv = func_args_p->argv;
-  }
-
   ecma_extended_object_t *ext_func_obj_p = (ecma_extended_object_t *) func_args_p->func_obj_p;
 
   ecma_call_stack_t frame =
@@ -1169,10 +1138,8 @@ ecma_builtin_dispatch_routine (ecma_func_args_t *func_args_p) /**< function argu
 
   JERRY_CONTEXT (call_stack_p) = &frame;
 
-  ecma_value_t ret_value = ecma_builtin_routines[ext_func_obj_p->u.built_in.id] (ext_func_obj_p->u.built_in.routine_id,
-                                                                                 func_args_p->this_value,
-                                                                                 argv,
-                                                                                 func_args_p->argc);
+  ecma_value_t ret_value = ecma_builtin_routines[ext_func_obj_p->u.built_in.id] (func_args_p,
+                                                                                 ext_func_obj_p->u.built_in.routine_id);
   JERRY_CONTEXT (call_stack_p) = frame.prev_p;
 
   return ret_value;

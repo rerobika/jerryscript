@@ -1263,43 +1263,39 @@ ecma_builtin_string_prototype_object_iterator (ecma_value_t to_string) /**< this
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_string_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                              *   identifier */
-                                                ecma_value_t this_arg, /**< 'this' argument value */
-                                                const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                      *   passed to routine */
-                                                uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_string_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
   if (builtin_routine_id <= ECMA_STRING_PROTOTYPE_VALUE_OF)
   {
-    return ecma_builtin_string_prototype_object_to_string (this_arg);
+    return ecma_builtin_string_prototype_object_to_string (func_args_p->this_value);
   }
 
-  ecma_value_t coercible = ecma_op_check_object_coercible (this_arg);
+  ecma_value_t coercible = ecma_op_check_object_coercible (func_args_p->this_value);
 
   if (ECMA_IS_VALUE_ERROR (coercible))
   {
     return coercible;
   }
 
-  ecma_value_t arg1 = arguments_list_p[0];
-  ecma_value_t arg2 = arguments_list_p[1];
+  ecma_value_t arg1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t arg2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
 
 #if ENABLED (JERRY_BUILTIN_REGEXP)
   if (builtin_routine_id == ECMA_STRING_PROTOTYPE_MATCH)
   {
-    return ecma_builtin_string_prototype_object_match (this_arg, arg1);
+    return ecma_builtin_string_prototype_object_match (func_args_p->this_value, arg1);
   }
 #endif /* ENABLED (JERRY_BUILTIN_REGEXP) */
 
   if (builtin_routine_id <= ECMA_STRING_PROTOTYPE_CHAR_CODE_AT)
   {
-    return ecma_builtin_string_prototype_char_at_helper (this_arg,
+    return ecma_builtin_string_prototype_char_at_helper (func_args_p->this_value,
                                                          arg1,
                                                          builtin_routine_id == ECMA_STRING_PROTOTYPE_CHAR_CODE_AT);
   }
 
-  ecma_string_t *string_p = ecma_op_to_string (this_arg);
+  ecma_string_t *string_p = ecma_op_to_string (func_args_p->this_value);
 
   if (JERRY_UNLIKELY (string_p == NULL))
   {
@@ -1313,7 +1309,7 @@ ecma_builtin_string_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
   {
     case ECMA_STRING_PROTOTYPE_CONCAT:
     {
-      ret_value = ecma_builtin_string_prototype_object_concat (string_p, arguments_list_p, arguments_number);
+      ret_value = ecma_builtin_string_prototype_object_concat (string_p, func_args_p->argv, func_args_p->argc);
       break;
     }
     case ECMA_STRING_PROTOTYPE_SLICE:

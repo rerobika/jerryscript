@@ -68,16 +68,10 @@ enum
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_symbol_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                     *   identifier */
-                                                ecma_value_t this_arg, /**< 'this' argument value */
-                                                const ecma_value_t arguments_list[], /**< list of arguments
-                                                                             *   passed to routine */
-                                                uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_symbol_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED_2 (arguments_list, arguments_number);
-
-  ecma_value_t sym = ecma_symbol_this_value (this_arg);
+  ecma_value_t sym = ecma_symbol_this_value (func_args_p->this_value);
 
   if (ECMA_IS_VALUE_ERROR (sym))
   {

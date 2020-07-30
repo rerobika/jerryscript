@@ -335,29 +335,23 @@ ecma_builtin_math_object_random (void)
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_math_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                  *   identifier */
-                                    ecma_value_t this_arg, /**< 'this' argument value */
-                                    const ecma_value_t arguments_list[], /**< list of arguments
-                                                                          *   passed to routine */
-                                    uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_math_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                    uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (this_arg);
-
   if (builtin_routine_id <= ECMA_MATH_OBJECT_POW)
   {
     ecma_number_t x = ecma_number_make_nan ();
     ecma_number_t y = ecma_number_make_nan ();
 
-    if (arguments_number >= 1)
+    if (func_args_p->argc >= 1)
     {
-      if (ecma_is_value_number (arguments_list[0]))
+      if (ecma_is_value_number (func_args_p->argv[0]))
       {
-        x = ecma_get_number_from_value (arguments_list[0]);
+        x = ecma_get_number_from_value (func_args_p->argv[0]);
       }
       else
       {
-        ecma_value_t value = ecma_op_to_number (arguments_list[0]);
+        ecma_value_t value = ecma_op_to_number (func_args_p->argv[0]);
 
         if (ECMA_IS_VALUE_ERROR (value))
         {
@@ -371,15 +365,15 @@ ecma_builtin_math_dispatch_routine (uint16_t builtin_routine_id, /**< built-in w
     }
 
     if (builtin_routine_id >= ECMA_MATH_OBJECT_ATAN2
-        && arguments_number >= 2)
+        && func_args_p->argc >= 2)
     {
-      if (ecma_is_value_number (arguments_list[1]))
+      if (ecma_is_value_number (func_args_p->argv[1]))
       {
-        y = ecma_get_number_from_value (arguments_list[1]);
+        y = ecma_get_number_from_value (func_args_p->argv[1]);
       }
       else
       {
-        ecma_value_t value = ecma_op_to_number (arguments_list[1]);
+        ecma_value_t value = ecma_op_to_number (func_args_p->argv[1]);
 
         if (ECMA_IS_VALUE_ERROR (value))
         {
@@ -603,14 +597,14 @@ ecma_builtin_math_dispatch_routine (uint16_t builtin_routine_id, /**< built-in w
   if (builtin_routine_id <= ECMA_MATH_OBJECT_MIN)
   {
     return ecma_builtin_math_object_max_min (builtin_routine_id == ECMA_MATH_OBJECT_MAX,
-                                             arguments_list,
-                                             arguments_number);
+                                             func_args_p->argv,
+                                             func_args_p->argc);
   }
 
 #if ENABLED (JERRY_ESNEXT)
   if (builtin_routine_id == ECMA_MATH_OBJECT_HYPOT)
   {
-    return ecma_builtin_math_object_hypot (arguments_list, arguments_number);
+    return ecma_builtin_math_object_hypot (func_args_p->argv, func_args_p->argc);
   }
 #endif /* ENABLED (JERRY_ESNEXT) */
 

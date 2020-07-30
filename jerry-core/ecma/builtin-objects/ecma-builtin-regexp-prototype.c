@@ -525,15 +525,9 @@ ecma_builtin_is_regexp_exec (ecma_extended_object_t *obj_p)
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_regexp_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                              *   identifier */
-                                                ecma_value_t this_arg, /**< 'this' argument value */
-                                                const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                        *   passed to routine */
-                                                uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_regexp_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (arguments_number);
-
 #if !ENABLED (JERRY_ESNEXT)
   bool require_regexp = builtin_routine_id <= ECMA_REGEXP_PROTOTYPE_ROUTINE_TO_STRING;
 #else /* ENABLED (JERRY_ESNEXT) */
@@ -542,10 +536,10 @@ ecma_builtin_regexp_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
 
   ecma_object_t *obj_p = NULL;
 
-  if (ecma_is_value_object (this_arg))
+  if (ecma_is_value_object (func_args_p->this_value))
   {
     /* 2. */
-    obj_p = ecma_get_object_from_value (this_arg);
+    obj_p = ecma_get_object_from_value (func_args_p->this_value);
 
     if (require_regexp && !ecma_object_class_is (obj_p, LIT_MAGIC_STRING_REGEXP_UL))
     {
@@ -558,6 +552,9 @@ ecma_builtin_regexp_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
     return ecma_raise_type_error (ECMA_ERR_MSG ("'this' is not an object"));
   }
 
+  ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
+
   JERRY_ASSERT (obj_p != NULL);
 
   switch (builtin_routine_id)
@@ -565,16 +562,16 @@ ecma_builtin_regexp_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
 #if ENABLED (JERRY_BUILTIN_ANNEXB)
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_COMPILE:
     {
-      return ecma_builtin_regexp_prototype_compile (this_arg, arguments_list_p[0], arguments_list_p[1]);
+      return ecma_builtin_regexp_prototype_compile (func_args_p->this_value, arg_1, arg_2);
     }
 #endif /* ENABLED (JERRY_BUILTIN_ANNEXB) */
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_TEST:
     {
-      return ecma_builtin_regexp_prototype_test (this_arg, arguments_list_p[0]);
+      return ecma_builtin_regexp_prototype_test (func_args_p->this_value, arg_1);
     }
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_EXEC:
     {
-      return ecma_builtin_regexp_prototype_exec (this_arg, arguments_list_p[0]);
+      return ecma_builtin_regexp_prototype_exec (func_args_p->this_value, arg_1);
     }
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_TO_STRING:
     {
@@ -583,19 +580,19 @@ ecma_builtin_regexp_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
 #if ENABLED (JERRY_ESNEXT)
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_SYMBOL_SEARCH:
     {
-      return ecma_regexp_search_helper (this_arg, arguments_list_p[0]);
+      return ecma_regexp_search_helper (func_args_p->this_value, arg_1);
     }
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_SYMBOL_MATCH:
     {
-      return ecma_regexp_match_helper (this_arg, arguments_list_p[0]);
+      return ecma_regexp_match_helper (func_args_p->this_value, arg_1);
     }
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_SYMBOL_REPLACE:
     {
-      return ecma_regexp_replace_helper (this_arg, arguments_list_p[0], arguments_list_p[1]);
+      return ecma_regexp_replace_helper (func_args_p->this_value, arg_1, arg_2);
     }
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_SYMBOL_SPLIT:
     {
-      return ecma_regexp_split_helper (this_arg, arguments_list_p[0], arguments_list_p[1]);
+      return ecma_regexp_split_helper (func_args_p->this_value, arg_1, arg_2);
     }
     case ECMA_REGEXP_PROTOTYPE_ROUTINE_GET_FLAGS:
     {

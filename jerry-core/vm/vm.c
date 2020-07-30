@@ -4632,14 +4632,11 @@ vm_init_exec (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
 
   /* The arg_list_len contains the end of the copied arguments.
    * Fill everything else with undefined. */
-  if (register_end > arg_list_len)
-  {
-    ecma_value_t *stack_p = VM_GET_REGISTERS (frame_ctx_p) + arg_list_len;
+  ecma_value_t *stack_p = VM_GET_REGISTERS (frame_ctx_p) + arg_list_len;
 
-    for (uint32_t i = arg_list_len; i < register_end; i++)
-    {
-      *stack_p++ = ECMA_VALUE_UNDEFINED;
-    }
+  for (uint32_t i = arg_list_len; i < register_end; i++)
+  {
+    *stack_p++ = ECMA_VALUE_UNDEFINED;
   }
 
 #if ENABLED (JERRY_ESNEXT)

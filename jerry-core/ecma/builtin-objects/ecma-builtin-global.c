@@ -596,17 +596,10 @@ ecma_builtin_global_object_unescape (lit_utf8_byte_t *input_start_p, /**< routin
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_global_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine identifier */
-                                      ecma_value_t this_arg, /**< 'this' argument value */
-                                      const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                              *   passed to routine */
-                                      uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_global_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                      uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (this_arg);
-  JERRY_UNUSED (arguments_list_p);
-  JERRY_UNUSED (arguments_number);
-
-  ecma_value_t routine_arg_1 = arguments_list_p[0];
+  ecma_value_t routine_arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
 
   if (builtin_routine_id == ECMA_GLOBAL_EVAL)
   {
@@ -649,9 +642,10 @@ ecma_builtin_global_dispatch_routine (uint16_t builtin_routine_id, /**< built-in
 
     if (builtin_routine_id == ECMA_GLOBAL_PARSE_INT)
     {
+      ecma_value_t routine_arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
       ret_value = ecma_number_parse_int (string_buff,
                                          string_buff_size,
-                                         arguments_list_p[1]);
+                                         routine_arg_2);
     }
     else
     {

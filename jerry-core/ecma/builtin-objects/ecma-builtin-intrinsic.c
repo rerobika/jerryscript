@@ -148,35 +148,30 @@ ecma_builtin_intrinsic_set_prototype_values (ecma_value_t this_value)
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_intrinsic_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine identifier */
-                                         ecma_value_t this_arg, /**< 'this' argument value */
-                                         const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                 *   passed to routine */
-                                         uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_intrinsic_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                         uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (arguments_number);
-
   switch (builtin_routine_id)
   {
     case ECMA_INTRINSIC_ARRAY_PROTOTYPE_VALUES:
     {
-      return ecma_builtin_intrinsic_array_prototype_values (this_arg);
+      return ecma_builtin_intrinsic_array_prototype_values (func_args_p->this_value);
     }
     case ECMA_INTRINSIC_TYPEDARRAY_PROTOTYPE_VALUES:
     {
-      return ecma_typedarray_iterators_helper (this_arg, ECMA_ITERATOR_VALUES);
+      return ecma_typedarray_iterators_helper (func_args_p->this_value, ECMA_ITERATOR_VALUES);
     }
     case ECMA_INTRINSIC_SET_PROTOTYPE_VALUES:
     {
-      return ecma_builtin_intrinsic_set_prototype_values (this_arg);
+      return ecma_builtin_intrinsic_set_prototype_values (func_args_p->this_value);
     }
     case ECMA_INTRINSIC_MAP_PROTOTYPE_ENTRIES:
     {
-      return ecma_builtin_intrinsic_map_prototype_entries (this_arg);
+      return ecma_builtin_intrinsic_map_prototype_entries (func_args_p->this_value);
     }
     case ECMA_INTRINSIC_ARRAY_TO_STRING:
     {
-      ecma_value_t this_obj = ecma_op_to_object (this_arg);
+      ecma_value_t this_obj = ecma_op_to_object (func_args_p->this_value);
       if (ECMA_IS_VALUE_ERROR (this_obj))
       {
         return this_obj;
@@ -189,13 +184,14 @@ ecma_builtin_intrinsic_dispatch_routine (uint16_t builtin_routine_id, /**< built
     }
     case ECMA_INTRINSIC_DATE_TO_UTC_STRING:
     {
-      if (!ecma_is_value_object (this_arg)
-          || !ecma_object_class_is (ecma_get_object_from_value (this_arg), LIT_MAGIC_STRING_DATE_UL))
+      if (!ecma_is_value_object (func_args_p->this_value)
+          || !ecma_object_class_is (ecma_get_object_from_value (func_args_p->this_value), LIT_MAGIC_STRING_DATE_UL))
       {
         return ecma_raise_type_error (ECMA_ERR_MSG ("'this' is not a Date object"));
       }
 
-      ecma_extended_object_t *ext_object_p = (ecma_extended_object_t *) ecma_get_object_from_value (this_arg);
+      ecma_extended_object_t *ext_object_p;
+      ext_object_p = (ecma_extended_object_t *) ecma_get_object_from_value (func_args_p->this_value);
       ecma_number_t *prim_value_p = ECMA_GET_INTERNAL_VALUE_POINTER (ecma_number_t,
                                                                      ext_object_p->u.class_prop.u.value);
 
@@ -211,7 +207,8 @@ ecma_builtin_intrinsic_dispatch_routine (uint16_t builtin_routine_id, /**< built
       JERRY_ASSERT (builtin_routine_id == ECMA_INTRINSIC_PARSE_INT
                     || builtin_routine_id == ECMA_INTRINSIC_PARSE_FLOAT);
 
-      ecma_string_t *str_p = ecma_op_to_string (arguments_list_p[0]);
+      ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+      ecma_string_t *str_p = ecma_op_to_string (arg_1);
 
       if (JERRY_UNLIKELY (str_p == NULL))
       {
@@ -223,9 +220,10 @@ ecma_builtin_intrinsic_dispatch_routine (uint16_t builtin_routine_id, /**< built
 
       if (builtin_routine_id == ECMA_INTRINSIC_PARSE_INT)
       {
+        ecma_value_t arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
         result = ecma_number_parse_int (string_buff,
                                         string_buff_size,
-                                        arguments_list_p[1]);
+                                        arg_2);
       }
       else
       {

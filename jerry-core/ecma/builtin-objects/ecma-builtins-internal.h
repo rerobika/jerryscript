@@ -90,10 +90,8 @@ ecma_builtin_ ## lowercase_name ## _property_descriptor_list[]; \
 ecma_value_t \
 ecma_builtin_ ## lowercase_name ## _dispatch (ecma_func_args_t *); \
 ecma_value_t \
-ecma_builtin_ ## lowercase_name ## _dispatch_routine (uint16_t builtin_routine_id, \
-                                                      ecma_value_t this_arg_value, \
-                                                      const ecma_value_t [], \
-                                                      uint32_t);
+ecma_builtin_ ## lowercase_name ## _dispatch_routine (ecma_func_args_t *, uint16_t);
+
 #define BUILTIN(builtin_id, \
                 object_type, \
                 object_prototype_builtin_id, \
@@ -102,10 +100,7 @@ ecma_builtin_ ## lowercase_name ## _dispatch_routine (uint16_t builtin_routine_i
 extern const ecma_builtin_property_descriptor_t \
 ecma_builtin_ ## lowercase_name ## _property_descriptor_list[]; \
 ecma_value_t \
-ecma_builtin_ ## lowercase_name ## _dispatch_routine (uint16_t builtin_routine_id, \
-                                                      ecma_value_t this_arg_value, \
-                                                      const ecma_value_t [], \
-                                                      uint32_t);
+ecma_builtin_ ## lowercase_name ## _dispatch_routine (ecma_func_args_t *, uint16_t);
 #include "ecma-builtins.inc.h"
 
 #undef BUILTIN_ROUTINE

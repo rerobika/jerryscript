@@ -85,22 +85,14 @@ JERRY_STATIC_ASSERT (ECMA_ASYNC_GENERATOR_ROUTINE_TO_OPERATION (ECMA_ASYNC_GENER
   *         Returned value must be freed with ecma_free_value.
   */
 ecma_value_t
-ecma_builtin_async_generator_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                                       *   identifier */
-                                                         ecma_value_t this_arg, /**< 'this' argument value */
-                                                         const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                                 *   passed to
-                                                                                                 *   routine */
-                                                         uint32_t arguments_number) /**< length of arguments'
-                                                                                     *   list */
+ecma_builtin_async_generator_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                         uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (arguments_number);
-
   vm_executable_object_t *executable_object_p = NULL;
 
-  if (ecma_is_value_object (this_arg))
+  if (ecma_is_value_object (func_args_p->this_value))
   {
-    ecma_object_t *object_p = ecma_get_object_from_value (this_arg);
+    ecma_object_t *object_p = ecma_get_object_from_value (func_args_p->this_value);
 
     if (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_CLASS)
     {
@@ -118,13 +110,15 @@ ecma_builtin_async_generator_prototype_dispatch_routine (uint16_t builtin_routin
     return ecma_raise_type_error (ECMA_ERR_MSG ("Argument 'this' is not an async generator object."));
   }
 
+  ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+
   if (executable_object_p->extended_object.u.class_prop.extra_info & ECMA_EXECUTABLE_OBJECT_COMPLETED)
   {
     ecma_value_t promise = ecma_make_object_value (ecma_builtin_get (ECMA_BUILTIN_ID_PROMISE));
 
     if (JERRY_UNLIKELY (builtin_routine_id == ECMA_ASYNC_GENERATOR_PROTOTYPE_ROUTINE_THROW))
     {
-      return ecma_promise_reject_or_resolve (promise, arguments_list_p[0], false);
+      return ecma_promise_reject_or_resolve (promise, arg_1, false);
     }
 
     ecma_value_t iter_result = ecma_create_iter_result_object (ECMA_VALUE_UNDEFINED, ECMA_VALUE_TRUE);
@@ -135,7 +129,7 @@ ecma_builtin_async_generator_prototype_dispatch_routine (uint16_t builtin_routin
 
   return ecma_async_generator_enqueue (executable_object_p,
                                        ECMA_ASYNC_GENERATOR_ROUTINE_TO_OPERATION (builtin_routine_id),
-                                       arguments_list_p[0]);
+                                       arg_1);
 } /* ecma_builtin_async_generator_prototype_dispatch_routine */
 
 /**

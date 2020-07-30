@@ -75,8 +75,8 @@ ecma_value_t ecma_op_container_create_iterator (ecma_value_t this_arg,
                                                 ecma_pseudo_array_type_t iterator_type,
                                                 ecma_iterator_kind_t kind);
 ecma_value_t ecma_op_container_iterator_next (ecma_value_t this_val, ecma_pseudo_array_type_t iterator_type);
-ecma_value_t ecma_builtin_container_dispatch_routine (uint16_t builtin_routine_id, ecma_value_t this_arg,
-                                                      const ecma_value_t arguments_list_p[],
+ecma_value_t ecma_builtin_container_dispatch_routine (ecma_func_args_t *func_args_p,
+                                                      uint16_t builtin_routine_id,
                                                       lit_magic_string_id_t lit_id);
 
 /**

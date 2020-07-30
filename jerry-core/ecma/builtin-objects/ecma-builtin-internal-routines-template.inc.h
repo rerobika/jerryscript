@@ -230,56 +230,53 @@ const ecma_builtin_property_descriptor_t PROPERTY_DESCRIPTOR_LIST_NAME[] =
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-DISPATCH_ROUTINE_ROUTINE_NAME (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                 identifier */
-                               ecma_value_t this_arg_value, /**< 'this' argument
-                                                                 value */
-                               const ecma_value_t arguments_list[], /**< list of arguments
-                                                                         passed to routine */
-                               uint32_t arguments_number) /**< length of
-                                                           *   arguments' list */
+DISPATCH_ROUTINE_ROUTINE_NAME (ecma_func_args_t *func_args_p, /**< function arguments */
+                               uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  /* the arguments may be unused for some built-ins */
-  JERRY_UNUSED (this_arg_value);
-  JERRY_UNUSED (arguments_list);
-  JERRY_UNUSED (arguments_number);
+  JERRY_ASSERT (ecma_builtin_function_is_routine (func_args_p->func_obj_p));
+
+  ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t arg_3 = func_args_p->argc > 2 ? func_args_p->argv[2] : ECMA_VALUE_UNDEFINED;
+
+  JERRY_UNUSED_3 (arg_1, arg_2, arg_3);
 
   switch (builtin_routine_id)
   {
-#define ROUTINE_ARG(n) (arguments_list[n - 1])
+#define ROUTINE_ARG(n) (arg_ ## n)
 #define ROUTINE_ARG_LIST_0
 #define ROUTINE_ARG_LIST_1 , ROUTINE_ARG(1)
 #define ROUTINE_ARG_LIST_2 ROUTINE_ARG_LIST_1, ROUTINE_ARG(2)
 #define ROUTINE_ARG_LIST_3 ROUTINE_ARG_LIST_2, ROUTINE_ARG(3)
-#define ROUTINE_ARG_LIST_NON_FIXED , arguments_list, arguments_number
+#define ROUTINE_ARG_LIST_NON_FIXED , func_args_p->argv, func_args_p->argc
 #define ROUTINE(name, c_function_name, args_number, length_prop_value) \
        case ECMA_ROUTINE_ ## name ## c_function_name: \
        { \
-         return c_function_name (this_arg_value ROUTINE_ARG_LIST_ ## args_number); \
+         return c_function_name (func_args_p->this_value ROUTINE_ARG_LIST_ ## args_number); \
        }
 #define ROUTINE_CONFIGURABLE_ONLY(name, c_function_name, args_number, length_prop_value) \
        case ECMA_ROUTINE_ ## name ## c_function_name: \
        { \
-         return c_function_name (this_arg_value ROUTINE_ARG_LIST_ ## args_number); \
+         return c_function_name (func_args_p->this_value ROUTINE_ARG_LIST_ ## args_number); \
        }
 #define ROUTINE_WITH_FLAGS(name, c_function_name, args_number, length_prop_value, flags) \
        case ECMA_ROUTINE_ ## name ## c_function_name: \
        { \
-         return c_function_name (this_arg_value ROUTINE_ARG_LIST_ ## args_number); \
+         return c_function_name (func_args_p->this_value ROUTINE_ARG_LIST_ ## args_number); \
        }
 #define ACCESSOR_READ_WRITE(name, c_getter_func_name, c_setter_func_name, prop_attributes) \
        case ECMA_ACCESSOR_ ## name ## c_getter_func_name: \
        { \
-         return c_getter_func_name(this_arg_value); \
+         return c_getter_func_name(func_args_p->this_value); \
        } \
        case ECMA_ACCESSOR_ ## name ## c_setter_func_name: \
        { \
-         return c_setter_func_name(this_arg_value ROUTINE_ARG_LIST_1); \
+         return c_setter_func_name(func_args_p->this_value ROUTINE_ARG_LIST_1); \
        }
 #define ACCESSOR_READ_ONLY(name, c_getter_func_name, prop_attributes) \
        case ECMA_ACCESSOR_ ## name ## c_getter_func_name: \
        { \
-         return c_getter_func_name(this_arg_value); \
+         return c_getter_func_name(func_args_p->this_value); \
        }
 #include BUILTIN_INC_HEADER_NAME
 #undef ROUTINE_ARG

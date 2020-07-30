@@ -1213,19 +1213,11 @@ ecma_op_object_get_own_property_keys (ecma_value_t this_arg, /**< this argument 
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_object_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                    *   identifier */
-                                      ecma_value_t this_arg, /**< 'this' argument value */
-                                      const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                              *   passed to routine */
-                                      uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_object_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                      uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  JERRY_UNUSED (this_arg);
-  JERRY_UNUSED (arguments_list_p);
-  JERRY_UNUSED (arguments_number);
-
-  ecma_value_t arg1 = arguments_list_p[0];
-  ecma_value_t arg2 = arguments_list_p[1];
+  ecma_value_t arg1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
+  ecma_value_t arg2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
 
   /* No specialization for the arguments */
   switch (builtin_routine_id)
@@ -1278,7 +1270,8 @@ ecma_builtin_object_dispatch_routine (uint16_t builtin_routine_id, /**< built-in
         return ECMA_VALUE_ERROR;
       }
 
-      ecma_value_t result = ecma_builtin_object_object_define_property (obj_p, prop_name_p, arguments_list_p[2]);
+      ecma_value_t arg3 = func_args_p->argc > 2 ? func_args_p->argv[2] : ECMA_VALUE_UNDEFINED;
+      ecma_value_t result = ecma_builtin_object_object_define_property (obj_p, prop_name_p, arg3);
 
       ecma_deref_ecma_string (prop_name_p);
       return result;
@@ -1312,7 +1305,7 @@ ecma_builtin_object_dispatch_routine (uint16_t builtin_routine_id, /**< built-in
 #if ENABLED (JERRY_ESNEXT)
       case ECMA_OBJECT_ROUTINE_ASSIGN:
       {
-        result = ecma_builtin_object_object_assign (obj_p, arguments_list_p + 1, arguments_number - 1);
+        result = ecma_builtin_object_object_assign (obj_p, func_args_p->argv + 1, func_args_p->argc - 1);
         break;
       }
       case ECMA_OBJECT_ROUTINE_ENTRIES:

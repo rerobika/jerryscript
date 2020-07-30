@@ -411,14 +411,10 @@ ecma_builtin_function_prototype_dispatch (ecma_func_args_t *func_args_p) /**< fu
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_function_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                                *   identifier */
-                                                  ecma_value_t this_arg, /**< 'this' argument value */
-                                                  const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                        *   passed to routine */
-                                                  uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_function_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                  uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  if (!ecma_op_is_callable (this_arg))
+  if (!ecma_op_is_callable (func_args_p->this_value))
   {
 #if ENABLED (JERRY_ESNEXT)
     if (JERRY_UNLIKELY (builtin_routine_id == ECMA_FUNCTION_PROTOTYPE_SYMBOL_HAS_INSTANCE))
@@ -430,7 +426,8 @@ ecma_builtin_function_prototype_dispatch_routine (uint16_t builtin_routine_id, /
     return ecma_raise_type_error (ECMA_ERR_MSG ("Argument 'this' is not a function."));
   }
 
-  ecma_object_t *func_obj_p = ecma_get_object_from_value (this_arg);
+  ecma_object_t *func_obj_p = ecma_get_object_from_value (func_args_p->this_value);
+  ecma_value_t arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
 
   switch (builtin_routine_id)
   {
@@ -440,22 +437,23 @@ ecma_builtin_function_prototype_dispatch_routine (uint16_t builtin_routine_id, /
     }
     case ECMA_FUNCTION_PROTOTYPE_APPLY:
     {
+      ecma_value_t arg_2 = func_args_p->argc > 1 ? func_args_p->argv[1] : ECMA_VALUE_UNDEFINED;
       return ecma_builtin_function_prototype_object_apply (func_obj_p,
-                                                           arguments_list_p[0],
-                                                           arguments_list_p[1]);
+                                                           arg_1,
+                                                           arg_2);
     }
     case ECMA_FUNCTION_PROTOTYPE_CALL:
     {
-      return ecma_builtin_function_prototype_object_call (func_obj_p, arguments_list_p, arguments_number);
+      return ecma_builtin_function_prototype_object_call (func_obj_p, func_args_p->argv, func_args_p->argc);
     }
     case ECMA_FUNCTION_PROTOTYPE_BIND:
     {
-      return ecma_builtin_function_prototype_object_bind (func_obj_p, arguments_list_p, arguments_number);
+      return ecma_builtin_function_prototype_object_bind (func_obj_p, func_args_p->argv, func_args_p->argc);
     }
 #if ENABLED (JERRY_ESNEXT)
     case ECMA_FUNCTION_PROTOTYPE_SYMBOL_HAS_INSTANCE:
     {
-      return ecma_op_object_has_instance (func_obj_p, arguments_list_p[0]);
+      return ecma_op_object_has_instance (func_obj_p, arg_1);
     }
 #endif /* ENABLED (JERRY_ESNEXT) */
     default:

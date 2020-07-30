@@ -835,17 +835,8 @@ ecma_op_get_prototype_from_constructor (ecma_object_t *ctor_obj_p, /**< construc
 static ecma_value_t
 ecma_op_function_call_simple (ecma_func_args_t *func_args_p) /**< function arguments */
 {
-  JERRY_ASSERT (ecma_get_object_type (func_args_p->func_obj_p) == ECMA_OBJECT_TYPE_FUNCTION);
-
-  if (JERRY_UNLIKELY (ecma_get_object_is_builtin (func_args_p->func_obj_p)))
-  {
-    if (ecma_builtin_function_is_routine (func_args_p->func_obj_p))
-    {
-      return ecma_builtin_dispatch_routine (func_args_p);
-    }
-
-    return ecma_builtin_dispatch_function (func_args_p);
-  }
+  JERRY_ASSERT (ecma_get_object_type (func_args_p->func_obj_p) == ECMA_OBJECT_TYPE_FUNCTION
+                && !ecma_get_object_is_builtin (func_args_p->func_obj_p));
 
   /* Entering Function Code (ECMA-262 v5, 10.4.3) */
   ecma_extended_object_t *ext_func_p = (ecma_extended_object_t *) func_args_p->func_obj_p;
@@ -1184,6 +1175,16 @@ ecma_op_function_call (ecma_func_args_t *func_args_p) /**< function arguments */
 
   if (JERRY_LIKELY (type == ECMA_OBJECT_TYPE_FUNCTION))
   {
+    if (JERRY_UNLIKELY (ecma_get_object_is_builtin (func_args_p->func_obj_p)))
+    {
+      if (ecma_builtin_function_is_routine (func_args_p->func_obj_p))
+      {
+        return ecma_builtin_dispatch_routine (func_args_p);
+      }
+
+      return ecma_builtin_dispatch_function (func_args_p);
+    }
+
     return ecma_op_function_call_simple (func_args_p);
   }
   if (type == ECMA_OBJECT_TYPE_EXTERNAL_FUNCTION)

@@ -52,15 +52,12 @@ vm_get_backtrace (uint32_t max_depth) /**< maximum backtrace depth, 0 = unlimite
     {
       ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *) "<external callback>", 19);
     }
-    else if (func_obj_p == ecma_builtin_get_global ())
-    {
-      ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *) "<global>", 8);
-    }
     else
     {
-      JERRY_ASSERT (ecma_get_object_type (func_obj_p) == ECMA_OBJECT_TYPE_FUNCTION);
+      JERRY_ASSERT (func_obj_p == ecma_builtin_get_global ()
+                    || ecma_get_object_type (func_obj_p) == ECMA_OBJECT_TYPE_FUNCTION);
 
-      if (ecma_get_object_is_builtin (func_obj_p))
+      if (ecma_get_object_is_builtin (func_obj_p) && func_obj_p != ecma_builtin_get_global ())
       {
         ecma_stringbuilder_append_raw (&builder, (const lit_utf8_byte_t *) "<native function>", 17);
       }

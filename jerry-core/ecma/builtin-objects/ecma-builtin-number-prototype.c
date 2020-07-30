@@ -749,14 +749,10 @@ ecma_builtin_number_prototype_object_to_number_convert (ecma_number_t this_num, 
  *         Returned value must be freed with ecma_free_value.
  */
 ecma_value_t
-ecma_builtin_number_prototype_dispatch_routine (uint16_t builtin_routine_id, /**< built-in wide routine
-                                                                              *   identifier */
-                                                ecma_value_t this_arg, /**< 'this' argument value */
-                                                const ecma_value_t arguments_list_p[], /**< list of arguments
-                                                                                      *   passed to routine */
-                                                uint32_t arguments_number) /**< length of arguments' list */
+ecma_builtin_number_prototype_dispatch_routine (ecma_func_args_t *func_args_p, /**< function arguments */
+                                                uint16_t builtin_routine_id) /**< builtin-routine ID */
 {
-  ecma_value_t this_value = ecma_builtin_number_prototype_object_value_of (this_arg);
+  ecma_value_t this_value = ecma_builtin_number_prototype_object_value_of (func_args_p->this_value);
 
   if (ECMA_IS_VALUE_ERROR (this_value))
   {
@@ -770,13 +766,11 @@ ecma_builtin_number_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
 
   ecma_number_t this_arg_number = ecma_get_number_from_value (this_value);
 
-  ecma_value_t routine_arg_1 = arguments_list_p[0];
-
   switch (builtin_routine_id)
   {
     case ECMA_NUMBER_PROTOTYPE_TO_STRING:
     {
-      return ecma_builtin_number_prototype_object_to_string (this_arg_number, arguments_list_p, arguments_number);
+      return ecma_builtin_number_prototype_object_to_string (this_arg_number, func_args_p->argv, func_args_p->argc);
     }
     case ECMA_NUMBER_PROTOTYPE_TO_LOCALE_STRING:
     {
@@ -786,6 +780,7 @@ ecma_builtin_number_prototype_dispatch_routine (uint16_t builtin_routine_id, /**
     case ECMA_NUMBER_PROTOTYPE_TO_EXPONENTIAL:
     case ECMA_NUMBER_PROTOTYPE_TO_PRECISION:
     {
+      ecma_value_t routine_arg_1 = func_args_p->argc > 0 ? func_args_p->argv[0] : ECMA_VALUE_UNDEFINED;
       const int option = NUMBER_ROUTINE_TO_FIXED + (builtin_routine_id - ECMA_NUMBER_PROTOTYPE_TO_FIXED);
       return ecma_builtin_number_prototype_object_to_number_convert (this_arg_number,
                                                                      routine_arg_1,
