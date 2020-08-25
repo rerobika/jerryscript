@@ -71,6 +71,8 @@
  */
 #define VM_OC_HAS_GET_ARGS(V) ((V) & (VM_OC_GET_ARGS_MASK << VM_OC_GET_ARGS_SHIFT))
 
+#define VM_OC_GET_ARGS_OPCODE(O) (((O) >> VM_OC_GET_ARGS_SHIFT) & VM_OC_GET_ARGS_MASK)
+
 /**
  * Argument getters that are part of the opcodes.
  */
@@ -233,7 +235,9 @@ typedef enum
   VM_OC_JUMP_AND_EXIT_CONTEXT,   /**< jump and exit context */
 
   VM_OC_CREATE_BINDING,          /**< create variables */
+#if ENABLED (JERRY_SNAPSHOT_EXEC)
   VM_OC_SET_BYTECODE_PTR,        /**< setting bytecode pointer */
+#endif /* ENABLED (JERRY_SNAPSHOT_EXEC) */
   VM_OC_VAR_EVAL,                /**< variable and function evaluation */
 #if ENABLED (JERRY_ESNEXT)
   VM_OC_EXT_VAR_EVAL,            /**< variable and function evaluation for
@@ -311,6 +315,9 @@ typedef enum
  */
 typedef enum
 {
+#if !ENABLED (JERRY_SNAPSHOT_EXEC)
+  VM_OC_SET_BYTECODE_PTR = VM_OC_NONE,        /**< setting bytecode pointer */
+#endif /* ENABLED (JERRY_SNAPSHOT_EXEC) */
 #if !ENABLED (JERRY_ESNEXT)
   VM_OC_EXP = VM_OC_NONE,                     /**< exponentiation */
   VM_OC_BRANCH_IF_NULLISH = VM_OC_NONE,       /** branch if undefined or null */
