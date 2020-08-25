@@ -103,6 +103,19 @@ typedef enum
  */
 typedef enum
 {
+  VM_OC_ARG_GET_NONE = 0,
+  VM_OC_ARG_GET_BRANCH,
+  VM_OC_ARG_GET_STACK,
+  VM_OC_ARG_GET_STACK_STACK,
+
+  VM_OC_ARG_GET_LITERAL,
+  VM_OC_ARG_GET_LITERAL_LITERAL,
+  VM_OC_ARG_GET_STACK_LITERAL,
+  VM_OC_ARG_GET_THIS_LITERAL,
+
+  VM_OC_DECODE_OPCODE,
+  VM_OC_PUT_RESULT,
+
   VM_OC_POP,                     /**< pop from stack */
   VM_OC_POP_BLOCK,               /**< pop block */
   VM_OC_PUSH,                    /**< push one literal  */
