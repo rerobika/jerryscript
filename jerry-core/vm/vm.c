@@ -1080,6 +1080,13 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
               uint16_t second_literal_index;
               READ_LITERAL_INDEX (second_literal_index);
               READ_LITERAL (second_literal_index, right_value);
+
+              if ((opcode_data & VM_OC_DIRECT_PUSH) == VM_OC_DIRECT_PUSH)
+              {
+                *stack_top_p++ = left_value;
+                *stack_top_p++ = right_value;
+                continue;
+              }
               break;
             }
             case VM_OC_GET_STACK_LITERAL:
@@ -1095,9 +1102,22 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
               right_value = left_value;
               left_value = ecma_copy_value (frame_ctx_p->this_binding);
+
+              if ((opcode_data & VM_OC_DIRECT_PUSH) == VM_OC_DIRECT_PUSH)
+              {
+                *stack_top_p++ = left_value;
+                *stack_top_p++ = right_value;
+                continue;
+              }
+
               break;
             }
           }
+        }
+        else if ((opcode_data & VM_OC_DIRECT_PUSH) == VM_OC_DIRECT_PUSH)
+        {
+          *stack_top_p++ = left_value;
+          continue;
         }
       }
       else if (operands >= VM_OC_GET_STACK)
@@ -1183,17 +1203,6 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         {
           ecma_fast_free_value (frame_ctx_p->block_result);
           frame_ctx_p->block_result = *(--stack_top_p);
-          continue;
-        }
-        case VM_OC_PUSH:
-        {
-          *stack_top_p++ = left_value;
-          continue;
-        }
-        case VM_OC_PUSH_TWO:
-        {
-          *stack_top_p++ = left_value;
-          *stack_top_p++ = right_value;
           continue;
         }
         case VM_OC_PUSH_THREE:
