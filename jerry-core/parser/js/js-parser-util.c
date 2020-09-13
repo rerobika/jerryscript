@@ -142,7 +142,7 @@ parser_print_literal (parser_context_t *context_p, /**< context */
 /**
  * Append the current byte code to the stream
  */
-void
+uint8_t *
 parser_flush_cbc (parser_context_t *context_p) /**< context */
 {
   uint8_t flags;
@@ -150,8 +150,10 @@ parser_flush_cbc (parser_context_t *context_p) /**< context */
 
   if (last_opcode == PARSER_CBC_UNAVAILABLE)
   {
-    return;
+    return NULL;
   }
+
+  uint8_t *opcode_p = NULL;
 
   context_p->status_flags |= PARSER_NO_END_LABEL;
 
@@ -163,6 +165,7 @@ parser_flush_cbc (parser_context_t *context_p) /**< context */
     flags = cbc_flags[opcode];
 
     PARSER_APPEND_TO_BYTE_CODE (context_p, opcode);
+    opcode_p = &context_p->byte_code.last_p->bytes[context_p->byte_code.last_position - 1];
     context_p->byte_code_size++;
   }
   else
@@ -280,6 +283,7 @@ parser_flush_cbc (parser_context_t *context_p) /**< context */
   }
 
   context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
+  return opcode_p;
 } /* parser_flush_cbc */
 
 /**

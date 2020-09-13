@@ -179,6 +179,8 @@ typedef enum
   VM_OC_VOID,                    /**< void */
   VM_OC_TYPEOF_IDENT,            /**< typeof identifier */
   VM_OC_TYPEOF,                  /**< typeof */
+  VM_OC_FOR_END_INCREASE_IDENT,                  /**< typeof */
+  VM_OC_FOR_END_LESS_IDENT,                  /**< typeof */
 
   VM_OC_ADD,                     /**< binary add */
   VM_OC_SUB,                     /**< binary sub */

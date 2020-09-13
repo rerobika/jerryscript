@@ -672,7 +672,7 @@ void parser_stack_iterator_write (parser_stack_iterator_t *iterator, const void 
 
 /* Compact byte code emitting functions. */
 
-void parser_flush_cbc (parser_context_t *context_p);
+uint8_t * parser_flush_cbc (parser_context_t *context_p);
 void parser_emit_cbc (parser_context_t *context_p, uint16_t opcode);
 void parser_emit_cbc_literal (parser_context_t *context_p, uint16_t opcode, uint16_t literal_index);
 void parser_emit_cbc_literal_value (parser_context_t *context_p, uint16_t opcode, uint16_t literal_index,

@@ -1664,9 +1664,23 @@ parser_parse_for_statement_end (parser_context_t *context_p) /**< context */
   }
 #endif
 
+  uint16_t literal_index = PARSER_INVALID_LITERAL_INDEX;
+  uint8_t *incr_opcode_p = NULL;
+  size_t byte_code_size = 0;
+
   if (context_p->token.type != LEXER_RIGHT_PAREN)
   {
     parser_parse_expression_statement (context_p, PARSE_EXPR);
+
+    if ((context_p->last_cbc_opcode == CBC_PRE_INCR_IDENT
+         || context_p->last_cbc_opcode == CBC_POST_INCR_IDENT)
+        && context_p->last_cbc.literal_index >= PARSER_REGISTER_START)
+    {
+      context_p->last_cbc_opcode = CBC_FOR_END_INCREASE_IDENT;
+      literal_index = context_p->last_cbc.literal_index;
+      incr_opcode_p = parser_flush_cbc (context_p);
+      byte_code_size = context_p->byte_code_size;
+    }
 
     if (context_p->token.type != LEXER_RIGHT_PAREN)
     {
@@ -1684,12 +1698,29 @@ parser_parse_for_statement_end (parser_context_t *context_p) /**< context */
   {
     parser_parse_expression (context_p, PARSE_EXPR);
 
+    opcode = CBC_BRANCH_IF_TRUE_BACKWARD;
+
+    if (incr_opcode_p)
+    {
+      if (context_p->last_cbc_opcode == CBC_LESS_TWO_LITERALS
+          && context_p->last_cbc.literal_index == literal_index
+          && byte_code_size == context_p->byte_code_size
+          && context_p->byte_code_size - for_statement.start_offset <= UINT8_MAX)
+      {
+        context_p->last_cbc_opcode = CBC_FOR_END_LESS_IDENT;
+        context_p->last_cbc.literal_index = context_p->last_cbc.value;
+      }
+      else
+      {
+        *incr_opcode_p = CBC_PRE_INCR_IDENT;
+      }
+    }
+
     if (context_p->token.type != LEXER_SEMICOLON)
     {
       parser_raise_error (context_p, PARSER_ERR_SEMICOLON_EXPECTED);
     }
 
-    opcode = CBC_BRANCH_IF_TRUE_BACKWARD;
     if (context_p->last_cbc_opcode == CBC_LOGICAL_NOT)
     {
       context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;

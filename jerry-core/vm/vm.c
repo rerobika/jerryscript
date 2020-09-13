@@ -2760,6 +2760,124 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           }
           break;
         }
+        case VM_OC_FOR_END_INCREASE_IDENT:
+        {
+          uint16_t literal_index;
+          READ_LITERAL_INDEX(literal_index);
+
+          JERRY_ASSERT (literal_index < register_end);
+
+          left_value = VM_GET_REGISTER (frame_ctx_p, literal_index);
+
+          if (ecma_is_value_integer_number (left_value))
+          {
+            ecma_integer_value_t int_value = (ecma_integer_value_t) left_value;
+
+            if (JERRY_LIKELY (int_value < ECMA_INTEGER_NUMBER_MAX_SHIFTED))
+            {
+              left_value = (ecma_value_t) (int_value + (1 << ECMA_DIRECT_SHIFT));
+              VM_GET_REGISTER (frame_ctx_p, literal_index) = left_value;
+            }
+            else
+            {
+              ecma_number_t num = ecma_get_integer_from_value (left_value) + 1;
+              VM_GET_REGISTER (frame_ctx_p, literal_index) = ecma_make_number_value (num);
+            }
+          }
+          else if (ecma_is_value_float_number (left_value))
+          {
+            ecma_number_t num = ecma_get_number_from_value (left_value);
+            VM_GET_REGISTER (frame_ctx_p, literal_index) = ecma_update_float_number (left_value, num + 1);
+
+          }
+          else
+          {
+            ecma_number_t result_number;
+            result = ecma_op_to_numeric (left_value, &result_number, ECMA_TO_NUMERIC_ALLOW_BIGINT);
+
+            if (ECMA_IS_VALUE_ERROR (result))
+            {
+              goto error;
+            }
+            ecma_free_value (left_value);
+
+#if ENABLED (JERRY_BUILTIN_BIGINT)
+            if (JERRY_UNLIKELY (ecma_is_value_bigint (result)))
+            {
+              left_value = ecma_bigint_unary (result, ECMA_BIGINT_UNARY_INCREASE);
+              ecma_free_value (result);
+
+              if (ECMA_IS_VALUE_ERROR (left_value))
+              {
+                goto error;
+              }
+            }
+            else
+#endif /* ENABLED (JERRY_BUILTIN_BIGINT) */
+            {
+              left_value = ecma_make_number_value (result_number + 1);
+            }
+
+            VM_GET_REGISTER (frame_ctx_p, literal_index) = left_value;
+          }
+
+          if (0)
+          {
+            case VM_OC_FOR_END_LESS_IDENT:
+            {
+              JERRY_ASSERT (byte_code_start_p[-1] < register_end);
+
+              left_value = VM_GET_REGISTER (frame_ctx_p, byte_code_start_p[-1]);
+              byte_code_p--;
+            }
+          }
+
+          JERRY_ASSERT(*byte_code_p == CBC_FOR_END_LESS_IDENT);
+          byte_code_p++;
+          READ_LITERAL_INDEX(literal_index);
+          READ_LITERAL(literal_index, right_value);
+          byte_code_start_p = byte_code_p++;
+          JERRY_ASSERT(*byte_code_start_p == CBC_BRANCH_IF_TRUE_BACKWARD);
+          uint8_t offset = *byte_code_p++;
+
+          if (ecma_are_values_integer_numbers (left_value, right_value))
+          {
+            if ((ecma_integer_value_t) left_value < (ecma_integer_value_t) right_value)
+            {
+              byte_code_p = byte_code_start_p - offset;
+            }
+            continue;
+          }
+
+          if (ecma_is_value_number (left_value) && ecma_is_value_number (right_value))
+          {
+            ecma_number_t left_number = ecma_get_number_from_value (left_value);
+            ecma_number_t right_number = ecma_get_number_from_value (right_value);
+
+            if (left_number < right_number)
+            {
+              byte_code_p = byte_code_start_p - offset;
+            }
+
+            ecma_free_number (right_value);
+            continue;
+          }
+
+          result = opfunc_relation (left_value, right_value, true, false);
+
+          if (ECMA_IS_VALUE_ERROR (result))
+          {
+            goto error;
+          }
+
+          if (ecma_is_value_true (result))
+          {
+            byte_code_p = byte_code_start_p - offset;
+          }
+
+          ecma_free_value (right_value);
+          continue;
+        }
         case VM_OC_ASSIGN:
         {
           result = left_value;
