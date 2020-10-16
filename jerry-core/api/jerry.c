@@ -3662,6 +3662,154 @@ jerry_foreach_object_property (const jerry_value_t obj_val, /**< object value */
 } /* jerry_foreach_object_property */
 
 /**
+ * TODO
+ *
+ * @return array containing the filtered property keys in successful operation
+ *         value marked with error flag - otherwise
+ */
+jerry_value_t
+jerry_object_get_property_names (const jerry_value_t obj_val, /**< object */
+                                 jerry_property_filter_t filter) /**< property filter options */
+{
+  jerry_assert_api_available ();
+
+  if (!ecma_is_value_object (obj_val))
+  {
+    return jerry_throw (ecma_raise_type_error (ECMA_ERR_MSG (wrong_args_msg_p)));
+  }
+
+  ecma_object_t *obj_p = ecma_get_object_from_value (obj_val);
+  ecma_collection_t *result_p = ecma_new_collection ();
+
+  while (true)
+  {
+    /* Step 1. Get Object.[[OwnKeys]] */
+    ecma_collection_t *prop_names_p = ecma_op_object_own_property_keys (obj_p);
+
+#if ENABLED (JERRY_BUILTIN_PROXY)
+    if (prop_names_p == NULL)
+    {
+      return jerry_throw (ECMA_VALUE_ERROR);
+    }
+#endif /* ENABLED (JERRY_BUILTIN_PROXY) */
+
+    for (uint32_t i = 0; i < prop_names_p->item_count; i++)
+    {
+      ecma_value_t key = prop_names_p->buffer_p[i];
+      ecma_string_t *key_p = ecma_get_prop_name_from_value (key);
+      uint32_t index = ecma_string_get_array_index (key_p);
+
+      /* Step 2. Filter by key type */
+      if (filter & (JERRY_PROPERTY_FILTER_EXLCUDE_STRINGS
+                    | JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS
+                    | JERRY_PROPERTY_FILTER_EXLCUDE_INTEGER_INDICES))
+      {
+        if (ecma_is_value_symbol (key))
+        {
+          if (filter & JERRY_PROPERTY_FILTER_EXLCUDE_SYMBOLS)
+          {
+            continue;
+          }
+        }
+        else if (index != ECMA_STRING_NOT_ARRAY_INDEX)
+        {
+          if ((filter & JERRY_PROPERTY_FILTER_EXLCUDE_INTEGER_INDICES)
+              || ((filter & JERRY_PROPERTY_FILTER_EXLCUDE_STRINGS)
+                  && !(filter & JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER)))
+          {
+            continue;
+          }
+        }
+        else if (filter & JERRY_PROPERTY_FILTER_EXLCUDE_STRINGS)
+        {
+          continue;
+        }
+      }
+
+      /* Step 3. Filter property attributes */
+      if (filter & (JERRY_PROPERTY_FILTER_EXLCUDE_NON_CONFIGURABLE
+                    | JERRY_PROPERTY_FILTER_EXLCUDE_NON_ENUMERABLE
+                    | JERRY_PROPERTY_FILTER_EXLCUDE_NON_WRITABLE))
+      {
+        ecma_property_descriptor_t prop_desc;
+        ecma_value_t status = ecma_op_object_get_own_property_descriptor (obj_p, key_p, &prop_desc);
+
+#if ENABLED (JERRY_BUILTIN_PROXY)
+        if (ECMA_IS_VALUE_ERROR (status))
+        {
+          ecma_collection_free (prop_names_p);
+          ecma_collection_free (result_p);
+          return jerry_throw (ECMA_VALUE_ERROR);
+        }
+#endif /* ENABLED (JERRY_BUILTIN_PROXY) */
+
+        JERRY_ASSERT (ecma_is_value_true (status));
+        uint16_t flags = prop_desc.flags;
+        ecma_free_property_descriptor (&prop_desc);
+
+        if ((!(flags & ECMA_PROP_IS_CONFIGURABLE)
+             && (filter & JERRY_PROPERTY_FILTER_EXLCUDE_NON_CONFIGURABLE))
+            || (!(flags & ECMA_PROP_IS_ENUMERABLE)
+                && (filter & JERRY_PROPERTY_FILTER_EXLCUDE_NON_ENUMERABLE))
+            || (!(flags & ECMA_PROP_IS_WRITABLE)
+                && (filter & JERRY_PROPERTY_FILTER_EXLCUDE_NON_WRITABLE)))
+        {
+          continue;
+        }
+      }
+
+      if (index != ECMA_STRING_NOT_ARRAY_INDEX
+          && (filter & JERRY_PROPERTY_FILTER_INTEGER_INDICES_AS_NUMBER))
+      {
+        ecma_deref_ecma_string (key_p);
+        key = ecma_make_uint32_value (index);
+      }
+      else
+      {
+        ecma_ref_ecma_string (key_p);
+      }
+      ecma_collection_push_back (result_p, key);
+    }
+
+    ecma_collection_free (prop_names_p);
+
+    /* Step 4: Traverse prototype chain */
+    jmem_cpointer_t parent_cp = JMEM_CP_NULL;
+
+    if (filter & JERRY_PROPERTY_FILTER_TRAVERSE_PROTOTYPE_CHAIN)
+    {
+#if ENABLED (JERRY_BUILTIN_PROXY)
+      if (ECMA_OBJECT_IS_PROXY (obj_p))
+      {
+        ecma_value_t parent = ecma_proxy_object_get_prototype_of (obj_p);
+
+        if (ECMA_IS_VALUE_ERROR (parent))
+        {
+          ecma_collection_free (result_p);
+          return jerry_throw (ECMA_VALUE_ERROR);
+        }
+
+        parent_cp = ecma_proxy_object_prototype_to_cp (parent);
+      }
+      else
+#endif /* ENABLED (JERRY_BUILTIN_PROXY) */
+      {
+        parent_cp = ecma_op_ordinary_object_get_prototype_of (obj_p);
+      }
+    }
+
+    if (parent_cp == JMEM_CP_NULL)
+    {
+      break;
+    }
+
+    obj_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, parent_cp);
+  }
+
+  return ecma_op_new_array_object_from_collection (result_p, false);
+} /* jerry_object_get_property_names */
+
+/**
  * Resolve or reject the promise with an argument.
  *
  * @return undefined value - if success
