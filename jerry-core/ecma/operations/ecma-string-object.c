@@ -62,12 +62,7 @@ ecma_op_create_string_object (const ecma_value_t *arguments_list_p, /**< list of
     prim_value = ecma_make_string_value (str_p);
   }
 
-  ecma_builtin_id_t proto_id;
-#if ENABLED (JERRY_BUILTIN_STRING)
-  proto_id = ECMA_BUILTIN_ID_STRING_PROTOTYPE;
-#else /* !ENABLED (JERRY_BUILTIN_STRING) */
-  proto_id = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_STRING) */
+  ecma_builtin_id_t proto_id = ECMA_BUILTIN_ID_STRING_PROTOTYPE;
   ecma_object_t *prototype_obj_p = ecma_builtin_get (proto_id);
 #if ENABLED (JERRY_ESNEXT)
   ecma_object_t *new_target = JERRY_CONTEXT (current_new_target);

@@ -13,8 +13,20 @@
  * limitations under the License.
  */
 
+#define _CORE_BUILTINS 1
+
+#ifndef BUILTIN_ENABLED
+# define BUILTIN_ENABLED(F) ENABLED(F)
+#endif /* !BUILTIN_ENABLED */
+
+#ifndef BUILTIN_GLOBAL_ENABLED
+# define BUILTIN_GLOBAL_ENABLED(F) BUILTIN_ENABLED(F)
+#endif /* !BUILTIN_GLOBAL_ENABLED */
+
 /* Description of built-in objects
    in format (ECMA_BUILTIN_ID_id, object_type, prototype_id, is_extensible, is_static, underscored_id) */
+
+#if BUILTIN_ENABLED (_CORE_BUILTINS)
 
 /* The Object.prototype object (15.2.4) */
 BUILTIN (ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
@@ -30,108 +42,6 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_OBJECT,
                  true,
                  object)
 
-#if ENABLED (JERRY_BUILTIN_ARRAY)
-/* The Array.prototype object (15.4.4) */
-BUILTIN (ECMA_BUILTIN_ID_ARRAY_PROTOTYPE,
-         ECMA_OBJECT_TYPE_ARRAY,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         array_prototype)
-
-/* The Array object (15.4.1) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
-                 true,
-                 array)
-#endif /* ENABLED (JERRY_BUILTIN_ARRAY) */
-
-#if ENABLED (JERRY_ESNEXT)
-# if ENABLED (JERRY_BUILTIN_DATE)
-/* The Date.prototype object (20.3.4) */
-BUILTIN (ECMA_BUILTIN_ID_DATE_PROTOTYPE,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         date_prototype)
-# endif /* ENABLED (JERRY_BUILTIN_DATE) */
-
-# if ENABLED (JERRY_BUILTIN_REGEXP)
-/* The RegExp.prototype object (21.2.5) */
-BUILTIN (ECMA_BUILTIN_ID_REGEXP_PROTOTYPE,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         regexp_prototype)
-# endif /* ENABLED (JERRY_BUILTIN_REGEXP) */
-#else /* !ENABLED (JERRY_ESNEXT) */
-# if ENABLED (JERRY_BUILTIN_DATE)
-/* The Date.prototype object (15.9.4) */
-BUILTIN (ECMA_BUILTIN_ID_DATE_PROTOTYPE,
-         ECMA_OBJECT_TYPE_CLASS,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         date_prototype)
-# endif /* ENABLED (JERRY_BUILTIN_DATE) */
-
-# if ENABLED (JERRY_BUILTIN_REGEXP)
-/* The RegExp.prototype object (15.10.6) */
-BUILTIN (ECMA_BUILTIN_ID_REGEXP_PROTOTYPE,
-         ECMA_OBJECT_TYPE_CLASS,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         regexp_prototype)
-# endif /* ENABLED (JERRY_BUILTIN_REGEXP) */
-#endif /* !ENABLED (JERRY_ESNEXT) */
-
-#if ENABLED (JERRY_BUILTIN_STRING)
-/* The String.prototype object (15.5.4) */
-BUILTIN (ECMA_BUILTIN_ID_STRING_PROTOTYPE,
-          ECMA_OBJECT_TYPE_CLASS,
-          ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-          true,
-          string_prototype)
-
-/* The String object (15.5.1) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_STRING,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
-                 true,
-                 string)
-#endif /* ENABLED (JERRY_BUILTIN_STRING) */
-
-#if ENABLED (JERRY_BUILTIN_BOOLEAN)
-/* The Boolean.prototype object (15.6.4) */
-BUILTIN (ECMA_BUILTIN_ID_BOOLEAN_PROTOTYPE,
-         ECMA_OBJECT_TYPE_CLASS,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         boolean_prototype)
-
-/* The Boolean object (15.6.1) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_BOOLEAN,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
-                 true,
-                 boolean)
-#endif /* ENABLED (JERRY_BUILTIN_BOOLEAN) */
-
-#if ENABLED (JERRY_BUILTIN_NUMBER)
-/* The Number.prototype object (15.7.4) */
-BUILTIN (ECMA_BUILTIN_ID_NUMBER_PROTOTYPE,
-         ECMA_OBJECT_TYPE_CLASS,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         number_prototype)
-
-/* The Number object (15.7.1) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_NUMBER,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
-                 true,
-                 number)
-#endif /* ENABLED (JERRY_BUILTIN_NUMBER) */
-
 /* The Function.prototype object (15.3.4) */
 BUILTIN_ROUTINE (ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
                  ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
@@ -146,56 +56,10 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_FUNCTION,
                  true,
                  function)
 
-#if ENABLED (JERRY_BUILTIN_MATH)
-/* The Math object (15.8) */
-BUILTIN (ECMA_BUILTIN_ID_MATH,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         math)
-#endif /* ENABLED (JERRY_BUILTIN_MATH) */
-
-#if ENABLED (JERRY_BUILTIN_REFLECT)
-
-/* The Reflect object (26.1) */
-BUILTIN (ECMA_BUILTIN_ID_REFLECT,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         reflect)
-#endif /* ENABLED (JERRY_BUILTIN_REFLECT) */
-
-#if ENABLED (JERRY_BUILTIN_JSON)
-/* The JSON object (15.12) */
-BUILTIN (ECMA_BUILTIN_ID_JSON,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
-         true,
-         json)
-#endif /* ENABLED (JERRY_BUILTIN_JSON) */
-
-#if ENABLED (JERRY_BUILTIN_DATE)
-/* The Date object (15.9.3) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_DATE,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
-                 true,
-                 date)
-#endif /* ENABLED (JERRY_BUILTIN_DATE) */
-
-#if ENABLED (JERRY_BUILTIN_REGEXP)
-/* The RegExp object (15.10) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_REGEXP,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
-                 true,
-                 regexp)
-#endif /* ENABLED (JERRY_BUILTIN_REGEXP) */
-
 #if ENABLED (JERRY_ESNEXT)
-#define ECMA_BUILTIN_NATIVE_ERROR_PROTOTYPE_ID ECMA_BUILTIN_ID_ERROR
+# define ECMA_BUILTIN_NATIVE_ERROR_PROTOTYPE_ID ECMA_BUILTIN_ID_ERROR
 #else /* !ENABLED (JERRY_ESNEXT) */
-#define ECMA_BUILTIN_NATIVE_ERROR_PROTOTYPE_ID ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE
+# define ECMA_BUILTIN_NATIVE_ERROR_PROTOTYPE_ID ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE
 #endif /* ENABLED (JERRY_ESNEXT */
 
 /* The Error object (15.11.1) */
@@ -212,7 +76,154 @@ BUILTIN (ECMA_BUILTIN_ID_ERROR_PROTOTYPE,
          true,
          error_prototype)
 
-#if ENABLED (JERRY_BUILTIN_ERRORS)
+/**< The [[ThrowTypeError]] object (13.2.3) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_TYPE_ERROR_THROWER,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 false,
+                 type_error_thrower)
+
+#endif /* BUILTIN_ENABLED (_CORE_BUILTINS) */
+
+/* Configuration dependent builtin objects */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_ARRAY)
+/* The Array.prototype object (15.4.4) */
+BUILTIN (ECMA_BUILTIN_ID_ARRAY_PROTOTYPE,
+         ECMA_OBJECT_TYPE_ARRAY,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         array_prototype)
+
+/* The Array object (15.4.1) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 true,
+                 array)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_ARRAY) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_DATE)
+# if ENABLED (JERRY_ESNEXT)
+#  define ECMA_BUILTIN_DATE_PROTOTYPE_TYPE ECMA_OBJECT_TYPE_GENERAL
+# else /* !ENABLED (JERRY_ESNEXT) */
+#  define ECMA_BUILTIN_DATE_PROTOTYPE_TYPE ECMA_OBJECT_TYPE_CLASS
+#endif /* ENABLED (JERRY_ESNEXT */
+
+/* The Date.prototype object (15.9.4) */
+BUILTIN (ECMA_BUILTIN_ID_DATE_PROTOTYPE,
+         ECMA_BUILTIN_DATE_PROTOTYPE_TYPE,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         date_prototype)
+
+/* The Date object (15.9.3) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_DATE,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 true,
+                 date)
+
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_DATE) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_REGEXP)
+# if ENABLED (JERRY_ESNEXT)
+#  define ECMA_BUILTIN_REGEXP_PROTOTYPE_TYPE ECMA_OBJECT_TYPE_GENERAL
+# else /* !ENABLED (JERRY_ESNEXT) */
+#  define ECMA_BUILTIN_REGEXP_PROTOTYPE_TYPE ECMA_OBJECT_TYPE_CLASS
+#endif /* ENABLED (JERRY_ESNEXT */
+
+/* The RegExp.prototype object (15.10.6) */
+BUILTIN (ECMA_BUILTIN_ID_REGEXP_PROTOTYPE,
+         ECMA_BUILTIN_REGEXP_PROTOTYPE_TYPE,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         regexp_prototype)
+
+/* The RegExp object (15.10) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_REGEXP,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 true,
+                 regexp)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_REGEXP) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_STRING)
+/* The String.prototype object (15.5.4) */
+BUILTIN (ECMA_BUILTIN_ID_STRING_PROTOTYPE,
+          ECMA_OBJECT_TYPE_CLASS,
+          ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+          true,
+          string_prototype)
+
+/* The String object (15.5.1) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_STRING,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 true,
+                 string)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_STRING) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_BOOLEAN)
+/* The Boolean.prototype object (15.6.4) */
+BUILTIN (ECMA_BUILTIN_ID_BOOLEAN_PROTOTYPE,
+         ECMA_OBJECT_TYPE_CLASS,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         boolean_prototype)
+
+/* The Boolean object (15.6.1) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_BOOLEAN,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 true,
+                 boolean)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_BOOLEAN) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_NUMBER)
+/* The Number.prototype object (15.7.4) */
+BUILTIN (ECMA_BUILTIN_ID_NUMBER_PROTOTYPE,
+         ECMA_OBJECT_TYPE_CLASS,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         number_prototype)
+
+/* The Number object (15.7.1) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_NUMBER,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 true,
+                 number)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_NUMBER) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_MATH)
+/* The Math object (15.8) */
+BUILTIN (ECMA_BUILTIN_ID_MATH,
+         ECMA_OBJECT_TYPE_GENERAL,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         math)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_MATH) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_REFLECT)
+/* The Reflect object (26.1) */
+BUILTIN (ECMA_BUILTIN_ID_REFLECT,
+         ECMA_OBJECT_TYPE_GENERAL,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         reflect)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_REFLECT) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_JSON)
+/* The JSON object (15.12) */
+BUILTIN (ECMA_BUILTIN_ID_JSON,
+         ECMA_OBJECT_TYPE_GENERAL,
+         ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+         true,
+         json)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_JSON) */
+
+#if BUILTIN_ENABLED (JERRY_BUILTIN_ERRORS)
 /* The EvalError.prototype object (15.11.6.1) */
 BUILTIN (ECMA_BUILTIN_ID_EVAL_ERROR_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -296,17 +307,9 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_URI_ERROR,
                  ECMA_BUILTIN_NATIVE_ERROR_PROTOTYPE_ID,
                  true,
                  uri_error)
-#endif /* ENABLED (JERRY_BUILTIN_ERRORS) */
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_ERRORS) */
 
-/**< The [[ThrowTypeError]] object (13.2.3) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_TYPE_ERROR_THROWER,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
-                 false,
-                 type_error_thrower)
-
-#if ENABLED (JERRY_BUILTIN_TYPEDARRAY)
-
+#if BUILTIN_ENABLED (JERRY_BUILTIN_TYPEDARRAY)
 /* The ArrayBuffer.prototype object (ES2015 24.1.4) */
 BUILTIN (ECMA_BUILTIN_ID_ARRAYBUFFER_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -328,83 +331,12 @@ BUILTIN (ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          typedarray_prototype)
 
-/* The %TypedArray% intrinsic object (ES2015 22.2.1)
-   Note: The routines must be in this order. */
+/* The %TypedArray% intrinsic object (ES2015 22.2.1) */
 BUILTIN_ROUTINE (ECMA_BUILTIN_ID_TYPEDARRAY,
                  ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
                  ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
                  true,
                  typedarray)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_INT8ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 int8array)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT8ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 uint8array)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT8CLAMPEDARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 uint8clampedarray)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_INT16ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 int16array)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT16ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 uint16array)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_INT32ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 int32array)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT32ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 uint32array)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_FLOAT32ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 float32array)
-
-#if ENABLED (JERRY_NUMBER_TYPE_FLOAT64)
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_FLOAT64ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 float64array)
-#endif /* ENABLED (JERRY_NUMBER_TYPE_FLOAT64) */
-
-#if ENABLED (JERRY_BUILTIN_BIGINT)
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_BIGINT64ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 bigint64array)
-
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_BIGUINT64ARRAY,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_TYPEDARRAY,
-                 true,
-                 biguint64array)
-#endif /* ENABLED (JERRY_BUILTIN_BIGINT) */
 
 BUILTIN (ECMA_BUILTIN_ID_INT8ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -412,11 +344,23 @@ BUILTIN (ECMA_BUILTIN_ID_INT8ARRAY_PROTOTYPE,
          true,
          int8array_prototype)
 
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_INT8ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 int8array)
+
 BUILTIN (ECMA_BUILTIN_ID_UINT8ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          uint8array_prototype)
+
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT8ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 uint8array)
 
 BUILTIN (ECMA_BUILTIN_ID_UINT8CLAMPEDARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -424,11 +368,23 @@ BUILTIN (ECMA_BUILTIN_ID_UINT8CLAMPEDARRAY_PROTOTYPE,
          true,
          uint8clampedarray_prototype)
 
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT8CLAMPEDARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 uint8clampedarray)
+
 BUILTIN (ECMA_BUILTIN_ID_INT16ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          int16array_prototype)
+
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_INT16ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 int16array)
 
 BUILTIN (ECMA_BUILTIN_ID_UINT16ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -436,11 +392,23 @@ BUILTIN (ECMA_BUILTIN_ID_UINT16ARRAY_PROTOTYPE,
          true,
          uint16array_prototype)
 
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT16ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 uint16array)
+
 BUILTIN (ECMA_BUILTIN_ID_INT32ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          int32array_prototype)
+
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_INT32ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 int32array)
 
 BUILTIN (ECMA_BUILTIN_ID_UINT32ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -448,37 +416,66 @@ BUILTIN (ECMA_BUILTIN_ID_UINT32ARRAY_PROTOTYPE,
          true,
          uint32array_prototype)
 
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_UINT32ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 uint32array)
+
 BUILTIN (ECMA_BUILTIN_ID_FLOAT32ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          float32array_prototype)
 
-#if ENABLED (JERRY_NUMBER_TYPE_FLOAT64)
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_FLOAT32ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 float32array)
+
+# if ENABLED (JERRY_NUMBER_TYPE_FLOAT64)
 BUILTIN (ECMA_BUILTIN_ID_FLOAT64ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          float64array_prototype)
-#endif /* ENABLED (JERRY_NUMBER_TYPE_FLOAT64) */
 
-#if ENABLED (JERRY_BUILTIN_BIGINT)
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_FLOAT64ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 float64array)
+# endif /* ENABLED (JERRY_NUMBER_TYPE_FLOAT64) */
+
+# if ENABLED (JERRY_BUILTIN_BIGINT)
 BUILTIN (ECMA_BUILTIN_ID_BIGINT64ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          bigint64array_prototype)
 
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_BIGINT64ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 bigint64array)
+
 BUILTIN (ECMA_BUILTIN_ID_BIGUINT64ARRAY_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_TYPEDARRAY_PROTOTYPE,
          true,
          biguint64array_prototype)
-#endif /* ENABLED (JERRY_BUILTIN_BIGINT) */
-#endif /* ENABLED (JERRY_BUILTIN_TYPEDARRAY) */
 
-#if ENABLED (JERRY_BUILTIN_PROMISE)
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_BIGUINT64ARRAY,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_TYPEDARRAY,
+                 true,
+                 biguint64array)
+# endif /* ENABLED (JERRY_BUILTIN_BIGINT) */
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_TYPEDARRAY) */
 
+#if BUILTIN_ENABLED (JERRY_BUILTIN_PROMISE)
 BUILTIN (ECMA_BUILTIN_ID_PROMISE_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
@@ -491,10 +488,9 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_PROMISE,
                  true,
                  promise)
 
-#endif /* ENABLED (JERRY_BUILTIN_PROMISE) */
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_PROMISE) */
 
-#if ENABLED (JERRY_BUILTIN_MAP)
-
+#if BUILTIN_ENABLED (JERRY_BUILTIN_MAP)
 /* The Map prototype object (23.1.3) */
 BUILTIN (ECMA_BUILTIN_ID_MAP_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -509,10 +505,15 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_MAP,
                  true,
                  map)
 
-#endif /* ENABLED (JERRY_BUILTIN_MAP) */
+/* The %MapIteratorPrototype% object (ECMA-262 v6, 23.1.5.2) */
+BUILTIN (ECMA_BUILTIN_ID_MAP_ITERATOR_PROTOTYPE,
+         ECMA_OBJECT_TYPE_GENERAL,
+         ECMA_BUILTIN_ID_ITERATOR_PROTOTYPE,
+         true,
+         map_iterator_prototype)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_MAP) */
 
-#if ENABLED (JERRY_BUILTIN_SET)
-
+#if BUILTIN_ENABLED (JERRY_BUILTIN_SET)
 /* The Set prototype object (23.1.3) */
 BUILTIN (ECMA_BUILTIN_ID_SET_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -527,10 +528,15 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_SET,
                  true,
                  set)
 
-#endif /* ENABLED (JERRY_BUILTIN_SET) */
+/* The %SetIteratorPrototype% object (ECMA-262 v6, 23.2.5.2) */
+BUILTIN (ECMA_BUILTIN_ID_SET_ITERATOR_PROTOTYPE,
+         ECMA_OBJECT_TYPE_GENERAL,
+         ECMA_BUILTIN_ID_ITERATOR_PROTOTYPE,
+         true,
+         set_iterator_prototype)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_SET) */
 
-#if ENABLED (JERRY_BUILTIN_WEAKMAP)
-
+#if BUILTIN_ENABLED (JERRY_BUILTIN_WEAKMAP)
 /* The WeakMap prototype object (23.1.3) */
 BUILTIN (ECMA_BUILTIN_ID_WEAKMAP_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -544,11 +550,9 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_WEAKMAP,
                  ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
                  true,
                  weakmap)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_WEAKMAP) */
 
-#endif /* ENABLED (JERRY_BUILTIN_WEAKMAP) */
-
-#if ENABLED (JERRY_BUILTIN_WEAKSET)
-
+#if BUILTIN_ENABLED (JERRY_BUILTIN_WEAKSET)
 /* The WeakSet prototype object (23.1.3) */
 BUILTIN (ECMA_BUILTIN_ID_WEAKSET_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -562,20 +566,18 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_WEAKSET,
                  ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
                  true,
                  weakset)
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_WEAKSET) */
 
-#endif /* ENABLED (JERRY_BUILTIN_WEAKSET) */
-
-#if ENABLED (JERRY_BUILTIN_PROXY)
+#if BUILTIN_ENABLED (JERRY_BUILTIN_PROXY)
 /* The Proxy routine (ECMA-262 v6, 26.2.1) */
 BUILTIN_ROUTINE (ECMA_BUILTIN_ID_PROXY,
                  ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
                  ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
                  true,
                  proxy)
-#endif /* ENABLED (JERRY_BUILTIN_PROXY) */
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_PROXY) */
 
-#if ENABLED (JERRY_ESNEXT)
-
+#if BUILTIN_ENABLED (JERRY_ESNEXT)
 /* Intrinsic hidden builtin object  */
 BUILTIN (ECMA_BUILTIN_ID_INTRINSIC_OBJECT,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -604,19 +606,19 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_SYMBOL,
                  true,
                  symbol)
 
-/* The %AsyncFunction% object (ECMA-262 v11, 25.7.2) */
-BUILTIN_ROUTINE (ECMA_BUILTIN_ID_ASYNC_FUNCTION,
-                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
-                 ECMA_BUILTIN_ID_FUNCTION,
-                 true,
-                 async_function)
-
 /* The %AsyncFunctionPrototype% object (ECMA-262 v11, 25.7.3) */
 BUILTIN (ECMA_BUILTIN_ID_ASYNC_FUNCTION_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
          true,
          async_function_prototype)
+
+/* The %AsyncFunction% object (ECMA-262 v11, 25.7.2) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_ASYNC_FUNCTION,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION,
+                 true,
+                 async_function)
 
 /* The %IteratorPrototype% object (ECMA-262 v6, 25.1.2) */
 BUILTIN (ECMA_BUILTIN_ID_ITERATOR_PROTOTYPE,
@@ -653,6 +655,13 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_GENERATOR_FUNCTION,
                  true,
                  generator_function)
 
+/* The %(Generator).prototype% object */
+BUILTIN (ECMA_BUILTIN_ID_GENERATOR_PROTOTYPE,
+         ECMA_OBJECT_TYPE_GENERAL,
+         ECMA_BUILTIN_ID_ITERATOR_PROTOTYPE,
+         true,
+         generator_prototype)
+
 /* The %(Generator)% object */
 BUILTIN (ECMA_BUILTIN_ID_GENERATOR,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -660,12 +669,12 @@ BUILTIN (ECMA_BUILTIN_ID_GENERATOR,
          true,
          generator)
 
-/* The %(Generator).prototype% object */
-BUILTIN (ECMA_BUILTIN_ID_GENERATOR_PROTOTYPE,
+/* The %(AsyncGenerator).prototype% object */
+BUILTIN (ECMA_BUILTIN_ID_ASYNC_GENERATOR_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_ITERATOR_PROTOTYPE,
+         ECMA_BUILTIN_ID_ASYNC_ITERATOR_PROTOTYPE,
          true,
-         generator_prototype)
+         async_generator_prototype)
 
 /* The %(AsyncGeneratorFunction)% object */
 BUILTIN_ROUTINE (ECMA_BUILTIN_ID_ASYNC_GENERATOR_FUNCTION,
@@ -680,35 +689,9 @@ BUILTIN (ECMA_BUILTIN_ID_ASYNC_GENERATOR,
          ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
          true,
          async_generator)
+#endif /* BUILTIN_ENABLED (JERRY_ESNEXT) */
 
-/* The %(AsyncGenerator).prototype% object */
-BUILTIN (ECMA_BUILTIN_ID_ASYNC_GENERATOR_PROTOTYPE,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_ASYNC_ITERATOR_PROTOTYPE,
-         true,
-         async_generator_prototype)
-
-#if ENABLED (JERRY_BUILTIN_SET)
-/* The %SetIteratorPrototype% object (ECMA-262 v6, 23.2.5.2) */
-BUILTIN (ECMA_BUILTIN_ID_SET_ITERATOR_PROTOTYPE,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_ITERATOR_PROTOTYPE,
-         true,
-         set_iterator_prototype)
-#endif /* ENABLED (JERRY_BUILTIN_SET) */
-
-#if ENABLED (JERRY_BUILTIN_MAP)
-/* The %MapIteratorPrototype% object (ECMA-262 v6, 23.1.5.2) */
-BUILTIN (ECMA_BUILTIN_ID_MAP_ITERATOR_PROTOTYPE,
-         ECMA_OBJECT_TYPE_GENERAL,
-         ECMA_BUILTIN_ID_ITERATOR_PROTOTYPE,
-         true,
-         map_iterator_prototype)
-#endif /* ENABLED (JERRY_BUILTIN_SET) */
-
-#endif /* ENABLED (JERRY_ESNEXT) */
-
-#if ENABLED (JERRY_BUILTIN_BIGINT)
+#if BUILTIN_ENABLED (JERRY_BUILTIN_BIGINT)
 /* The %BigInt.prototype% object */
 BUILTIN (ECMA_BUILTIN_ID_BIGINT_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -722,9 +705,9 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_BIGINT,
                  ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
                  true,
                  bigint)
-#endif /* ENABLED (JERRY_BUILTIN_BIGINT) */
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_BIGINT) */
 
-#if ENABLED (JERRY_BUILTIN_DATAVIEW)
+#if BUILTIN_ENABLED (JERRY_BUILTIN_DATAVIEW)
 /* The DataView prototype object (ECMA-262 v6, 24.2.3.1) */
 BUILTIN (ECMA_BUILTIN_ID_DATAVIEW_PROTOTYPE,
          ECMA_OBJECT_TYPE_GENERAL,
@@ -738,13 +721,19 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_DATAVIEW,
                  ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
                  true,
                  dataview)
-#endif /* ENABLED (JERRY_BUILTIN_DATAVIEW */
+#endif /* BUILTIN_ENABLED (JERRY_BUILTIN_DATAVIEW) */
 
+#if BUILTIN_GLOBAL_ENABLED (_CORE_BUILTINS)
 /* The Global object (15.1) */
 BUILTIN (ECMA_BUILTIN_ID_GLOBAL,
          ECMA_OBJECT_TYPE_GENERAL,
          ECMA_BUILTIN_ID_OBJECT_PROTOTYPE, /* Implementation-dependent */
          true,
          global)
+#endif /* BUILTIN_GLOBAL_ENABLED (_CORE_BUILTINS) */
 
 #undef BUILTIN
+#undef BUILTIN_ROUTINE
+#undef BUILTIN_ENABLED
+#undef BUILTIN_GLOBAL_ENABLED
+#undef _CORE_BUILTINS

@@ -44,14 +44,7 @@ ecma_value_t
 ecma_op_create_boolean_object (ecma_value_t arg) /**< argument passed to the Boolean constructor */
 {
   bool boolean_value = ecma_op_to_boolean (arg);
-  ecma_builtin_id_t proto_id;
-
-#if ENABLED (JERRY_BUILTIN_BOOLEAN)
-  proto_id = ECMA_BUILTIN_ID_BOOLEAN_PROTOTYPE;
-#else /* ENABLED (JERRY_BUILTIN_BOOLEAN) */
-  proto_id = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE;
-#endif /* !(ENABLED (JERRY_BUILTIN_BOOLEAN) */
-
+  ecma_builtin_id_t proto_id = ECMA_BUILTIN_ID_BOOLEAN_PROTOTYPE;
   ecma_object_t *prototype_obj_p = ecma_builtin_get (proto_id);
 
 #if ENABLED (JERRY_ESNEXT)

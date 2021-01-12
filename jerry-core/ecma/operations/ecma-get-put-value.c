@@ -158,15 +158,11 @@ ecma_op_get_value_object_base (ecma_value_t base_value, /**< base value */
         return ecma_make_string_value (ecma_new_ecma_string_from_code_unit (char_at_idx));
       }
 
-#if ENABLED (JERRY_BUILTIN_STRING)
       id = ECMA_BUILTIN_ID_STRING_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_STRING) */
     }
     else if (ecma_is_value_number (base_value))
     {
-#if ENABLED (JERRY_BUILTIN_NUMBER)
       id = ECMA_BUILTIN_ID_NUMBER_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_NUMBER) */
     }
 #if ENABLED (JERRY_ESNEXT)
     else if (ecma_is_value_symbol (base_value))
@@ -183,9 +179,7 @@ ecma_op_get_value_object_base (ecma_value_t base_value, /**< base value */
     else
     {
       JERRY_ASSERT (ecma_is_value_boolean (base_value));
-#if ENABLED (JERRY_BUILTIN_BOOLEAN)
       id = ECMA_BUILTIN_ID_BOOLEAN_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_BOOLEAN) */
     }
 
     obj_p = ecma_builtin_get (id);

@@ -65,13 +65,7 @@
 static ecma_object_t *
 ecma_op_alloc_array_object (uint32_t length) /**< length of the new array */
 {
-#if ENABLED (JERRY_BUILTIN_ARRAY)
-  ecma_object_t *array_prototype_object_p = ecma_builtin_get (ECMA_BUILTIN_ID_ARRAY_PROTOTYPE);
-#else /* !ENABLED (JERRY_BUILTIN_ARRAY) */
-  ecma_object_t *array_prototype_object_p = ecma_builtin_get (ECMA_BUILTIN_ID_OBJECT_PROTOTYPE);
-#endif /* ENABLED (JERRY_BUILTIN_ARRAY) */
-
-  ecma_object_t *object_p = ecma_create_object (array_prototype_object_p,
+  ecma_object_t *object_p = ecma_create_object (ecma_builtin_get (ECMA_BUILTIN_ID_ARRAY_PROTOTYPE),
                                                 sizeof (ecma_extended_object_t),
                                                 ECMA_OBJECT_TYPE_ARRAY);
 

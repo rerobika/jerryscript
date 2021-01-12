@@ -20,6 +20,13 @@
 
 /**
  * A built-in object's identifier
+ *
+ * Enum layout:
+ *  - Enabled builtin routine indices
+ *  - Enabled builtin indices
+ *  - ECMA_BUILTIN_ID__COUNT
+ *  - Disabled builtin routine indices = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE
+ *  - Disabled builtin indices = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE
  */
 typedef enum
 {
@@ -45,7 +52,36 @@ typedef enum
 #undef BUILTIN
 #undef BUILTIN_ROUTINE
 /** @endcond */
-  ECMA_BUILTIN_ID__COUNT /**< number of built-in objects */
+
+ECMA_BUILTIN_ID__COUNT, /**< number of built-in objects */
+
+/** @cond doxygen_suppress */
+/* Generate disabled builtins */
+
+#define BUILTIN_ENABLED(F) DISABLED(F)
+#define BUILTIN(a, b, c, d, e)
+#define BUILTIN_ROUTINE(builtin_id, \
+                        object_type, \
+                        object_prototype_builtin_id, \
+                        is_extensible, \
+                        lowercase_name) \
+  builtin_id = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+#include "ecma-builtins.inc.h"
+#undef BUILTIN
+#undef BUILTIN_ROUTINE
+#define BUILTIN_ENABLED(F) DISABLED(F)
+#define BUILTIN_ROUTINE(a, b, c, d, e)
+#define BUILTIN(builtin_id, \
+                object_type, \
+                object_prototype_builtin_id, \
+                is_extensible, \
+                lowercase_name) \
+  builtin_id = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE,
+#include "ecma-builtins.inc.h"
+#undef BUILTIN
+#undef BUILTIN_ROUTINE
+#undef BUILTIN_ENABLED
+/** @endcond */
 } ecma_builtin_id_t;
 
 #if ENABLED (JERRY_ESNEXT)

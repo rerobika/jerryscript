@@ -536,16 +536,12 @@ ecma_op_to_object (ecma_value_t value) /**< ecma value */
 
   if (ecma_is_value_number (value))
   {
-#if ENABLED (JERRY_BUILTIN_NUMBER)
     proto_id =  ECMA_BUILTIN_ID_NUMBER_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_NUMBER) */
     lit_id = LIT_MAGIC_STRING_NUMBER_UL;
   }
   else if (ecma_is_value_string (value))
   {
-#if ENABLED (JERRY_BUILTIN_STRING)
     proto_id = ECMA_BUILTIN_ID_STRING_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_STRING) */
     lit_id = LIT_MAGIC_STRING_STRING_UL;
   }
   else if (ecma_is_value_object (value))
@@ -575,9 +571,7 @@ ecma_op_to_object (ecma_value_t value) /**< ecma value */
     else
     {
       JERRY_ASSERT (ecma_is_value_boolean (value));
-#if ENABLED (JERRY_BUILTIN_BOOLEAN)
       proto_id = ECMA_BUILTIN_ID_BOOLEAN_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_BOOLEAN) */
       lit_id = LIT_MAGIC_STRING_BOOLEAN_UL;
     }
   }

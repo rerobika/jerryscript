@@ -52,12 +52,7 @@ ecma_op_create_number_object (ecma_value_t arg) /**< argument passed to the Numb
   }
 
   conv_to_num_completion = ecma_make_number_value (num);
-  ecma_builtin_id_t proto_id;
-#if ENABLED (JERRY_BUILTIN_NUMBER)
-  proto_id = ECMA_BUILTIN_ID_NUMBER_PROTOTYPE;
-#else /* ENABLED (JERRY_BUILTIN_NUMBER) */
-  proto_id = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE;
-#endif /* ENABLED (JERRY_BUILTIN_NUMBER) */
+  ecma_builtin_id_t proto_id = ECMA_BUILTIN_ID_NUMBER_PROTOTYPE;
   ecma_object_t *prototype_obj_p = ecma_builtin_get (proto_id);
 #if ENABLED (JERRY_ESNEXT)
   ecma_object_t *new_target = JERRY_CONTEXT (current_new_target);
