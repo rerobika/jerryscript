@@ -1002,6 +1002,55 @@ opfunc_construct (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
   }
 
 /**
+ * Check whether the next instruction is a fast branch and execute it
+ *
+ * The jump is executed if the `condition` matches with the branch's logical condition
+ * Otherwise the branch instruction is skipped
+ *
+ * @param condition test condition
+ * @param result value to be placed onto the stack if the following instruction is not fast branch
+ */
+#if ENABLED (JERRY_VM_EXEC_STOP)
+#define CONDITION_LOOKAHEAD(condition, result)
+#else /* ENABLED (JERRY_VM_EXEC_STOP) */
+#define CONDITION_LOOKAHEAD(condition, result) \
+  if (JERRY_LIKELY (CBC_IS_FAST_BACKWARD_BRANCH (*byte_code_p))) \
+  { \
+    if ((condition)) \
+    { \
+      byte_code_p -= byte_code_p[1]; \
+    } \
+    else \
+    { \
+      byte_code_p += 2; /* cbc_opcode + branch offset length */ \
+    } \
+  } \
+  else if (JERRY_LIKELY (CBC_IS_FAST_FORWARD_BRANCH (*byte_code_p))) \
+  { \
+    if ((condition)) \
+    { \
+      byte_code_p += 2; /* cbc_opcode + branch offset length */ \
+    } \
+    else \
+    { \
+      byte_code_p += byte_code_p[1]; \
+    } \
+  } \
+  else \
+  { \
+    *stack_top_p++ = result; \
+  }
+#endif /* !ENABLED (JERRY_VM_EXEC_STOP) */
+
+/**
+ * CONDITION_LOOKAHEAD with boolean condtion
+ *
+ * @param condition test condition
+ */
+#define BOOL_CONDITION_LOOKAHEAD(condition) \
+  CONDITION_LOOKAHEAD (condition, ecma_make_boolean_value (condition))
+
+/**
  * Run generic byte code.
  *
  * @return ecma value
@@ -1020,7 +1069,6 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
   uint16_t ident_end;
   uint16_t const_literal_end;
   int32_t branch_offset = 0;
-  uint8_t branch_offset_length = 0;
   ecma_value_t left_value;
   ecma_value_t right_value;
   ecma_value_t result = ECMA_VALUE_EMPTY;
@@ -1130,7 +1178,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
       }
       else if (operands == VM_OC_GET_BRANCH)
       {
-        branch_offset_length = CBC_BRANCH_OFFSET_LENGTH (opcode);
+        uint8_t branch_offset_length = CBC_BRANCH_OFFSET_LENGTH (opcode);
         JERRY_ASSERT (branch_offset_length >= 1 && branch_offset_length <= 3);
 
         branch_offset = *(byte_code_p++);
@@ -3529,7 +3577,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
             goto error;
           }
 
-          *stack_top_p++ = result;
+          CONDITION_LOOKAHEAD (ecma_is_value_true (result), result);
           goto free_both_values;
         }
         case VM_OC_NOT_EQUAL:
@@ -3541,25 +3589,21 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
             goto error;
           }
 
-          *stack_top_p++ = ecma_invert_boolean_value (result);
+          CONDITION_LOOKAHEAD (ecma_is_value_false (result), ecma_invert_boolean_value (result));
           goto free_both_values;
         }
         case VM_OC_STRICT_EQUAL:
         {
           bool is_equal = ecma_op_strict_equality_compare (left_value, right_value);
 
-          result = ecma_make_boolean_value (is_equal);
-
-          *stack_top_p++ = result;
+          BOOL_CONDITION_LOOKAHEAD (is_equal);
           goto free_both_values;
         }
         case VM_OC_STRICT_NOT_EQUAL:
         {
           bool is_equal = ecma_op_strict_equality_compare (left_value, right_value);
 
-          result = ecma_make_boolean_value (!is_equal);
-
-          *stack_top_p++ = result;
+          BOOL_CONDITION_LOOKAHEAD (!is_equal);
           goto free_both_values;
         }
         case VM_OC_BIT_OR:
@@ -3711,42 +3755,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           if (ecma_are_values_integer_numbers (left_value, right_value))
           {
             bool is_less = (ecma_integer_value_t) left_value < (ecma_integer_value_t) right_value;
-#if !ENABLED (JERRY_VM_EXEC_STOP)
-            /* This is a lookahead to the next opcode to improve performance.
-             * If it is CBC_BRANCH_IF_TRUE_BACKWARD, execute it. */
-            if (*byte_code_p <= CBC_BRANCH_IF_TRUE_BACKWARD_3 && *byte_code_p >= CBC_BRANCH_IF_TRUE_BACKWARD)
-            {
-              byte_code_start_p = byte_code_p++;
-              branch_offset_length = CBC_BRANCH_OFFSET_LENGTH (*byte_code_start_p);
-              JERRY_ASSERT (branch_offset_length >= 1 && branch_offset_length <= 3);
-
-              if (is_less)
-              {
-                branch_offset = *(byte_code_p++);
-
-                if (JERRY_UNLIKELY (branch_offset_length != 1))
-                {
-                  branch_offset <<= 8;
-                  branch_offset |= *(byte_code_p++);
-                  if (JERRY_UNLIKELY (branch_offset_length == 3))
-                  {
-                    branch_offset <<= 8;
-                    branch_offset |= *(byte_code_p++);
-                  }
-                }
-
-                /* Note: The opcode is a backward branch. */
-                byte_code_p = byte_code_start_p - branch_offset;
-              }
-              else
-              {
-                byte_code_p += branch_offset_length;
-              }
-
-              continue;
-            }
-#endif /* !ENABLED (JERRY_VM_EXEC_STOP) */
-            *stack_top_p++ = ecma_make_boolean_value (is_less);
+            BOOL_CONDITION_LOOKAHEAD (is_less);
             continue;
           }
 
@@ -3773,10 +3782,8 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         {
           if (ecma_are_values_integer_numbers (left_value, right_value))
           {
-            ecma_integer_value_t left_integer = (ecma_integer_value_t) left_value;
-            ecma_integer_value_t right_integer = (ecma_integer_value_t) right_value;
-
-            *stack_top_p++ = ecma_make_boolean_value (left_integer > right_integer);
+            bool is_greater = (ecma_integer_value_t) left_value > (ecma_integer_value_t) right_value;
+            BOOL_CONDITION_LOOKAHEAD (is_greater);
             continue;
           }
 
@@ -3803,10 +3810,8 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         {
           if (ecma_are_values_integer_numbers (left_value, right_value))
           {
-            ecma_integer_value_t left_integer = (ecma_integer_value_t) left_value;
-            ecma_integer_value_t right_integer = (ecma_integer_value_t) right_value;
-
-            *stack_top_p++ = ecma_make_boolean_value (left_integer <= right_integer);
+            bool is_less_equal = (ecma_integer_value_t) left_value <= (ecma_integer_value_t) right_value;
+            BOOL_CONDITION_LOOKAHEAD (is_less_equal);
             continue;
           }
 
@@ -3833,10 +3838,8 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         {
           if (ecma_are_values_integer_numbers (left_value, right_value))
           {
-            ecma_integer_value_t left_integer = (ecma_integer_value_t) left_value;
-            ecma_integer_value_t right_integer = (ecma_integer_value_t) right_value;
-
-            *stack_top_p++ = ecma_make_boolean_value (left_integer >= right_integer);
+            bool is_greater_equal = (ecma_integer_value_t) left_value >= (ecma_integer_value_t) right_value;
+            BOOL_CONDITION_LOOKAHEAD (is_greater_equal);
             continue;
           }
 

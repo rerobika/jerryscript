@@ -210,6 +210,16 @@
   (PARSER_FINALLY_CONTEXT_STACK_ALLOCATION - PARSER_TRY_CONTEXT_STACK_ALLOCATION)
 
 /**
+ * Branch true backward with 1 byte jump offset
+ */
+#define CBC_IS_FAST_BACKWARD_BRANCH(op) ((op) == CBC_BRANCH_IF_TRUE_BACKWARD)
+
+/**
+ * branch false forward with 1 byte jump offset
+ */
+#define CBC_IS_FAST_FORWARD_BRANCH(op) ((op) == CBC_BRANCH_IF_FALSE_FORWARD)
+
+/**
  * Opcode definitions.
  */
 #define CBC_OPCODE_LIST \
