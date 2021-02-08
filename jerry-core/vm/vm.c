@@ -212,6 +212,20 @@ vm_op_set_value (ecma_value_t base, /**< base object */
 
     if (JERRY_UNLIKELY (!ecma_is_value_prop_name (property)))
     {
+      if (ecma_is_value_integer_number (property))
+      {
+        ecma_integer_value_t int_value = ecma_get_integer_from_value (property);
+
+        if (int_value >= 0
+            && int_value <= ECMA_DIRECT_STRING_MAX_IMM
+            && ecma_op_object_is_fast_array (object_p)
+            && ecma_fast_array_set_property (object_p, (uint32_t) int_value, value))
+        {
+          ecma_deref_object (object_p);
+          return ECMA_VALUE_TRUE;
+        }
+      }
+
       property_p = ecma_op_to_string (property);
       ecma_fast_free_value (property);
 
