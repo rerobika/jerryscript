@@ -934,26 +934,23 @@ opfunc_construct (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 #define READ_LITERAL(literal_index, target_value) \
   do \
   { \
-    if ((literal_index) < ident_end) \
+    if ((literal_index) < register_end) \
     { \
-      if ((literal_index) < register_end) \
+      /* Note: There should be no specialization for arguments. */ \
+      (target_value) = ecma_fast_copy_value (VM_GET_REGISTER (frame_ctx_p, literal_index)); \
+    } \
+    else if ((literal_index) < ident_end) \
+    { \
+      ecma_string_t *name_p = ecma_get_string_from_value (literal_start_p[literal_index]); \
+      \
+      result = ecma_op_resolve_reference_value (frame_ctx_p->lex_env_p, \
+                                                name_p); \
+      \
+      if (ECMA_IS_VALUE_ERROR (result)) \
       { \
-        /* Note: There should be no specialization for arguments. */ \
-        (target_value) = ecma_fast_copy_value (VM_GET_REGISTER (frame_ctx_p, literal_index)); \
+        goto error; \
       } \
-      else \
-      { \
-        ecma_string_t *name_p = ecma_get_string_from_value (literal_start_p[literal_index]); \
-        \
-        result = ecma_op_resolve_reference_value (frame_ctx_p->lex_env_p, \
-                                                  name_p); \
-        \
-        if (ECMA_IS_VALUE_ERROR (result)) \
-        { \
-          goto error; \
-        } \
-        (target_value) = result; \
-      } \
+      (target_value) = result; \
     } \
     else if (literal_index < const_literal_end) \
     { \
