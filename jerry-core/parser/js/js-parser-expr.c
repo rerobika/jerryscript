@@ -2614,12 +2614,12 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
         {
           if (opcode == CBC_CALL)
           {
-            parser_emit_cbc (context_p, (uint16_t) (CBC_CALL0 + (call_arguments * 6)));
+            parser_emit_cbc (context_p, (uint16_t) (CBC_CALL0 + (call_arguments * 4)));
             continue;
           }
           if (opcode == CBC_CALL_PROP)
           {
-            parser_emit_cbc (context_p, (uint16_t) (CBC_CALL0_PROP + (call_arguments * 6)));
+            parser_emit_cbc (context_p, (uint16_t) (CBC_CALL0_PROP + (call_arguments * 4)));
             continue;
           }
           if (opcode == CBC_NEW)
@@ -3902,18 +3902,29 @@ void
 parser_parse_block_expression (parser_context_t *context_p, /**< context */
                                int options) /**< option flags */
 {
+  bool may_block_result = context_p->source_p >= context_p->last_expr_stmt_source_p;
   parser_parse_expression (context_p, options | PARSE_EXPR_NO_PUSH_RESULT);
 
-  if (CBC_NO_RESULT_OPERATION (context_p->last_cbc_opcode))
+  cbc_opcode_t pop_opcode = CBC_POP_BLOCK;
+
+  if (may_block_result)
   {
-    JERRY_ASSERT (CBC_SAME_ARGS (context_p->last_cbc_opcode, context_p->last_cbc_opcode + 2));
-    PARSER_PLUS_EQUAL_U16 (context_p->last_cbc_opcode, 2);
-    parser_flush_cbc (context_p);
+    if (CBC_NO_RESULT_OPERATION (context_p->last_cbc_opcode))
+    {
+      JERRY_ASSERT (CBC_SAME_ARGS (context_p->last_cbc_opcode, context_p->last_cbc_opcode + 1));
+      PARSER_PLUS_EQUAL_U16 (context_p->last_cbc_opcode, 1);
+    }
   }
   else
   {
-    parser_emit_cbc (context_p, CBC_POP_BLOCK);
+    if (CBC_NO_RESULT_OPERATION (context_p->last_cbc_opcode))
+    {
+      return;
+    }
+    pop_opcode = CBC_POP;
   }
+
+  parser_emit_cbc (context_p, pop_opcode);
 } /* parser_parse_block_expression */
 
 /**

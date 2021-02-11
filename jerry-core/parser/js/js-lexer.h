@@ -248,7 +248,7 @@ typedef enum
    ((((token_type) - LEXER_PLUS) * 2) + CBC_PLUS)
 
 #define LEXER_UNARY_LVALUE_OP_TOKEN_TO_OPCODE(token_type) \
-   ((((token_type) - LEXER_INCREASE) * 6) + CBC_PRE_INCR)
+   ((((token_type) - LEXER_INCREASE) * 4) + CBC_PRE_INCR)
 
 #define LEXER_BINARY_OP_TOKEN_TO_OPCODE(token_type) \
    ((cbc_opcode_t) ((((token_type) - LEXER_BIT_OR) * 3) + CBC_BIT_OR))

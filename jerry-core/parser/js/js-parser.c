@@ -1278,7 +1278,14 @@ parser_post_processing (parser_context_t *context_p) /**< context */
 
   if (!(context_p->status_flags & PARSER_NO_END_LABEL))
   {
-    *dst_p++ = CBC_RETURN_WITH_BLOCK;
+    if (context_p->status_flags & PARSER_IS_FUNCTION)
+    {
+      *dst_p++ = CBC_RETURN_UNDEFINED;
+    }
+    else
+    {
+      *dst_p++ = CBC_RETURN_WITH_BLOCK;
+    }
 
 #if JERRY_ESNEXT
     if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags))
@@ -1842,6 +1849,7 @@ parser_parse_source (const uint8_t *arg_list_p, /**< function argument list */
 
   context.stack_depth = 0;
   context.stack_limit = 0;
+  context.last_expr_stmt_source_p = NULL;
   context.last_context_p = NULL;
   context.last_statement.current_p = NULL;
 

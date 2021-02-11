@@ -66,6 +66,7 @@ typedef enum
 #endif /* JERRY_ESNEXT */
   SCAN_STACK_SWITCH_BLOCK,                 /**< block part of "switch" statement */
   SCAN_STACK_IF_STATEMENT,                 /**< statement part of "if" statements */
+  SCAN_STACK_ELSE_STATEMENT,               /**< statement part of "else" statements */
   SCAN_STACK_WITH_STATEMENT,               /**< statement part of "with" statements */
   SCAN_STACK_WITH_EXPRESSION,              /**< expression part of "with" statements */
   SCAN_STACK_DO_STATEMENT,                 /**< statement part of "do" statements */

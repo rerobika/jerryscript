@@ -2021,10 +2021,20 @@ scanner_scan_statement (parser_context_t *context_p, /**< context */
     }
 #endif /* JERRY_ESNEXT */
 
+    if (stack_top == SCAN_STACK_SCRIPT)
+    {
+      context_p->last_expr_stmt_source_p = context_p->source_p;
+    }
+
     scanner_add_reference (context_p, scanner_context_p);
 
     scanner_context_p->mode = SCAN_MODE_POST_PRIMARY_EXPRESSION;
     return SCAN_NEXT_TOKEN;
+  }
+
+  if (stack_top == SCAN_STACK_SCRIPT)
+  {
+    context_p->last_expr_stmt_source_p = context_p->source_p;
   }
 
   return SCAN_KEEP_TOKEN;
@@ -2201,6 +2211,7 @@ scanner_scan_statement_end (parser_context_t *context_p, /**< context */
         if (type == LEXER_KEYW_ELSE
             && (terminator_found || (context_p->token.flags & LEXER_WAS_NEWLINE)))
         {
+          parser_stack_push_uint8 (context_p, SCAN_STACK_ELSE_STATEMENT);
 #if JERRY_ESNEXT
           scanner_check_function_after_if (context_p, scanner_context_p);
           return SCAN_KEEP_TOKEN;
@@ -2209,6 +2220,11 @@ scanner_scan_statement_end (parser_context_t *context_p, /**< context */
           return SCAN_NEXT_TOKEN;
 #endif /* JERRY_ESNEXT */
         }
+        continue;
+      }
+      case SCAN_STACK_ELSE_STATEMENT:
+      {
+        parser_stack_pop_uint8 (context_p);
         continue;
       }
       case SCAN_STACK_WITH_STATEMENT:

@@ -1604,11 +1604,6 @@ opfunc_assign_super_reference (ecma_value_t **vm_stack_top_p, /**< vm stack top 
   {
     *stack_top_p++ = result;
   }
-  else if (opcode_data & VM_OC_PUT_BLOCK)
-  {
-    ecma_fast_free_value (frame_ctx_p->block_result);
-    frame_ctx_p->block_result = result;
-  }
 
   *vm_stack_top_p = stack_top_p;
 
