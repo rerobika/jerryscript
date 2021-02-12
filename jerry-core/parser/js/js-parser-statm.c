@@ -3119,20 +3119,27 @@ parser_parse_statements (parser_context_t *context_p) /**< context */
 
         lexer_next_token (context_p);
 
+        uint16_t return_opcode_offset = 0;
+
+        if (JERRY_UNLIKELY (context_p->stack_depth != 0))
+        {
+          return_opcode_offset = PARSER_TO_EXT_OPCODE (CBC_EXT_CONTEXT_RETURN - CBC_RETURN);
+        }
+
         if ((context_p->token.flags & LEXER_WAS_NEWLINE)
             || context_p->token.type == LEXER_SEMICOLON
             || context_p->token.type == LEXER_EOS
             || context_p->token.type == LEXER_RIGHT_BRACE)
         {
 #if JERRY_ESNEXT
-          if (context_p->status_flags & PARSER_IS_ASYNC_FUNCTION)
+          if ((context_p->status_flags & PARSER_IS_ASYNC_FUNCTION))
           {
             parser_emit_cbc_ext (context_p, CBC_EXT_RETURN_UNDEFINED);
             break;
           }
 #endif /* JERRY_ESNEXT */
 
-          parser_emit_cbc (context_p, CBC_RETURN_UNDEFINED);
+          parser_emit_cbc (context_p, (uint16_t) (return_opcode_offset + CBC_RETURN_UNDEFINED));
           break;
         }
 
@@ -3140,11 +3147,11 @@ parser_parse_statements (parser_context_t *context_p) /**< context */
 
         if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
         {
-          context_p->last_cbc_opcode = CBC_RETURN_WITH_LITERAL;
+          context_p->last_cbc_opcode = (uint16_t) (return_opcode_offset + CBC_RETURN_LITERAL);
           break;
         }
 
-        parser_emit_cbc (context_p, CBC_RETURN);
+        parser_emit_cbc (context_p, (uint16_t) (return_opcode_offset + CBC_RETURN));
         break;
       }
 

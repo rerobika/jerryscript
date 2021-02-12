@@ -3905,7 +3905,7 @@ parser_parse_block_expression (parser_context_t *context_p, /**< context */
   bool last_expr_stmt = context_p->source_p >= context_p->last_expr_stmt_source_p;
   parser_parse_expression (context_p, options | PARSE_EXPR_NO_PUSH_RESULT);
 
-  cbc_opcode_t pop_opcode = CBC_POP_BLOCK;
+  uint16_t pop_opcode = CBC_POP_BLOCK;
 
   if (last_expr_stmt)
   {

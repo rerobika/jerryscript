@@ -3085,22 +3085,30 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           left_value = ECMA_VALUE_UNDEFINED;
           break;
         }
-        case VM_OC_RETURN:
+        case VM_OC_RETURN_BLOCK:
         {
-          JERRY_ASSERT (opcode == CBC_RETURN
-                        || opcode == CBC_RETURN_WITH_BLOCK
-                        || opcode == CBC_RETURN_UNDEFINED
-                        || opcode == CBC_RETURN_WITH_LITERAL);
+          result = VM_GET_REGISTER (frame_ctx_p, 0);
+          VM_GET_REGISTERS (frame_ctx_p)[0] = ECMA_VALUE_UNDEFINED;
 
-          if (opcode == CBC_RETURN_WITH_BLOCK)
-          {
-            left_value = VM_GET_REGISTER (frame_ctx_p, 0);
-            VM_GET_REGISTERS (frame_ctx_p)[0] = ECMA_VALUE_UNDEFINED;
-          }
-
+          JERRY_ASSERT (frame_ctx_p->context_depth == 0);
+          JERRY_ASSERT (VM_GET_REGISTERS (frame_ctx_p) + register_end == stack_top_p);
+          frame_ctx_p->call_operation = VM_NO_EXEC_OP;
+          return result;
+        }
+        case VM_OC_CONTEXT_RETURN:
+        {
+          JERRY_ASSERT (VM_GET_REGISTERS (frame_ctx_p) + register_end + frame_ctx_p->context_depth == stack_top_p);
+          JERRY_ASSERT (frame_ctx_p->context_depth != 0);
           result = left_value;
           left_value = ECMA_VALUE_UNDEFINED;
           goto error;
+        }
+        case VM_OC_RETURN:
+        {
+          JERRY_ASSERT (frame_ctx_p->context_depth == 0);
+          JERRY_ASSERT (VM_GET_REGISTERS (frame_ctx_p) + register_end == stack_top_p);
+          frame_ctx_p->call_operation = VM_NO_EXEC_OP;
+          return left_value;
         }
         case VM_OC_THROW:
         {

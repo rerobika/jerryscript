@@ -726,6 +726,7 @@ parser_post_processing (parser_context_t *context_p) /**< context */
         cbc_ext_opcode_t ext_opcode;
 
         ext_opcode = (cbc_ext_opcode_t) page_p->bytes[offset];
+        last_opcode = PARSER_TO_EXT_OPCODE (ext_opcode);
         branch_offset_length = CBC_BRANCH_OFFSET_LENGTH (ext_opcode);
         flags = cbc_ext_flags[ext_opcode];
         PARSER_NEXT_BYTE (page_p, offset);
@@ -1284,7 +1285,7 @@ parser_post_processing (parser_context_t *context_p) /**< context */
     }
     else
     {
-      *dst_p++ = CBC_RETURN_WITH_BLOCK;
+      *dst_p++ = CBC_RETURN_BLOCK;
     }
 
 #if JERRY_ESNEXT
@@ -2410,13 +2411,20 @@ parser_parse_arrow_function (parser_context_t *context_p, /**< context */
 
     parser_parse_expression (context_p, PARSE_EXPR_NO_COMMA);
 
+    uint16_t return_opcode_offset = 0;
+
+    if (JERRY_UNLIKELY (context_p->status_flags & PARSER_IS_ASYNC_FUNCTION))
+    {
+      return_opcode_offset = PARSER_TO_EXT_OPCODE (CBC_EXT_CONTEXT_RETURN - CBC_RETURN);
+    }
+
     if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
     {
-      context_p->last_cbc_opcode = CBC_RETURN_WITH_LITERAL;
+      context_p->last_cbc_opcode = (uint16_t) (return_opcode_offset + CBC_RETURN_LITERAL);
     }
     else
     {
-      parser_emit_cbc (context_p, CBC_RETURN);
+      parser_emit_cbc (context_p, (uint16_t) (return_opcode_offset + CBC_RETURN));
     }
     parser_flush_cbc (context_p);
 
