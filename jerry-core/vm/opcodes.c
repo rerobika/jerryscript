@@ -693,7 +693,7 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
 
   JERRY_ASSERT (VM_GET_EXECUTABLE_SHARED (new_frame_ctx_p)->result == ECMA_VALUE_UNDEFINED);
 
-  new_frame_ctx_p->this_binding = ecma_copy_value_if_not_object (new_frame_ctx_p->this_binding);
+  new_shared_p->this_binding = ecma_copy_value_if_not_object (new_shared_p->this_binding);
 
   JERRY_CONTEXT (vm_top_context_p) = new_frame_ctx_p->prev_context_p;
 
@@ -935,6 +935,7 @@ opfunc_init_class_fields (ecma_value_t class_object, /**< the function itself */
 
   vm_frame_ctx_shared_class_fields_t shared_class_fields;
   shared_class_fields.header.status_flags = VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS;
+  shared_class_fields.header.this_binding = this_val;
   shared_class_fields.computed_class_fields_p = NULL;
 
   name_p = ecma_get_internal_string (LIT_INTERNAL_MAGIC_STRING_CLASS_FIELD_COMPUTED);
@@ -956,7 +957,7 @@ opfunc_init_class_fields (ecma_value_t class_object, /**< the function itself */
   ecma_object_t *scope_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
                                                                        ext_function_p->u.function.scope_cp);
 
-  ecma_value_t result = vm_run (&shared_class_fields.header, this_val, scope_p);
+  ecma_value_t result = vm_run (&shared_class_fields.header, scope_p);
 
   JERRY_ASSERT (ECMA_IS_VALUE_ERROR (result) || result == ECMA_VALUE_UNDEFINED);
   return result;
@@ -977,6 +978,7 @@ opfunc_init_static_class_fields (ecma_value_t function_object, /**< the function
 
   vm_frame_ctx_shared_class_fields_t shared_class_fields;
   shared_class_fields.header.status_flags = VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS;
+  shared_class_fields.header.this_binding = this_val;
   shared_class_fields.computed_class_fields_p = NULL;
 
   ecma_string_t *name_p = ecma_get_internal_string (LIT_INTERNAL_MAGIC_STRING_CLASS_FIELD_COMPUTED);
@@ -996,7 +998,7 @@ opfunc_init_static_class_fields (ecma_value_t function_object, /**< the function
   ecma_object_t *scope_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
                                                                        ext_function_p->u.function.scope_cp);
 
-  ecma_value_t result = vm_run (&shared_class_fields.header, this_val, scope_p);
+  ecma_value_t result = vm_run (&shared_class_fields.header, scope_p);
 
   JERRY_ASSERT (ECMA_IS_VALUE_ERROR (result) || result == ECMA_VALUE_UNDEFINED);
   return result;
@@ -1528,7 +1530,7 @@ opfunc_form_super_reference (ecma_value_t **vm_stack_top_p, /**< current vm stac
     return ECMA_VALUE_ERROR;
   }
 
-  ecma_value_t result = ecma_op_object_get_with_receiver (parent_p, prop_name_p, frame_ctx_p->this_binding);
+  ecma_value_t result = ecma_op_object_get_with_receiver (parent_p, prop_name_p, frame_ctx_p->shared_p->this_binding);
   ecma_deref_ecma_string (prop_name_p);
   ecma_deref_object (parent_p);
 
@@ -1539,7 +1541,7 @@ opfunc_form_super_reference (ecma_value_t **vm_stack_top_p, /**< current vm stac
 
   if (opcode == CBC_EXT_SUPER_PROP_LITERAL_REFERENCE || opcode == CBC_EXT_SUPER_PROP_REFERENCE)
   {
-    *stack_top_p++ = ecma_copy_value (frame_ctx_p->this_binding);
+    *stack_top_p++ = ecma_copy_value (frame_ctx_p->shared_p->this_binding);
     *stack_top_p++ = ECMA_VALUE_UNDEFINED;
   }
 
@@ -1583,7 +1585,7 @@ opfunc_assign_super_reference (ecma_value_t **vm_stack_top_p, /**< vm stack top 
   ecma_value_t result = ecma_op_object_put_with_receiver (base_obj_p,
                                                           prop_name_p,
                                                           stack_top_p[-1],
-                                                          frame_ctx_p->this_binding,
+                                                          frame_ctx_p->shared_p->this_binding,
                                                           is_strict);
 
   ecma_deref_ecma_string (prop_name_p);
@@ -1757,7 +1759,7 @@ opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *frame_ctx_p, /**< f
   JERRY_ASSERT (ecma_get_lex_env_type (frame_ctx_p->lex_env_p) == ECMA_LEXICAL_ENVIRONMENT_DECLARATIVE);
 
 #if JERRY_BUILTIN_REALMS
-  JERRY_ASSERT (frame_ctx_p->this_binding == JERRY_CONTEXT (global_object_p)->this_binding);
+  JERRY_ASSERT (frame_ctx_p->shared_p->this_binding == JERRY_CONTEXT (global_object_p)->this_binding);
 #else /* !JERRY_BUILTIN_REALMS */
   JERRY_ASSERT (frame_ctx_p->this_binding == ecma_builtin_get_global ());
 #endif /* JERRY_BUILTIN_REALMS */
@@ -1781,7 +1783,7 @@ opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *frame_ctx_p, /**< f
     return ECMA_VALUE_FALSE;
   }
 
-  ecma_object_t *global_obj_p = ecma_get_object_from_value (frame_ctx_p->this_binding);
+  ecma_object_t *global_obj_p = ecma_get_object_from_value (frame_ctx_p->shared_p->this_binding);
 
 #if JERRY_BUILTIN_PROXY
   if (ECMA_OBJECT_IS_PROXY (global_obj_p))

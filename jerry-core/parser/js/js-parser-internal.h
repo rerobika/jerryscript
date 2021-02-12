@@ -317,10 +317,14 @@ typedef struct
 #define PARSER_GET_FLAGS(op) \
   (PARSER_IS_BASIC_OPCODE (op) ? cbc_flags[(op)] : cbc_ext_flags[PARSER_GET_EXT_OPCODE (op)])
 
+#if JERRY_ESNEXT
 #define PARSER_OPCODE_IS_RETURN(op) \
   (((op) >= CBC_RETURN && (op) <= CBC_RETURN_LITERAL) \
     || ((op) >= PARSER_TO_EXT_OPCODE (CBC_EXT_CONTEXT_RETURN) \
         && (op) <= PARSER_TO_EXT_OPCODE (CBC_EXT_CONTEXT_RETURN_LITERAL)))
+#else /* !JERRY_ESNEXT */
+#define PARSER_OPCODE_IS_RETURN(op) ((op) >= CBC_RETURN && (op) <= CBC_RETURN_LITERAL)
+#endif /* JERRY_ESNEXT */
 
 #define PARSER_ARGS_EQ(op, types) \
   ((PARSER_GET_FLAGS (op) & CBC_ARG_TYPES) == (types))

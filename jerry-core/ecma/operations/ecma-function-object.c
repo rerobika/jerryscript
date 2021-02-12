@@ -1051,9 +1051,6 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
   ecma_object_t *scope_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
                                                                        ext_func_p->u.function.scope_cp);
 
-  /* 8. */
-  ecma_value_t this_binding = this_arg_value;
-
   const ecma_compiled_code_t *bytecode_data_p = ecma_op_function_get_compiled_code (ext_func_p);
   uint16_t status_flags = bytecode_data_p->status_flags;
 
@@ -1077,7 +1074,7 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
     {
       JERRY_CONTEXT (current_new_target_p) = ecma_get_object_from_value (arrow_func_p->new_target);
     }
-    this_binding = arrow_func_p->this_binding;
+    shared_args.header.this_binding = arrow_func_p->this_binding;
   }
   else
   {
@@ -1086,24 +1083,32 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
 
     if (!(status_flags & CBC_CODE_FLAGS_STRICT_MODE))
     {
-      if (ecma_is_value_undefined (this_binding)
-          || ecma_is_value_null (this_binding))
+      if (ecma_is_value_undefined (this_arg_value)
+          || ecma_is_value_null (this_arg_value))
       {
         /* 2. */
 #if JERRY_BUILTIN_REALMS
-        this_binding = realm_p->this_binding;
+        shared_args.header.this_binding = realm_p->this_binding;
 #else /* !JERRY_BUILTIN_REALMS */
-        this_binding = ecma_make_object_value (ecma_builtin_get_global ());
+        shared_args.header.this_binding = ecma_make_object_value (ecma_builtin_get_global ());
 #endif /* JERRY_BUILTIN_REALMS */
       }
-      else if (!ecma_is_value_object (this_binding))
+      else if (!ecma_is_value_object (this_arg_value))
       {
         /* 3., 4. */
-        this_binding = ecma_op_to_object (this_binding);
+        shared_args.header.this_binding = ecma_op_to_object (this_arg_value);
         shared_args.header.status_flags |= VM_FRAME_CTX_SHARED_FREE_THIS;
 
-        JERRY_ASSERT (!ECMA_IS_VALUE_ERROR (this_binding));
+        JERRY_ASSERT (!ECMA_IS_VALUE_ERROR (shared_args.header.this_binding));
       }
+      else
+      {
+        shared_args.header.this_binding = this_arg_value;
+      }
+    }
+    else
+    {
+      shared_args.header.this_binding = this_arg_value;
     }
 #if JERRY_ESNEXT
   }
@@ -1127,7 +1132,7 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
       goto exit;
     }
 
-    ecma_value_t lexical_this = this_binding;
+    ecma_value_t lexical_this = shared_args.header.this_binding;
 
     if (ECMA_GET_THIRD_BIT_FROM_POINTER_TAG (ext_func_p->u.function.scope_cp))
     {
@@ -1144,7 +1149,7 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
   JERRY_CONTEXT (global_object_p) = realm_p;
 #endif /* JERRY_BUILTIN_REALMS */
 
-  ret_value = vm_run (&shared_args.header, this_binding, scope_p);
+  ret_value = vm_run (&shared_args.header, scope_p);
 
 #if JERRY_BUILTIN_REALMS
   JERRY_CONTEXT (global_object_p) = saved_global_object_p;
@@ -1178,7 +1183,7 @@ exit:
 
   if (JERRY_UNLIKELY (shared_args.header.status_flags & VM_FRAME_CTX_SHARED_FREE_THIS))
   {
-    ecma_free_value (this_binding);
+    ecma_free_value (shared_args.header.this_binding);
   }
 
   return ret_value;

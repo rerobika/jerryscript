@@ -60,6 +60,7 @@ typedef struct
 {
   const ecma_compiled_code_t *bytecode_header_p;      /**< currently executed byte-code data */
   uint32_t status_flags;                              /**< combination of vm_frame_ctx_shared_flags_t bits */
+  ecma_value_t this_binding;                          /**< this binding */
 } vm_frame_ctx_shared_t;
 
 /**
@@ -125,7 +126,6 @@ typedef struct vm_frame_ctx_t
   ecma_value_t *literal_start_p;                      /**< literal list start pointer */
   ecma_object_t *lex_env_p;                           /**< current lexical environment */
   struct vm_frame_ctx_t *prev_context_p;              /**< previous context */
-  ecma_value_t this_binding;                          /**< this binding */
 #if JERRY_LINE_INFO
   uint32_t current_line;                              /**< currently executed line */
 #endif /* JERRY_LINE_INFO */

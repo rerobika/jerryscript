@@ -281,11 +281,14 @@ vm_run_module (ecma_module_t *module_p) /**< module to be executed */
     return module_init_result;
   }
 
-  vm_frame_ctx_shared_t shared;
-  shared.bytecode_header_p = module_p->compiled_code_p;
-  shared.status_flags = 0;
+  vm_frame_ctx_shared_t shared =
+  {
+    .bytecode_header_p = module_p->compiled_code_p,
+    .status_flags = 0,
+    .this_binding = ECMA_VALUE_UNDEFINED
+  };
 
-  return vm_run (&shared, ECMA_VALUE_UNDEFINED, module_p->scope_p);
+  return vm_run (&shared, module_p->scope_p);
 } /* vm_run_module */
 #endif /* JERRY_MODULE_SYSTEM */
 
@@ -315,10 +318,6 @@ vm_run_global (const ecma_compiled_code_t *bytecode_p) /**< pointer to bytecode 
 
   ecma_object_t *const global_scope_p = ecma_get_global_scope (global_obj_p);
 
-  vm_frame_ctx_shared_t shared;
-  shared.bytecode_header_p = bytecode_p;
-  shared.status_flags = 0;
-
 #if JERRY_BUILTIN_REALMS
   ecma_value_t this_binding = ((ecma_global_object_t *) global_obj_p)->this_binding;
 
@@ -328,7 +327,14 @@ vm_run_global (const ecma_compiled_code_t *bytecode_p) /**< pointer to bytecode 
   ecma_value_t this_binding = ecma_make_object_value (global_obj_p);
 #endif /* JERRY_BUILTIN_REALMS */
 
-  ecma_value_t result = vm_run (&shared, this_binding, global_scope_p);
+  vm_frame_ctx_shared_t shared =
+  {
+    .bytecode_header_p = bytecode_p,
+    .status_flags = 0,
+    .this_binding = this_binding
+  };
+
+  ecma_value_t result = vm_run (&shared, global_scope_p);
 
 #if JERRY_BUILTIN_REALMS
   JERRY_CONTEXT (global_object_p) = saved_global_object_p;
@@ -352,7 +358,7 @@ vm_run_eval (ecma_compiled_code_t *bytecode_data_p, /**< byte-code data */
   /* ECMA-262 v5, 10.4.2 */
   if (parse_opts & ECMA_PARSE_DIRECT_EVAL)
   {
-    this_binding = ecma_copy_value (JERRY_CONTEXT (vm_top_context_p)->this_binding);
+    this_binding = ecma_copy_value (JERRY_CONTEXT (vm_top_context_p)->shared_p->this_binding);
     lex_env_p = JERRY_CONTEXT (vm_top_context_p)->lex_env_p;
 
 #if JERRY_DEBUGGER
@@ -412,8 +418,9 @@ vm_run_eval (ecma_compiled_code_t *bytecode_data_p, /**< byte-code data */
   vm_frame_ctx_shared_t shared;
   shared.bytecode_header_p = bytecode_data_p;
   shared.status_flags = (parse_opts & ECMA_PARSE_DIRECT_EVAL) ? VM_FRAME_CTX_SHARED_DIRECT_EVAL : 0;
+  shared.this_binding = this_binding;
 
-  ecma_value_t completion_value = vm_run (&shared, this_binding, lex_env_p);
+  ecma_value_t completion_value = vm_run (&shared, lex_env_p);
 
   ecma_deref_object (lex_env_p);
   ecma_free_value (this_binding);
@@ -479,7 +486,7 @@ vm_construct_literal_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
   {
     func_obj_p = ecma_op_create_arrow_function_object (frame_ctx_p->lex_env_p,
                                                        bytecode_p,
-                                                       frame_ctx_p->this_binding);
+                                                       frame_ctx_p->shared_p->this_binding);
   }
   else
   {
@@ -635,7 +642,7 @@ vm_super_call (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
   else
   {
     ecma_op_bind_this_value (environment_record_p, completion_value);
-    frame_ctx_p->this_binding = completion_value;
+    frame_ctx_p->shared_p->this_binding = completion_value;
 
     frame_ctx_p->byte_code_p = byte_code_p;
     uint32_t opcode_data = vm_decode_table[(CBC_END + 1) + opcode];
@@ -1091,7 +1098,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
               JERRY_ASSERT (operands == VM_OC_GET_THIS_LITERAL);
 
               right_value = left_value;
-              left_value = ecma_copy_value (frame_ctx_p->this_binding);
+              left_value = ecma_copy_value (frame_ctx_p->shared_p->this_binding);
               break;
             }
           }
@@ -1229,7 +1236,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PUSH_THIS:
         {
-          *stack_top_p++ = ecma_copy_value (frame_ctx_p->this_binding);
+          *stack_top_p++ = ecma_copy_value (frame_ctx_p->shared_p->this_binding);
           continue;
         }
         case VM_OC_PUSH_0:
@@ -2085,7 +2092,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         {
           JERRY_ASSERT (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC);
           result = opfunc_init_class_fields (ecma_make_object_value (VM_FRAME_CTX_GET_FUNCTION_OBJECT (frame_ctx_p)),
-                                             frame_ctx_p->this_binding);
+                                             frame_ctx_p->shared_p->this_binding);
 
           if (ECMA_IS_VALUE_ERROR (result))
           {
@@ -2120,7 +2127,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
           result = stack_top_p[-2];
           stack_top_p[-1] = ecma_copy_value (computed_class_fields_p[next_index]);
-          stack_top_p[-2] = ecma_copy_value (frame_ctx_p->this_binding);
+          stack_top_p[-2] = ecma_copy_value (frame_ctx_p->shared_p->this_binding);
           break;
         }
         case VM_OC_PUSH_SUPER_CONSTRUCTOR:
@@ -3080,7 +3087,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         case VM_OC_ASSIGN_PROP_THIS:
         {
           result = stack_top_p[-1];
-          stack_top_p[-1] = ecma_copy_value (frame_ctx_p->this_binding);
+          stack_top_p[-1] = ecma_copy_value (frame_ctx_p->shared_p->this_binding);
           *stack_top_p++ = left_value;
           left_value = ECMA_VALUE_UNDEFINED;
           break;
@@ -5082,7 +5089,6 @@ vm_execute (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
  */
 ecma_value_t
 vm_run (vm_frame_ctx_shared_t *shared_p, /**< shared data */
-        ecma_value_t this_binding_value, /**< value of 'ThisBinding' */
         ecma_object_t *lex_env_p) /**< lexical environment to use */
 {
   const ecma_compiled_code_t *bytecode_header_p = shared_p->bytecode_header_p;
@@ -5110,7 +5116,6 @@ vm_run (vm_frame_ctx_shared_t *shared_p, /**< shared data */
 
   frame_ctx_p->shared_p = shared_p;
   frame_ctx_p->lex_env_p = lex_env_p;
-  frame_ctx_p->this_binding = this_binding_value;
 
   vm_init_exec (frame_ctx_p);
   return vm_execute (frame_ctx_p);
