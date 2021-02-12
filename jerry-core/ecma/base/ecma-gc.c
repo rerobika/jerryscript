@@ -525,7 +525,7 @@ ecma_gc_mark_executable_object (ecma_object_t *object_p) /**< object */
     ecma_gc_set_object_visited (ecma_get_object_from_value (executable_object_p->frame_ctx.this_binding));
   }
 
-  const ecma_compiled_code_t *bytecode_header_p = executable_object_p->shared.bytecode_header_p;
+  const ecma_compiled_code_t *bytecode_header_p = executable_object_p->shared.header.bytecode_header_p;
   size_t register_end;
 
   if (bytecode_header_p->status_flags & CBC_CODE_FLAGS_UINT16_ARGUMENTS)
@@ -609,9 +609,9 @@ ecma_gc_mark_executable_object (ecma_object_t *object_p) /**< object */
     register_p++;
   }
 
-  if (ecma_is_value_object (executable_object_p->frame_ctx.block_result))
+  if (ecma_is_value_object (executable_object_p->shared.result))
   {
-    ecma_gc_set_object_visited (ecma_get_object_from_value (executable_object_p->frame_ctx.block_result));
+    ecma_gc_set_object_visited (ecma_get_object_from_value (executable_object_p->shared.result));
   }
 } /* ecma_gc_mark_executable_object */
 
@@ -1198,7 +1198,7 @@ ecma_gc_free_executable_object (ecma_object_t *object_p) /**< object */
 {
   vm_executable_object_t *executable_object_p = (vm_executable_object_t *) object_p;
 
-  const ecma_compiled_code_t *bytecode_header_p = executable_object_p->shared.bytecode_header_p;
+  const ecma_compiled_code_t *bytecode_header_p = executable_object_p->shared.header.bytecode_header_p;
   size_t size, register_end;
 
   if (bytecode_header_p->status_flags & CBC_CODE_FLAGS_UINT16_ARGUMENTS)

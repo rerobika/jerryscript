@@ -48,6 +48,8 @@ typedef enum
   VM_FRAME_CTX_SHARED_NON_ARROW_FUNC = (1 << 4),      /**< non-arrow function */
   VM_FRAME_CTX_SHARED_HERITAGE_PRESENT = (1 << 5),    /**< class heritage present */
   VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS = (1 << 6),    /**< has class fields */
+  VM_FRAME_CTX_SHARED_EXECUTABLE = (1 << 7),          /**< frame is an executable object constructed
+                                                       *   with opfunc_create_executable_object */
 #endif /* JERRY_ESNEXT */
 } vm_frame_ctx_shared_flags_t;
 
@@ -70,6 +72,15 @@ typedef struct
   const ecma_value_t *arg_list_p;                     /**< arguments list */
   uint32_t arg_list_len;                              /**< arguments list length */
 } vm_frame_ctx_shared_args_t;
+
+/**
+ * Shared data extended with executable result
+ */
+typedef struct
+{
+  vm_frame_ctx_shared_t header;                       /**< shared data header */
+  ecma_value_t result;                                /**< executable object's result */
+} vm_executable_shared_args_t;
 
 #if JERRY_ESNEXT
 
@@ -115,7 +126,6 @@ typedef struct vm_frame_ctx_t
   ecma_object_t *lex_env_p;                           /**< current lexical environment */
   struct vm_frame_ctx_t *prev_context_p;              /**< previous context */
   ecma_value_t this_binding;                          /**< this binding */
-  ecma_value_t block_result;                          /**< block result */
 #if JERRY_LINE_INFO
   uint32_t current_line;                              /**< currently executed line */
 #endif /* JERRY_LINE_INFO */
@@ -136,10 +146,18 @@ typedef struct vm_frame_ctx_t
 #define VM_GET_REGISTER(frame_ctx_p, i) (((ecma_value_t *) ((frame_ctx_p) + 1))[i])
 
 /**
- * Get the executable object.
+ * Calculate the executable object from a vm_executable_object frame context.
  */
 #define VM_GET_EXECUTABLE_OBJECT(frame_ctx_p) \
   ((ecma_extended_object_t *) ((uintptr_t) (frame_ctx_p) - (uintptr_t) offsetof (vm_executable_object_t, frame_ctx)))
+
+/**
+ * Calculate the shared_part from a vm_executable_object frame context.
+ */
+#define VM_GET_EXECUTABLE_SHARED(frame_ctx_p) \
+  ((vm_executable_shared_args_t *) ((uintptr_t) (frame_ctx_p) \
+                                    - (uintptr_t) offsetof (vm_executable_object_t, frame_ctx) \
+                                    + (uintptr_t) offsetof (vm_executable_object_t, shared)))
 
 /**
  * Generator frame context.
@@ -147,7 +165,7 @@ typedef struct vm_frame_ctx_t
 typedef struct
 {
   ecma_extended_object_t extended_object; /**< extended object part */
-  vm_frame_ctx_shared_t shared; /**< shared part */
+  vm_executable_shared_args_t shared; /**< shared part */
   vm_frame_ctx_t frame_ctx; /**< frame context part */
 } vm_executable_object_t;
 

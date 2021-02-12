@@ -1986,7 +1986,7 @@ parser_parse_source (const uint8_t *arg_list_p, /**< function argument list */
 #if JERRY_MODULE_SYSTEM
     else if (parse_opts & ECMA_PARSE_MODULE)
     {
-      scanner_create_variables (&context, SCANNER_CREATE_VARS_NO_OPTS);
+      scanner_create_variables (&context, SCANNER_CREATE_VARS_IS_MODULE);
     }
 #endif /* JERRY_MODULE_SYSTEM */
     else

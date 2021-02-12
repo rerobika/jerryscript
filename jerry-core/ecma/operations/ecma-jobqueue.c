@@ -264,8 +264,8 @@ ecma_process_promise_async_reaction_job (ecma_job_promise_async_reaction_t *job_
     {
       if (ECMA_AWAIT_GET_STATE (executable_object_p) <= ECMA_AWAIT_YIELD_END)
       {
-        JERRY_ASSERT (ecma_is_value_object (executable_object_p->frame_ctx.block_result));
-        executable_object_p->frame_ctx.block_result = ECMA_VALUE_UNDEFINED;
+        JERRY_ASSERT (ecma_is_value_object (executable_object_p->shared.result));
+        executable_object_p->shared.result = ECMA_VALUE_UNDEFINED;
 
         JERRY_ASSERT (executable_object_p->frame_ctx.stack_top_p[-1] == ECMA_VALUE_UNDEFINED
                       || ecma_is_value_object (executable_object_p->frame_ctx.stack_top_p[-1]));
@@ -304,8 +304,8 @@ ecma_process_promise_async_reaction_job (ecma_job_promise_async_reaction_t *job_
 
     if (ECMA_AWAIT_GET_STATE (executable_object_p) <= ECMA_AWAIT_YIELD_END)
     {
-      JERRY_ASSERT (ecma_is_value_object (executable_object_p->frame_ctx.block_result));
-      executable_object_p->frame_ctx.block_result = ECMA_VALUE_UNDEFINED;
+      JERRY_ASSERT (ecma_is_value_object (executable_object_p->shared.result));
+      executable_object_p->shared.result = ECMA_VALUE_UNDEFINED;
 
       JERRY_ASSERT (executable_object_p->frame_ctx.stack_top_p[-1] == ECMA_VALUE_UNDEFINED
                     || ecma_is_value_object (executable_object_p->frame_ctx.stack_top_p[-1]));
