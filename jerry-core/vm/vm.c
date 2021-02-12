@@ -5106,11 +5106,7 @@ vm_run (vm_frame_ctx_shared_t *shared_p, /**< shared data */
     frame_size = (size_t) (args_p->register_end + args_p->stack_limit);
   }
 
-  frame_size = frame_size * sizeof (ecma_value_t) + sizeof (vm_frame_ctx_t);
-  frame_size = (frame_size + sizeof (uintptr_t) - 1) / sizeof (uintptr_t);
-
-  /* Use JERRY_MAX() to avoid array declaration with size 0. */
-  JERRY_VLA (uintptr_t, stack, frame_size);
+  JERRY_VLA (ecma_value_t, stack, frame_size + (sizeof (vm_frame_ctx_t) / sizeof (ecma_value_t)));
 
   frame_ctx_p = (vm_frame_ctx_t *) stack;
 
