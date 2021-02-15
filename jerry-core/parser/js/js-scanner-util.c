@@ -424,7 +424,7 @@ scanner_scope_find_lexical_declaration (parser_context_t *context_p, /**< contex
 
   if (flags & ECMA_PARSE_DIRECT_EVAL)
   {
-    lex_env_p = JERRY_CONTEXT (vm_top_context_p)->lex_env_p;
+    lex_env_p = JERRY_CONTEXT (vm_top_context_p)->shared_p->lex_env_p;
 
     while (lex_env_p->type_flags_refs & ECMA_OBJECT_FLAG_BLOCK)
     {

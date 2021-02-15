@@ -676,7 +676,7 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
       ecma_deref_if_object (*new_registers_p++);
     }
 
-    vm_ref_lex_env_chain (frame_ctx_p->lex_env_p,
+    vm_ref_lex_env_chain (frame_ctx_p->shared_p->lex_env_p,
                           frame_ctx_p->context_depth,
                           new_registers_p,
                           false);
@@ -755,7 +755,7 @@ opfunc_resume_executable_object (vm_executable_object_t *executable_object_p, /*
       ecma_ref_if_object (*register_p++);
     }
 
-    vm_ref_lex_env_chain (executable_object_p->frame_ctx.lex_env_p,
+    vm_ref_lex_env_chain (executable_object_p->frame_ctx.shared_p->lex_env_p,
                           executable_object_p->frame_ctx.context_depth,
                           register_p,
                           true);
@@ -816,7 +816,7 @@ opfunc_resume_executable_object (vm_executable_object_t *executable_object_p, /*
       ecma_deref_if_object (*register_p++);
     }
 
-    vm_ref_lex_env_chain (executable_object_p->frame_ctx.lex_env_p,
+    vm_ref_lex_env_chain (executable_object_p->frame_ctx.shared_p->lex_env_p,
                           executable_object_p->frame_ctx.context_depth,
                           register_p,
                           false);
@@ -954,10 +954,10 @@ opfunc_init_class_fields (ecma_value_t class_object, /**< the function itself */
   ext_function_p = (ecma_extended_object_t *) ecma_get_object_from_value (property_value_p->value);
   shared_class_fields.header.bytecode_header_p = ecma_op_function_get_compiled_code (ext_function_p);
 
-  ecma_object_t *scope_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
-                                                                       ext_function_p->u.function.scope_cp);
+  shared_class_fields.header.lex_env_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
+                                                                                     ext_function_p->u.function.scope_cp);
 
-  ecma_value_t result = vm_run (&shared_class_fields.header, scope_p);
+  ecma_value_t result = vm_run (&shared_class_fields.header);
 
   JERRY_ASSERT (ECMA_IS_VALUE_ERROR (result) || result == ECMA_VALUE_UNDEFINED);
   return result;
@@ -994,11 +994,10 @@ opfunc_init_static_class_fields (ecma_value_t function_object, /**< the function
   ecma_extended_object_t *ext_function_p;
   ext_function_p = (ecma_extended_object_t *) ecma_get_object_from_value (function_object);
   shared_class_fields.header.bytecode_header_p = ecma_op_function_get_compiled_code (ext_function_p);
+  shared_class_fields.header.lex_env_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
+                                                                                     ext_function_p->u.function.scope_cp);
 
-  ecma_object_t *scope_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
-                                                                       ext_function_p->u.function.scope_cp);
-
-  ecma_value_t result = vm_run (&shared_class_fields.header, scope_p);
+  ecma_value_t result = vm_run (&shared_class_fields.header);
 
   JERRY_ASSERT (ECMA_IS_VALUE_ERROR (result) || result == ECMA_VALUE_UNDEFINED);
   return result;
@@ -1207,7 +1206,7 @@ opfunc_push_class_environment (vm_frame_ctx_t *frame_ctx_p, /**< frame context *
                                ecma_value_t class_name) /**< class name */
 {
   JERRY_ASSERT (ecma_is_value_string (class_name));
-  ecma_object_t *class_env_p = ecma_create_decl_lex_env (frame_ctx_p->lex_env_p);
+  ecma_object_t *class_env_p = ecma_create_decl_lex_env (frame_ctx_p->shared_p->lex_env_p);
 
   /* 4.a */
   ecma_property_value_t *property_value_p;
@@ -1217,7 +1216,7 @@ opfunc_push_class_environment (vm_frame_ctx_t *frame_ctx_p, /**< frame context *
                                                       NULL);
 
   property_value_p->value = ECMA_VALUE_UNINITIALIZED;
-  frame_ctx_p->lex_env_p = class_env_p;
+  frame_ctx_p->shared_p->lex_env_p = class_env_p;
 
   *(*vm_stack_top)++ = ECMA_VALUE_RELEASE_LEX_ENV;
 } /* opfunc_push_class_environment */
@@ -1318,7 +1317,7 @@ opfunc_init_class (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
 
   if (ecma_get_object_type (ctor_p) == ECMA_OBJECT_TYPE_FUNCTION)
   {
-    ecma_object_t *proto_env_p = ecma_create_object_lex_env (frame_ctx_p->lex_env_p,
+    ecma_object_t *proto_env_p = ecma_create_object_lex_env (frame_ctx_p->shared_p->lex_env_p,
                                                              proto_p,
                                                              ECMA_LEXICAL_ENVIRONMENT_HOME_OBJECT_BOUND);
 
@@ -1415,9 +1414,9 @@ opfunc_set_class_attributes (ecma_object_t *obj_p, /**< object */
 void
 opfunc_pop_lexical_environment (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 {
-  ecma_object_t *outer_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, frame_ctx_p->lex_env_p->u2.outer_reference_cp);
-  ecma_deref_object (frame_ctx_p->lex_env_p);
-  frame_ctx_p->lex_env_p = outer_env_p;
+  ecma_object_t *outer_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, frame_ctx_p->shared_p->lex_env_p->u2.outer_reference_cp);
+  ecma_deref_object (frame_ctx_p->shared_p->lex_env_p);
+  frame_ctx_p->shared_p->lex_env_p = outer_env_p;
 } /* opfunc_pop_lexical_environment */
 
 /**
@@ -1436,7 +1435,7 @@ opfunc_finalize_class (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
   ecma_object_t *ctor_p = ecma_get_object_from_value (stack_top_p[-2]);
   ecma_object_t *proto_p = ecma_get_object_from_value (stack_top_p[-1]);
 
-  ecma_object_t *class_env_p = frame_ctx_p->lex_env_p;
+  ecma_object_t *class_env_p = frame_ctx_p->shared_p->lex_env_p;
 
   /* 23.a */
   if (!ecma_is_value_undefined (class_name))
@@ -1487,7 +1486,7 @@ opfunc_form_super_reference (ecma_value_t **vm_stack_top_p, /**< current vm stac
 {
   if (CBC_FUNCTION_GET_TYPE (frame_ctx_p->shared_p->bytecode_header_p->status_flags) == CBC_FUNCTION_CONSTRUCTOR)
   {
-    ecma_environment_record_t *environment_record_p = ecma_op_get_environment_record (frame_ctx_p->lex_env_p);
+    ecma_environment_record_t *environment_record_p = ecma_op_get_environment_record (frame_ctx_p->shared_p->lex_env_p);
 
     if (!ecma_op_this_binding_is_initialized (environment_record_p))
     {
@@ -1496,7 +1495,7 @@ opfunc_form_super_reference (ecma_value_t **vm_stack_top_p, /**< current vm stac
     }
   }
 
-  ecma_value_t parent = ecma_op_resolve_super_base (frame_ctx_p->lex_env_p);
+  ecma_value_t parent = ecma_op_resolve_super_base (frame_ctx_p->shared_p->lex_env_p);
 
   if (ECMA_IS_VALUE_ERROR (parent))
   {
@@ -1756,7 +1755,7 @@ ecma_value_t
 opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
                                              ecma_string_t *name_p) /**< binding name */
 {
-  JERRY_ASSERT (ecma_get_lex_env_type (frame_ctx_p->lex_env_p) == ECMA_LEXICAL_ENVIRONMENT_DECLARATIVE);
+  JERRY_ASSERT (ecma_get_lex_env_type (frame_ctx_p->shared_p->lex_env_p) == ECMA_LEXICAL_ENVIRONMENT_DECLARATIVE);
 
 #if JERRY_BUILTIN_REALMS
   JERRY_ASSERT (frame_ctx_p->shared_p->this_binding == JERRY_CONTEXT (global_object_p)->this_binding);
@@ -1764,7 +1763,7 @@ opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *frame_ctx_p, /**< f
   JERRY_ASSERT (frame_ctx_p->this_binding == ecma_builtin_get_global ());
 #endif /* JERRY_BUILTIN_REALMS */
 
-  ecma_object_t *lex_env_p = frame_ctx_p->lex_env_p;
+  ecma_object_t *lex_env_p = frame_ctx_p->shared_p->lex_env_p;
   ecma_property_t *binding_p = ecma_find_named_property (lex_env_p, name_p);
 
   if (binding_p != NULL)

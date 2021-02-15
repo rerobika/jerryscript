@@ -1048,8 +1048,8 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
   /* Entering Function Code (ECMA-262 v5, 10.4.3) */
   ecma_extended_object_t *ext_func_p = (ecma_extended_object_t *) func_obj_p;
 
-  ecma_object_t *scope_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
-                                                                       ext_func_p->u.function.scope_cp);
+  shared_args.header.lex_env_p = ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t,
+                                                                             ext_func_p->u.function.scope_cp);
 
   const ecma_compiled_code_t *bytecode_data_p = ecma_op_function_get_compiled_code (ext_func_p);
   uint16_t status_flags = bytecode_data_p->status_flags;
@@ -1118,7 +1118,7 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
   if (!(status_flags & CBC_CODE_FLAGS_LEXICAL_ENV_NOT_NEEDED))
   {
     shared_args.header.status_flags |= VM_FRAME_CTX_SHARED_FREE_LOCAL_ENV;
-    scope_p = ecma_create_decl_lex_env (scope_p);
+    shared_args.header.lex_env_p = ecma_create_decl_lex_env (shared_args.header.lex_env_p);
   }
 
   ecma_value_t ret_value;
@@ -1140,7 +1140,7 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
       lexical_this = ECMA_VALUE_UNINITIALIZED;
     }
 
-    ecma_op_create_environment_record (scope_p, lexical_this, func_obj_p);
+    ecma_op_create_environment_record (shared_args.header.lex_env_p, lexical_this, func_obj_p);
   }
 #endif /* JERRY_ESNEXT */
 
@@ -1149,7 +1149,7 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
   JERRY_CONTEXT (global_object_p) = realm_p;
 #endif /* JERRY_BUILTIN_REALMS */
 
-  ret_value = vm_run (&shared_args.header, scope_p);
+  ret_value = vm_run (&shared_args.header);
 
 #if JERRY_BUILTIN_REALMS
   JERRY_CONTEXT (global_object_p) = saved_global_object_p;
@@ -1168,7 +1168,7 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
       }
       else
       {
-        ret_value = ecma_op_get_this_binding (scope_p);
+        ret_value = ecma_op_get_this_binding (shared_args.header.lex_env_p);
       }
     }
   }
@@ -1178,7 +1178,7 @@ exit:
 
   if (JERRY_UNLIKELY (shared_args.header.status_flags & VM_FRAME_CTX_SHARED_FREE_LOCAL_ENV))
   {
-    ecma_deref_object (scope_p);
+    ecma_deref_object (shared_args.header.lex_env_p);
   }
 
   if (JERRY_UNLIKELY (shared_args.header.status_flags & VM_FRAME_CTX_SHARED_FREE_THIS))

@@ -217,7 +217,7 @@ jerry_debugger_send_scope_chain (void)
 
   size_t buffer_pos = 0;
   bool next_func_is_local = true;
-  ecma_object_t *lex_env_p = iter_frame_ctx_p->lex_env_p;
+  ecma_object_t *lex_env_p = iter_frame_ctx_p->shared_p->lex_env_p;
 
   while (true)
   {
@@ -428,7 +428,7 @@ jerry_debugger_send_scope_variables (const uint8_t *recv_buffer_p) /**< pointer 
   memcpy (&chain_index, get_scope_variables_p->chain_index, sizeof (uint32_t));
 
   vm_frame_ctx_t *iter_frame_ctx_p = JERRY_CONTEXT (vm_top_context_p);
-  ecma_object_t *lex_env_p = iter_frame_ctx_p->lex_env_p;
+  ecma_object_t *lex_env_p = iter_frame_ctx_p->shared_p->lex_env_p;
 
   while (chain_index != 0)
   {

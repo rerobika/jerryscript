@@ -484,7 +484,7 @@ ecma_value_t vm_run_eval (ecma_compiled_code_t *bytecode_data_p, uint32_t parse_
 ecma_value_t vm_run_module (ecma_module_t *module_p);
 #endif /* JERRY_MODULE_SYSTEM */
 
-ecma_value_t vm_run (vm_frame_ctx_shared_t *shared_p, ecma_object_t *lex_env_p);
+ecma_value_t vm_run (vm_frame_ctx_shared_t *shared_p);
 ecma_value_t vm_execute (vm_frame_ctx_t *frame_ctx_p);
 
 bool vm_is_strict_mode (void);

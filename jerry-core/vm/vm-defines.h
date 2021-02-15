@@ -59,6 +59,7 @@ typedef enum
 typedef struct
 {
   const ecma_compiled_code_t *bytecode_header_p;      /**< currently executed byte-code data */
+  ecma_object_t *lex_env_p;                           /**< current lexical environment */
   uint32_t status_flags;                              /**< combination of vm_frame_ctx_shared_flags_t bits */
   ecma_value_t this_binding;                          /**< this binding */
 } vm_frame_ctx_shared_t;
@@ -124,7 +125,6 @@ typedef struct vm_frame_ctx_t
   const uint8_t *byte_code_start_p;                   /**< byte code start pointer */
   ecma_value_t *stack_top_p;                          /**< stack top pointer */
   ecma_value_t *literal_start_p;                      /**< literal list start pointer */
-  ecma_object_t *lex_env_p;                           /**< current lexical environment */
   struct vm_frame_ctx_t *prev_context_p;              /**< previous context */
 #if JERRY_LINE_INFO
   uint32_t current_line;                              /**< currently executed line */

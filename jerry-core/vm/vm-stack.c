@@ -89,9 +89,9 @@ vm_stack_context_abort (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
 
   if (context_info & VM_CONTEXT_HAS_LEX_ENV)
   {
-    ecma_object_t *lex_env_p = frame_ctx_p->lex_env_p;
+    ecma_object_t *lex_env_p = frame_ctx_p->shared_p->lex_env_p;
     JERRY_ASSERT (lex_env_p->u2.outer_reference_cp != JMEM_CP_NULL);
-    frame_ctx_p->lex_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, lex_env_p->u2.outer_reference_cp);
+    frame_ctx_p->shared_p->lex_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, lex_env_p->u2.outer_reference_cp);
     ecma_deref_object (lex_env_p);
   }
 
@@ -256,9 +256,9 @@ vm_stack_find_finally (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
 #if JERRY_ESNEXT
       if (stack_top_p[-1] & VM_CONTEXT_HAS_LEX_ENV)
       {
-        ecma_object_t *lex_env_p = frame_ctx_p->lex_env_p;
+        ecma_object_t *lex_env_p = frame_ctx_p->shared_p->lex_env_p;
         JERRY_ASSERT (lex_env_p->u2.outer_reference_cp != JMEM_CP_NULL);
-        frame_ctx_p->lex_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, lex_env_p->u2.outer_reference_cp);
+        frame_ctx_p->shared_p->lex_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, lex_env_p->u2.outer_reference_cp);
         ecma_deref_object (lex_env_p);
       }
 #endif /* JERRY_ESNEXT */
@@ -305,9 +305,9 @@ vm_stack_find_finally (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
 #if !JERRY_ESNEXT
         if (stack_top_p[-1] & VM_CONTEXT_HAS_LEX_ENV)
         {
-          ecma_object_t *lex_env_p = frame_ctx_p->lex_env_p;
+          ecma_object_t *lex_env_p = frame_ctx_p->shared_p->lex_env_p;
           JERRY_ASSERT (lex_env_p->u2.outer_reference_cp != JMEM_CP_NULL);
-          frame_ctx_p->lex_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, lex_env_p->u2.outer_reference_cp);
+          frame_ctx_p->shared_p->lex_env_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, lex_env_p->u2.outer_reference_cp);
           ecma_deref_object (lex_env_p);
         }
 #endif /* !JERRY_ESNEXT */
