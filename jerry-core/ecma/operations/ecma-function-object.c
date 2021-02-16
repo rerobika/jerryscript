@@ -1110,68 +1110,23 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
 #endif /* JERRY_ESNEXT */
 
   /* 5. */
-  if (!(status_flags & CBC_CODE_FLAGS_LEXICAL_ENV_NOT_NEEDED))
+  if (JERRY_LIKELY (!(status_flags & CBC_CODE_FLAGS_LEXICAL_ENV_NOT_NEEDED)))
   {
-    shared_args.header.status_flags |= VM_FRAME_CTX_SHARED_FREE_LOCAL_ENV;
     scope_p = ecma_create_decl_lex_env (scope_p);
   }
-
-  ecma_value_t ret_value;
-
-#if JERRY_ESNEXT
-  if (JERRY_UNLIKELY (CBC_FUNCTION_GET_TYPE (status_flags) == CBC_FUNCTION_CONSTRUCTOR))
-  {
-    if (JERRY_CONTEXT (current_new_target_p) == NULL)
-    {
-      ret_value = ecma_raise_type_error (ECMA_ERR_MSG ("Class constructor requires 'new'"));
-      goto exit;
-    }
-
-    ecma_value_t lexical_this = this_binding;
-
-    if (ECMA_GET_THIRD_BIT_FROM_POINTER_TAG (ext_func_p->u.function.scope_cp))
-    {
-      shared_args.header.status_flags |= VM_FRAME_CTX_SHARED_HERITAGE_PRESENT;
-      lexical_this = ECMA_VALUE_UNINITIALIZED;
-    }
-
-    ecma_op_create_environment_record (scope_p, lexical_this, func_obj_p);
-  }
-#endif /* JERRY_ESNEXT */
 
 #if JERRY_BUILTIN_REALMS
   ecma_global_object_t *saved_global_object_p = JERRY_CONTEXT (global_object_p);
   JERRY_CONTEXT (global_object_p) = realm_p;
 #endif /* JERRY_BUILTIN_REALMS */
 
-  ret_value = vm_run (&shared_args.header, this_binding, scope_p);
+  ecma_value_t ret_value = vm_run (&shared_args.header, this_binding, scope_p);
 
 #if JERRY_BUILTIN_REALMS
   JERRY_CONTEXT (global_object_p) = saved_global_object_p;
 #endif /* JERRY_BUILTIN_REALMS */
 
-#if JERRY_ESNEXT
-  /* ECMAScript v6, 9.2.2.13 */
-  if (JERRY_UNLIKELY (shared_args.header.status_flags & VM_FRAME_CTX_SHARED_HERITAGE_PRESENT))
-  {
-    if (!ECMA_IS_VALUE_ERROR (ret_value) && !ecma_is_value_object (ret_value))
-    {
-      if (!ecma_is_value_undefined (ret_value))
-      {
-        ecma_free_value (ret_value);
-        ret_value = ecma_raise_type_error (ECMA_ERR_MSG ("Derived constructors may only return object or undefined"));
-      }
-      else
-      {
-        ret_value = ecma_op_get_this_binding (scope_p);
-      }
-    }
-  }
-
-exit:
-#endif /* JERRY_ESNEXT */
-
-  if (JERRY_UNLIKELY (shared_args.header.status_flags & VM_FRAME_CTX_SHARED_FREE_LOCAL_ENV))
+  if (JERRY_LIKELY (!(status_flags & CBC_CODE_FLAGS_LEXICAL_ENV_NOT_NEEDED)))
   {
     ecma_deref_object (scope_p);
   }

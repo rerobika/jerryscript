@@ -223,6 +223,12 @@ typedef enum
 #define PARSER_IS_NORMAL_ASYNC_FUNCTION(status_flags) \
   (((status_flags) & (PARSER_IS_GENERATOR_FUNCTION | PARSER_IS_ASYNC_FUNCTION)) == PARSER_IS_ASYNC_FUNCTION)
 
+/**
+ * Check class constructor when class heritage is present
+ */
+#define PARSER_IS_CLASS_CTOR_HERITAGE(status_flags) \
+  (((status_flags) & (PARSER_CLASS_CONSTRUCTOR | PARSER_ALLOW_SUPER_CALL)) == (PARSER_CLASS_CONSTRUCTOR | PARSER_ALLOW_SUPER_CALL))
+
 #else /* !JERRY_ESNEXT */
 
 /**

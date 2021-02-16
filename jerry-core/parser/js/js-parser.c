@@ -628,7 +628,8 @@ parser_post_processing (parser_context_t *context_p) /**< context */
     JERRY_ASSERT (!(context_p->status_flags & PARSER_NO_END_LABEL));
   }
 
-  if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags))
+  if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags)
+      || PARSER_IS_CLASS_CTOR_HERITAGE (context_p->status_flags))
   {
     PARSER_MINUS_EQUAL_U16 (context_p->stack_depth, PARSER_TRY_CONTEXT_STACK_ALLOCATION);
 #ifndef JERRY_NDEBUG
@@ -894,7 +895,8 @@ parser_post_processing (parser_context_t *context_p) /**< context */
     context_p->status_flags &= (uint32_t) ~PARSER_NO_END_LABEL;
 
 #if JERRY_ESNEXT
-    if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags))
+    if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags)
+        || PARSER_IS_CLASS_CTOR_HERITAGE (context_p->status_flags))
     {
       length++;
     }
@@ -1287,6 +1289,12 @@ parser_post_processing (parser_context_t *context_p) /**< context */
       dst_p[0] = CBC_EXT_ASYNC_EXIT;
       dst_p++;
     }
+    else if (PARSER_IS_CLASS_CTOR_HERITAGE (context_p->status_flags))
+    {
+      dst_p[-1] = CBC_EXT_OPCODE;
+      dst_p[0] = CBC_EXT_CONSTRUCTOR_EXIT;
+      dst_p++;
+    }
 #endif /* JERRY_ESNEXT */
   }
   JERRY_ASSERT (dst_p == byte_code_p + length);
@@ -1429,7 +1437,8 @@ parser_parse_function_arguments (parser_context_t *context_p, /**< context */
 
   bool has_duplicated_arg_names = false;
 
-  if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags))
+  if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags)
+      || PARSER_IS_CLASS_CTOR_HERITAGE (context_p->status_flags))
   {
     parser_branch_t branch;
     parser_emit_cbc_ext_forward_branch (context_p, CBC_EXT_TRY_CREATE_CONTEXT, &branch);
@@ -2288,7 +2297,7 @@ parser_parse_function (parser_context_t *context_p, /**< context */
   }
 
 #if JERRY_ESNEXT
-  if ((context_p->status_flags & (PARSER_CLASS_CONSTRUCTOR | PARSER_ALLOW_SUPER_CALL)) == PARSER_CLASS_CONSTRUCTOR)
+  if (context_p->status_flags & PARSER_CLASS_CONSTRUCTOR)
   {
     parser_emit_cbc_ext (context_p, CBC_EXT_RUN_FIELD_INIT);
     parser_flush_cbc (context_p);

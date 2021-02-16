@@ -326,7 +326,7 @@ vm_stack_find_finally (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
       stack_top_p += PARSER_FINALLY_CONTEXT_EXTRA_STACK_ALLOCATION;
 
 #if JERRY_ESNEXT
-      if (JERRY_UNLIKELY (byte_code_p[1] == CBC_EXT_ASYNC_EXIT))
+      if (JERRY_UNLIKELY (byte_code_p[1] == CBC_EXT_ASYNC_EXIT || byte_code_p[1] == CBC_EXT_CONSTRUCTOR_EXIT))
       {
         branch_offset = (uint32_t) (byte_code_p - frame_ctx_p->byte_code_start_p);
         stack_top_p[-1] = VM_CREATE_CONTEXT ((uint32_t) finally_type, branch_offset);

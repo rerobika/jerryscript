@@ -294,6 +294,7 @@ typedef enum
   VM_OC_GENERATOR_AWAIT,         /**< generator await operation */
   VM_OC_EXT_RETURN,              /**< return which also clears the stack */
   VM_OC_ASYNC_EXIT,              /**< return from async function */
+  VM_OC_CONSTRUCTOR_EXIT,        /**< return from class constructor */
   VM_OC_STRING_CONCAT,           /**< string concatenation */
   VM_OC_GET_TEMPLATE_OBJECT,     /**< GetTemplateObject operation */
   VM_OC_PUSH_NEW_TARGET,         /**< push new.target onto the stack */
@@ -381,6 +382,7 @@ typedef enum
   VM_OC_GENERATOR_AWAIT = VM_OC_NONE,         /**< generator await operation */
   VM_OC_EXT_RETURN = VM_OC_NONE,              /**< return which also clears the stack */
   VM_OC_ASYNC_EXIT = VM_OC_NONE,              /**< return from async function */
+  VM_OC_CONSTRUCTOR_EXIT = VM_OC_NONE,        /**< return from class constructor */
   VM_OC_STRING_CONCAT = VM_OC_NONE,           /**< string concatenation */
   VM_OC_GET_TEMPLATE_OBJECT = VM_OC_NONE,     /**< GetTemplateObject operation */
   VM_OC_PUSH_NEW_TARGET = VM_OC_NONE,         /**< push new.target onto the stack */

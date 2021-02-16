@@ -43,11 +43,9 @@ typedef enum
   VM_FRAME_CTX_SHARED_HAS_ARG_LIST = (1 << 0),        /**< has argument list */
   VM_FRAME_CTX_SHARED_DIRECT_EVAL = (1 << 1),         /**< direct eval call */
   VM_FRAME_CTX_SHARED_FREE_THIS = (1 << 2),           /**< free this binding */
-  VM_FRAME_CTX_SHARED_FREE_LOCAL_ENV = (1 << 3),      /**< free local environment */
 #if JERRY_ESNEXT
   VM_FRAME_CTX_SHARED_NON_ARROW_FUNC = (1 << 4),      /**< non-arrow function */
-  VM_FRAME_CTX_SHARED_HERITAGE_PRESENT = (1 << 5),    /**< class heritage present */
-  VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS = (1 << 6),    /**< has class fields */
+  VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS = (1 << 5),    /**< has class fields */
 #endif /* JERRY_ESNEXT */
 } vm_frame_ctx_shared_flags_t;
 

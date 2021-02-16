@@ -917,14 +917,12 @@ opfunc_async_create_and_await (vm_frame_ctx_t *frame_ctx_p, /**< frame context *
  *         ECMA_VALUE_UNDEFINED - otherwise
  */
 ecma_value_t
-opfunc_init_class_fields (ecma_value_t class_object, /**< the function itself */
+opfunc_init_class_fields (ecma_object_t *class_object_p, /**< the function itself */
                           ecma_value_t this_val) /**< this_arg of the function */
 {
-  JERRY_ASSERT (ecma_is_value_object (class_object));
   JERRY_ASSERT (ecma_is_value_object (this_val));
 
   ecma_string_t *name_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_STRING_CLASS_FIELD_INIT);
-  ecma_object_t *class_object_p = ecma_get_object_from_value (class_object);
   ecma_property_t *property_p = ecma_find_named_property (class_object_p, name_p);
 
   if (property_p == NULL)
@@ -1071,7 +1069,7 @@ ecma_op_implicit_constructor_handler_cb (const ecma_value_t function_obj, /**< t
     return ecma_raise_type_error (ECMA_ERR_MSG ("Class constructor cannot be invoked without 'new'"));
   }
 
-  return opfunc_init_class_fields (function_obj, this_val);
+  return opfunc_init_class_fields (ecma_get_object_from_value (function_obj), this_val);
 } /* ecma_op_implicit_constructor_handler_cb */
 
 /**
@@ -1112,7 +1110,7 @@ ecma_op_implicit_constructor_handler_heritage_cb (const ecma_value_t function_ob
 
   if (ecma_is_value_object (result))
   {
-    ecma_value_t fields_value = opfunc_init_class_fields (function_obj, result);
+    ecma_value_t fields_value = opfunc_init_class_fields (func_obj_p, result);
 
     if (ECMA_IS_VALUE_ERROR (fields_value))
     {

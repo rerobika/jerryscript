@@ -615,8 +615,7 @@ vm_super_call (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
   if (ecma_is_value_object (completion_value))
   {
-    ecma_value_t current_function = ecma_make_object_value (vm_get_class_function (frame_ctx_p));
-    ecma_value_t fields_value = opfunc_init_class_fields (current_function, completion_value);
+    ecma_value_t fields_value = opfunc_init_class_fields (vm_get_class_function (frame_ctx_p), completion_value);
 
     if (ECMA_IS_VALUE_ERROR (fields_value))
     {
@@ -2108,8 +2107,25 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         case VM_OC_RUN_FIELD_INIT:
         {
           JERRY_ASSERT (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC);
-          result = opfunc_init_class_fields (ecma_make_object_value (VM_FRAME_CTX_GET_FUNCTION_OBJECT (frame_ctx_p)),
-                                             frame_ctx_p->this_binding);
+
+          ecma_object_t *func_obj_p = VM_FRAME_CTX_GET_FUNCTION_OBJECT (frame_ctx_p);
+
+          if (JERRY_UNLIKELY (JERRY_CONTEXT (current_new_target_p) == NULL))
+          {
+            result = ecma_raise_type_error (ECMA_ERR_MSG ("Class constructor requires 'new'"));
+            goto error;
+          }
+
+          if (ECMA_GET_THIRD_BIT_FROM_POINTER_TAG (((ecma_extended_object_t *) func_obj_p)->u.function.scope_cp))
+          {
+            left_value = ECMA_VALUE_UNINITIALIZED;
+            ecma_op_create_environment_record (frame_ctx_p->lex_env_p, ECMA_VALUE_UNINITIALIZED, func_obj_p);
+            continue;
+          }
+
+          ecma_op_create_environment_record (frame_ctx_p->lex_env_p, frame_ctx_p->this_binding, func_obj_p);
+
+          result = opfunc_init_class_fields (func_obj_p, frame_ctx_p->this_binding);
 
           if (ECMA_IS_VALUE_ERROR (result))
           {
@@ -2705,6 +2721,47 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
             ecma_fast_free_value (*(--stack_top_p));
           }
 
+          goto error;
+        }
+        case VM_OC_CONSTRUCTOR_EXIT:
+        {
+          vm_stack_context_type_t context_type = VM_GET_CONTEXT_TYPE (stack_top_p[-1]);
+
+          if (context_type == VM_CONTEXT_TRY)
+          {
+            JERRY_ASSERT (frame_ctx_p->context_depth == PARSER_TRY_CONTEXT_STACK_ALLOCATION);
+            result = ECMA_VALUE_UNDEFINED;
+          }
+          else
+          {
+            JERRY_ASSERT (frame_ctx_p->context_depth == PARSER_FINALLY_CONTEXT_STACK_ALLOCATION);
+            result = stack_top_p[-2];
+            stack_top_p[-2] = ECMA_VALUE_UNDEFINED;
+          }
+
+          if (context_type == VM_CONTEXT_FINALLY_THROW)
+          {
+            jcontext_raise_exception (result);
+            result = ECMA_VALUE_ERROR;
+            goto error;
+          }
+
+          JERRY_ASSERT (context_type == VM_CONTEXT_FINALLY_RETURN || context_type == VM_CONTEXT_TRY);
+
+          if (ecma_is_value_object (result))
+          {
+            goto error;
+          }
+
+          if (ecma_is_value_undefined (result))
+          {
+            result = ecma_op_get_this_binding (frame_ctx_p->lex_env_p);
+          }
+          else
+          {
+            ecma_free_value (result);
+            result = ecma_raise_type_error (ECMA_ERR_MSG ("Derived constructors may only return object or undefined"));
+          }
           goto error;
         }
         case VM_OC_ASYNC_EXIT:
