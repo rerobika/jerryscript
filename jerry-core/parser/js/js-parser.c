@@ -1278,7 +1278,14 @@ parser_post_processing (parser_context_t *context_p) /**< context */
 
   if (!(context_p->status_flags & PARSER_NO_END_LABEL))
   {
-    *dst_p++ = CBC_RETURN_WITH_BLOCK;
+    if (context_p->status_flags & PARSER_IS_FUNCTION)
+    {
+      *dst_p++ = CBC_RETURN_WITH_UNDEFINED;
+    }
+    else
+    {
+      *dst_p++ = CBC_RETURN_WITH_BLOCK;
+    }
 
 #if JERRY_ESNEXT
     if (PARSER_IS_NORMAL_ASYNC_FUNCTION (context_p->status_flags))
@@ -1978,7 +1985,7 @@ parser_parse_source (const uint8_t *arg_list_p, /**< function argument list */
 #if JERRY_MODULE_SYSTEM
     else if (parse_opts & ECMA_PARSE_MODULE)
     {
-      scanner_create_variables (&context, SCANNER_CREATE_VARS_NO_OPTS);
+      scanner_create_variables (&context, SCANNER_CREATE_VARS_IS_MODULE);
     }
 #endif /* JERRY_MODULE_SYSTEM */
     else
