@@ -536,7 +536,7 @@ vm_get_class_function (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 {
   JERRY_ASSERT (frame_ctx_p != NULL);
 
-  if (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC)
+  if (!(frame_ctx_p->shared_p->status_flags & (VM_FRAME_CTX_SHARED_ARROW_FUNC | VM_FRAME_CTX_SHARED_DIRECT_EVAL)))
   {
     return VM_FRAME_CTX_GET_FUNCTION_OBJECT (frame_ctx_p);
   }
@@ -1921,6 +1921,26 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
           goto free_left_value;
         }
+        case VM_OC_ARROW_INIT:
+        {
+          JERRY_ASSERT (CBC_FUNCTION_IS_ARROW (frame_ctx_p->shared_p->bytecode_header_p->status_flags));
+
+          ecma_arrow_function_t *arrow_func_p;
+          arrow_func_p = (ecma_arrow_function_t *) VM_FRAME_CTX_GET_FUNCTION_OBJECT (frame_ctx_p);
+
+          if (ecma_is_value_undefined (arrow_func_p->new_target))
+          {
+            JERRY_CONTEXT (current_new_target_p) = NULL;
+          }
+          else
+          {
+            JERRY_CONTEXT (current_new_target_p) = ecma_get_object_from_value (arrow_func_p->new_target);
+          }
+
+          frame_ctx_p->this_binding = arrow_func_p->this_binding;
+          frame_ctx_p->shared_p->status_flags |= VM_FRAME_CTX_SHARED_ARROW_FUNC;
+          continue;
+        }
         case VM_OC_SET_COMPUTED_PROPERTY:
         {
           /* Swap values. */
@@ -2106,7 +2126,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_RUN_FIELD_INIT:
         {
-          JERRY_ASSERT (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC);
+          JERRY_ASSERT (!(frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_ARROW_FUNC));
 
           ecma_object_t *func_obj_p = VM_FRAME_CTX_GET_FUNCTION_OBJECT (frame_ctx_p);
 

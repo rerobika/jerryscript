@@ -1064,50 +1064,27 @@ ecma_op_function_call_simple (ecma_object_t *func_obj_p, /**< Function object */
 #endif /* JERRY_BUILTIN_REALMS */
 
   /* 1. */
-#if JERRY_ESNEXT
-  if (JERRY_UNLIKELY (CBC_FUNCTION_IS_ARROW (status_flags)))
+  if (!(status_flags & CBC_CODE_FLAGS_STRICT_MODE))
   {
-    ecma_arrow_function_t *arrow_func_p = (ecma_arrow_function_t *) func_obj_p;
-
-    if (ecma_is_value_undefined (arrow_func_p->new_target))
+    if (ecma_is_value_undefined (this_binding)
+        || ecma_is_value_null (this_binding))
     {
-      JERRY_CONTEXT (current_new_target_p) = NULL;
-    }
-    else
-    {
-      JERRY_CONTEXT (current_new_target_p) = ecma_get_object_from_value (arrow_func_p->new_target);
-    }
-    this_binding = arrow_func_p->this_binding;
-  }
-  else
-  {
-    shared_args.header.status_flags |= VM_FRAME_CTX_SHARED_NON_ARROW_FUNC;
-#endif /* JERRY_ESNEXT */
-
-    if (!(status_flags & CBC_CODE_FLAGS_STRICT_MODE))
-    {
-      if (ecma_is_value_undefined (this_binding)
-          || ecma_is_value_null (this_binding))
-      {
-        /* 2. */
+      /* 2. */
 #if JERRY_BUILTIN_REALMS
-        this_binding = realm_p->this_binding;
+      this_binding = realm_p->this_binding;
 #else /* !JERRY_BUILTIN_REALMS */
-        this_binding = ecma_make_object_value (ecma_builtin_get_global ());
+      this_binding = ecma_make_object_value (ecma_builtin_get_global ());
 #endif /* JERRY_BUILTIN_REALMS */
-      }
-      else if (!ecma_is_value_object (this_binding))
-      {
-        /* 3., 4. */
-        this_binding = ecma_op_to_object (this_binding);
-        shared_args.header.status_flags |= VM_FRAME_CTX_SHARED_FREE_THIS;
-
-        JERRY_ASSERT (!ECMA_IS_VALUE_ERROR (this_binding));
-      }
     }
-#if JERRY_ESNEXT
+    else if (!ecma_is_value_object (this_binding))
+    {
+      /* 3., 4. */
+      this_binding = ecma_op_to_object (this_binding);
+      shared_args.header.status_flags |= VM_FRAME_CTX_SHARED_FREE_THIS;
+
+      JERRY_ASSERT (!ECMA_IS_VALUE_ERROR (this_binding));
+    }
   }
-#endif /* JERRY_ESNEXT */
 
   /* 5. */
   if (JERRY_LIKELY (!(status_flags & CBC_CODE_FLAGS_LEXICAL_ENV_NOT_NEEDED)))

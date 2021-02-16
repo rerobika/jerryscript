@@ -303,6 +303,7 @@ typedef enum
   VM_OC_SET__PROTO__,            /**< set prototype when __proto__: form is used */
   VM_OC_PUSH_STATIC_FIELD_FUNC,  /**< push static field initializer function */
   VM_OC_ADD_COMPUTED_FIELD,      /**< add computed field name */
+  VM_OC_ARROW_INIT,              /**< init arrow function */
 #endif /* JERRY_ESNEXT */
   VM_OC_NONE,                    /**< a special opcode for unsupported byte codes */
 } vm_oc_types;
@@ -391,6 +392,7 @@ typedef enum
   VM_OC_SET__PROTO__ = VM_OC_NONE,            /**< set prototype when __proto__: form is used */
   VM_OC_PUSH_STATIC_FIELD_FUNC = VM_OC_NONE,  /**< push static field initializer function */
   VM_OC_ADD_COMPUTED_FIELD = VM_OC_NONE,      /**< add computed field name */
+  VM_OC_ARROW_INIT = VM_OC_NONE,              /**< init arrow function */
 #endif /* !JERRY_ESNEXT */
 
   VM_OC_UNUSED = VM_OC_NONE                   /**< placeholder if the list is empty */

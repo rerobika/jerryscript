@@ -2375,6 +2375,8 @@ parser_parse_arrow_function (parser_context_t *context_p, /**< context */
   }
 #endif /* JERRY_DEBUGGER */
 
+  parser_emit_cbc_ext (context_p, CBC_EXT_ARROW_INIT);
+
   if (context_p->token.type == LEXER_LEFT_PAREN)
   {
     lexer_next_token (context_p);

@@ -620,7 +620,7 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
       class_id = LIT_MAGIC_STRING_ASYNC_GENERATOR_UL;
     }
 
-    JERRY_ASSERT (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC);
+    JERRY_ASSERT (!(frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_ARROW_FUNC));
     proto_p = ecma_op_get_prototype_from_constructor (VM_FRAME_CTX_GET_FUNCTION_OBJECT (frame_ctx_p),
                                                       default_proto_id);
   }
