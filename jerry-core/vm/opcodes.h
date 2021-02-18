@@ -16,6 +16,7 @@
 #ifndef OPCODES_H
 #define OPCODES_H
 
+#include "ecma-conversion.h"
 #include "ecma-globals.h"
 #include "vm-defines.h"
 
@@ -181,6 +182,12 @@ opfunc_copy_data_properties (ecma_value_t target_object, ecma_value_t source_obj
 ecma_value_t
 opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *vm_frame_ctx_p, ecma_string_t *name_p);
 #endif /* JERRY_ESNEXT */
+
+ecma_value_t
+opfunc_concat_string_chain (ecma_value_t *argv, uint32_t argc, ecma_preferred_type_hint_t hint);
+
+ecma_value_t
+opfunc_concat_strings (ecma_value_t *left_value_p, ecma_value_t *right_value_p, ecma_preferred_type_hint_t hint);
 
 /**
  * @}

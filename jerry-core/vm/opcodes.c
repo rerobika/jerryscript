@@ -17,7 +17,6 @@
 #include "ecma-array-object.h"
 #include "ecma-builtins.h"
 #include "ecma-builtin-helpers.h"
-#include "ecma-conversion.h"
 #include "ecma-exceptions.h"
 #include "ecma-function-object.h"
 #include "ecma-gc.h"
@@ -1809,6 +1808,127 @@ opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *frame_ctx_p, /**< f
 } /* opfunc_lexical_scope_has_restricted_binding */
 
 #endif /* JERRY_ESNEXT */
+
+ecma_value_t
+opfunc_concat_strings (ecma_value_t *left_value_p,
+                       ecma_value_t *right_value_p,
+                       ecma_preferred_type_hint_t hint)
+{
+  if (JERRY_UNLIKELY (ecma_is_value_object (*left_value_p)))
+  {
+    ecma_object_t *obj_p = ecma_get_object_from_value (*left_value_p);
+    ecma_value_t prim_value = ecma_op_object_default_value (obj_p, hint);
+
+    if (ECMA_IS_VALUE_ERROR (prim_value))
+    {
+      return prim_value;
+    }
+
+    ecma_deref_object (obj_p);
+    *left_value_p = prim_value;
+  }
+
+  ecma_string_t *left_str_p = ecma_op_to_string (*left_value_p);
+
+  if (JERRY_UNLIKELY (left_str_p == NULL))
+  {
+    return ECMA_VALUE_ERROR;
+  }
+
+  if (JERRY_UNLIKELY (ecma_is_value_object (*right_value_p)))
+  {
+    ecma_object_t *obj_p = ecma_get_object_from_value (*right_value_p);
+    ecma_value_t prim_value = ecma_op_object_default_value (obj_p, hint);
+
+    if (ECMA_IS_VALUE_ERROR (prim_value))
+    {
+      ecma_deref_ecma_string (left_str_p);
+      return prim_value;
+    }
+
+    ecma_deref_object (obj_p);
+    *right_value_p = prim_value;
+  }
+
+  ecma_string_t *right_str_p = ecma_op_to_string (*right_value_p);
+
+  if (JERRY_UNLIKELY (right_str_p == NULL))
+  {
+    ecma_deref_ecma_string (left_str_p);
+    return ECMA_VALUE_ERROR;
+  }
+
+  ecma_string_t *result_str_p = ecma_concat_ecma_strings (left_str_p, right_str_p);
+  ecma_deref_ecma_string (right_str_p);
+
+  return ecma_make_string_value (result_str_p);
+} /* opfunc_concat_strings */
+
+ecma_value_t
+opfunc_concat_string_chain (ecma_value_t *argv,
+                            uint32_t argc,
+                            ecma_preferred_type_hint_t hint)
+{
+  uint32_t total_size = 0;
+
+  for (uint32_t i = 0; i < argc; i++)
+  {
+    if (JERRY_UNLIKELY (ecma_is_value_object (argv[i])))
+    {
+      ecma_object_t *obj_p = ecma_get_object_from_value (argv[i]);
+      ecma_value_t prim_value = ecma_op_object_default_value (obj_p, hint);
+
+      if (ECMA_IS_VALUE_ERROR (prim_value))
+      {
+        return prim_value;
+      }
+
+      ecma_deref_object (obj_p);
+      argv[i] = prim_value;
+    }
+
+    ecma_string_t *string_p = ecma_op_to_string (argv[i]);
+
+    if (JERRY_UNLIKELY (string_p == NULL))
+    {
+      return ECMA_VALUE_ERROR;
+    }
+
+    const lit_utf8_size_t string_size = ecma_string_get_size (string_p);
+
+    if (string_size >= ECMA_STRING_SIZE_LIMIT - total_size)
+    {
+      jerry_fatal (ERR_OUT_OF_MEMORY);
+    }
+
+    total_size += string_size;
+
+    ecma_free_value (argv[i]);
+    argv[i] = ecma_make_string_value (string_p);
+  }
+
+  ecma_stringbuilder_t builder = ecma_stringbuilder_create_with_size (total_size);
+  lit_utf8_byte_t *dest_p = ecma_stringbuilder_get_data (&builder);
+
+  for (uint32_t i = 0; i < argc; i++)
+  {
+    JERRY_ASSERT (ecma_is_value_string (argv[i]));
+    ecma_string_t *string_p = ecma_get_string_from_value (argv[i]);
+
+    const lit_utf8_size_t string_size = ecma_string_get_size (string_p);
+
+    size_t copied_size = ecma_string_copy_to_cesu8_buffer (string_p,
+                                                           dest_p,
+                                                           string_size);
+    JERRY_ASSERT (copied_size == string_size);
+    dest_p += string_size;
+
+    ecma_deref_ecma_string (string_p);
+  }
+
+  return ecma_make_string_value (ecma_stringbuilder_finalize (&builder));
+} /* opfunc_concat_string_chain */
+
 
 /**
  * @}

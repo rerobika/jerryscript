@@ -2693,6 +2693,25 @@ ecma_stringbuilder_create (void)
 } /* ecma_stringbuilder_create */
 
 /**
+ * Create a string builder with the given underlying buffer size
+ *
+ * @return new string builder
+ */
+ecma_stringbuilder_t
+ecma_stringbuilder_create_with_size (uint32_t required_size)
+{
+  const lit_utf8_size_t initial_size = ECMA_ASCII_STRING_HEADER_SIZE + required_size;
+  ecma_stringbuilder_header_t *header_p = (ecma_stringbuilder_header_t *) jmem_heap_alloc_block (initial_size);
+  header_p->current_size = initial_size;
+#if JERRY_MEM_STATS
+  jmem_stats_allocate_string_bytes (initial_size);
+#endif /* JERRY_MEM_STATS */
+
+  ecma_stringbuilder_t ret = {.header_p = header_p};
+  return ret;
+} /* ecma_stringbuilder_create_with_size */
+
+/**
  * Create a string builder from an ecma string
  *
  * @return new string builder

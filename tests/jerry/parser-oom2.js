@@ -26,7 +26,7 @@ var array = [];
 
 try
 {
-  for (var i = 0; i < 90; i++)
+  for (var i = 0; i < 120; i++)
   {
     array[i] = eval(str);
   }

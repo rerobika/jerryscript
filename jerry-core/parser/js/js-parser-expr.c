@@ -48,6 +48,15 @@
 #define PARSER_RIGHT_TO_LEFT_ORDER_EXPONENTIATION 16
 
 /**
+ * Precedence for LEXER_STRING_CONCAT_CHAIN operation.
+ */
+#define PARSER_STRING_CONCAT_CHAIN_PRECEDENCE 14
+
+#define PARSER_STRING_CONCAT_NEXT_PRECEDENCE_TOKEN LEXER_MULTIPLY
+#define PARSER_STRING_CONCAT_INITIAL_LENGTH 2
+#define PARSER_STRING_CONCAT_LIMIT CBC_MAXIMUM_BYTE_VALUE
+
+/**
  * Value of grouping level increase and decrease.
  */
 #define PARSER_GROUPING_LEVEL_INCREASE 2
@@ -97,6 +106,7 @@ static const uint8_t parser_binary_precedence_table[] =
   13, /**< "<<" */
   13, /**< ">>" */
   13, /**< ">>>" */
+  14, /**< LEXER_STRING_CONCAT_CHAIN */
   14, /**< "+" */
   14, /**< "-" */
   15, /**< "*" */
@@ -108,10 +118,10 @@ static const uint8_t parser_binary_precedence_table[] =
 };
 
 #if JERRY_ESNEXT
-JERRY_STATIC_ASSERT (sizeof (parser_binary_precedence_table) == 39,
+JERRY_STATIC_ASSERT (sizeof (parser_binary_precedence_table) == 40,
                      parser_binary_precedence_table_should_have_39_values_in_es2015);
 #else /* !JERRY_ESNEXT */
-JERRY_STATIC_ASSERT (sizeof (parser_binary_precedence_table) == 36,
+JERRY_STATIC_ASSERT (sizeof (parser_binary_precedence_table) == 37,
                      parser_binary_precedence_table_should_have_36_values_in_es51);
 #endif /* JERRY_ESNEXT */
 
@@ -1681,12 +1691,44 @@ parser_parse_function_expression (parser_context_t *context_p, /**< context */
 #if JERRY_ESNEXT
 
 /**
+ * Append a template literal element to the concat chain
+ */
+static void
+parser_template_literal_append (parser_context_t *context_p, /**< context */
+                                uint8_t *argc_p) /**< [out] argc */
+{
+  if ((*argc_p)++ == PARSER_STRING_CONCAT_LIMIT)
+  {
+    parser_emit_cbc_ext_call (context_p, CBC_EXT_STRING_CONCAT, PARSER_STRING_CONCAT_LIMIT);
+    *argc_p = 2;
+  }
+
+  if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
+  {
+    context_p->last_cbc_opcode = CBC_PUSH_TWO_LITERALS;
+    context_p->last_cbc.value = context_p->lit_object.index;
+  }
+  else if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
+  {
+    context_p->last_cbc_opcode = CBC_PUSH_THREE_LITERALS;
+    context_p->last_cbc.third_literal_index = context_p->lit_object.index;
+  }
+  else
+  {
+    parser_emit_cbc_literal_from_token (context_p, CBC_PUSH_LITERAL);
+  }
+} /* parser_template_literal_append */
+
+/**
  * Parse template literal.
  */
 static void
 parser_parse_template_literal (parser_context_t *context_p) /**< context */
 {
   bool is_empty_head = true;
+  uint8_t argc = 1;
+
+  parser_flush_cbc (context_p);
 
   if (context_p->token.lit_location.length > 0)
   {
@@ -1697,6 +1739,7 @@ parser_parse_template_literal (parser_context_t *context_p) /**< context */
                                     context_p->token.lit_location.type);
 
     parser_emit_cbc_literal_from_token (context_p, CBC_PUSH_LITERAL);
+    argc++;
   }
 
   lexer_next_token (context_p);
@@ -1705,22 +1748,6 @@ parser_parse_template_literal (parser_context_t *context_p) /**< context */
   if (context_p->token.type != LEXER_RIGHT_BRACE)
   {
     parser_raise_error (context_p, PARSER_ERR_RIGHT_BRACE_EXPECTED);
-  }
-
-  if (!is_empty_head)
-  {
-    if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
-    {
-      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_STRING_CONCAT_TWO_LITERALS);
-    }
-    else if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
-    {
-      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_STRING_CONCAT_RIGHT_LITERAL);
-    }
-    else
-    {
-      parser_emit_cbc_ext (context_p, CBC_EXT_STRING_CONCAT);
-    }
   }
 
   context_p->source_p--;
@@ -1733,37 +1760,24 @@ parser_parse_template_literal (parser_context_t *context_p) /**< context */
                                     &context_p->token.lit_location,
                                     context_p->token.lit_location.type);
 
-    if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
-    {
-      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_STRING_CONCAT_TWO_LITERALS);
-      context_p->last_cbc.value = context_p->lit_object.index;
-      context_p->last_cbc.literal_type = context_p->token.lit_location.type;
-      context_p->last_cbc.literal_keyword_type = context_p->token.keyword_type;
-    }
-    else
-    {
-      parser_emit_cbc_ext_literal_from_token (context_p, CBC_EXT_STRING_CONCAT_RIGHT_LITERAL);
-    }
+    parser_template_literal_append (context_p, &argc);
   }
 
   while (context_p->source_p[-1] != LIT_CHAR_GRAVE_ACCENT)
   {
     lexer_next_token (context_p);
 
+    if (argc++ == PARSER_STRING_CONCAT_LIMIT)
+    {
+      parser_emit_cbc_call (context_p, CBC_EXT_STRING_CONCAT, PARSER_STRING_CONCAT_LIMIT);
+      argc = 2;
+    }
+
     parser_parse_expression (context_p, PARSE_EXPR);
 
     if (context_p->token.type != LEXER_RIGHT_BRACE)
     {
       parser_raise_error (context_p, PARSER_ERR_RIGHT_BRACE_EXPECTED);
-    }
-
-    if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
-    {
-      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_STRING_CONCAT_RIGHT_LITERAL);
-    }
-    else
-    {
-      parser_emit_cbc_ext (context_p, CBC_EXT_STRING_CONCAT);
     }
 
     context_p->source_p--;
@@ -1776,9 +1790,26 @@ parser_parse_template_literal (parser_context_t *context_p) /**< context */
                                       &context_p->token.lit_location,
                                       context_p->token.lit_location.type);
 
-      parser_emit_cbc_ext_literal_from_token (context_p, CBC_EXT_STRING_CONCAT_RIGHT_LITERAL);
+      parser_template_literal_append (context_p, &argc);
     }
   }
+
+  if (argc <= 2)
+  {
+    if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
+    {
+      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_STRING_CONCAT_RIGHT_LITERAL);
+      return;
+    }
+
+    if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
+    {
+      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_STRING_CONCAT_TWO_LITERALS);
+      return;
+    }
+  }
+
+  parser_emit_cbc_ext_call (context_p, CBC_EXT_STRING_CONCAT, argc);
 } /* parser_parse_template_literal */
 
 /**
@@ -3021,6 +3052,51 @@ parser_append_binary_token (parser_context_t *context_p) /**< context */
     return;
   }
 #endif /* JERRY_ESNEXT */
+  else if (context_p->token.type >= LEXER_STRING_CONCAT_CHAIN)
+  {
+    if (context_p->token.type == LEXER_ADD)
+    {
+      if (context_p->stack_top_uint8 == LEXER_STRING_CONCAT_CHAIN)
+      {
+        uint8_t *argc_p = parser_stack_get_prev_uint8 (context_p);
+
+        if (JERRY_UNLIKELY (*argc_p == PARSER_STRING_CONCAT_LIMIT))
+        {
+          parser_emit_cbc_call (context_p, CBC_STRING_CONCAT, PARSER_STRING_CONCAT_LIMIT);
+          parser_stack_pop_uint8 (context_p);
+          parser_stack_change_last_uint8 (context_p, context_p->token.type);
+        }
+        else
+        {
+          (*argc_p)++;
+        }
+
+        return;
+      }
+
+      if ((PARSER_IS_PUSH_LITERAL (context_p->last_cbc_opcode)
+          && context_p->last_cbc.literal_type == LEXER_STRING_LITERAL)
+          || lexer_check_next_characters (context_p, LIT_CHAR_SINGLE_QUOTE, LIT_CHAR_DOUBLE_QUOTE))
+      {
+        /* Assume that the following string the be part of the chain */
+        parser_stack_push_uint8 (context_p, PARSER_STRING_CONCAT_INITIAL_LENGTH);
+        context_p->token.type = LEXER_STRING_CONCAT_CHAIN;
+      }
+
+      parser_stack_push_uint8 (context_p, context_p->token.type);
+      return;
+    }
+
+    if (JERRY_UNLIKELY (context_p->stack_top_uint8 == LEXER_STRING_CONCAT_CHAIN)
+        && context_p->token.type > LEXER_STRING_CONCAT_CHAIN
+        && *parser_stack_get_prev_uint8 (context_p) <= PARSER_STRING_CONCAT_INITIAL_LENGTH)
+    {
+      /* The assumption was bad the chain is aborted.
+        `+ "string"` is followed by greater precedence operator than addition */
+      parser_stack_pop_uint8 (context_p);
+      parser_stack_change_last_uint8 (context_p, LEXER_ADD);
+    }
+  }
 
   parser_stack_push_uint8 (context_p, context_p->token.type);
 } /* parser_append_binary_token */
@@ -3159,6 +3235,42 @@ parser_process_binary_opcodes (parser_context_t *context_p, /**< context */
       continue;
     }
 #endif /* JERRY_ESNEXT */
+    else if (token == LEXER_STRING_CONCAT_CHAIN)
+    {
+      if (min_prec_treshold >= PARSER_STRING_CONCAT_CHAIN_PRECEDENCE)
+      {
+        /* continue the chain */
+        parser_stack_push_uint8 (context_p, LEXER_STRING_CONCAT_CHAIN);
+        return;
+      }
+
+      uint8_t argc = context_p->stack_top_uint8;
+      parser_stack_pop_uint8 (context_p);
+
+      if (context_p->stack_top_uint8 < LEXER_STRING_CONCAT_CHAIN
+          || context_p->stack_top_uint8 > LEXER_LAST_BINARY_OP)
+      {
+        /* The processed binary opcode has smaller precedence than addition so the chain is aborted
+          e.g.: a + "foo" + a < 5 */
+        if (JERRY_UNLIKELY (argc <= PARSER_STRING_CONCAT_INITIAL_LENGTH))
+        {
+          if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
+          {
+            context_p->last_cbc_opcode = CBC_STRING_CONCAT_TWO_LITERALS;
+            continue;
+          }
+
+          if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
+          {
+            context_p->last_cbc_opcode = CBC_STRING_CONCAT_RIGHT_LITERAL;
+            continue;
+          }
+        }
+
+        parser_emit_cbc_call (context_p, CBC_STRING_CONCAT, argc);
+      }
+      continue;
+    }
     else
     {
       opcode = LEXER_BINARY_OP_TOKEN_TO_OPCODE (token);

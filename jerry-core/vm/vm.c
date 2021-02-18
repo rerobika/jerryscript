@@ -2753,30 +2753,6 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           frame_ctx_p->call_operation = VM_NO_EXEC_OP;
           return result;
         }
-        case VM_OC_STRING_CONCAT:
-        {
-          ecma_string_t *left_str_p = ecma_op_to_string (left_value);
-
-          if (JERRY_UNLIKELY (left_str_p == NULL))
-          {
-            result = ECMA_VALUE_ERROR;
-            goto error;
-          }
-          ecma_string_t *right_str_p = ecma_op_to_string (right_value);
-
-          if (JERRY_UNLIKELY (right_str_p == NULL))
-          {
-            ecma_deref_ecma_string (left_str_p);
-            result = ECMA_VALUE_ERROR;
-            goto error;
-          }
-
-          ecma_string_t *result_str_p = ecma_concat_ecma_strings (left_str_p, right_str_p);
-          ecma_deref_ecma_string (right_str_p);
-
-          *stack_top_p++ = ecma_make_string_value (result_str_p);
-          goto free_both_values;
-        }
         case VM_OC_GET_TEMPLATE_OBJECT:
         {
           uint8_t tagged_idx = *byte_code_p++;
@@ -3380,6 +3356,46 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
           *stack_top_p++ = result;
           goto free_left_value;
+        }
+        case VM_OC_STRING_CONCAT_MULTIPLE:
+        {
+          ecma_preferred_type_hint_t hint = ECMA_PREFERRED_TYPE_NO;
+
+          if (*byte_code_start_p == CBC_EXT_OPCODE)
+          {
+            hint = ECMA_PREFERRED_TYPE_STRING;
+          }
+
+          uint8_t argc = *byte_code_p++;
+          result = opfunc_concat_string_chain (stack_top_p - argc, argc, hint);
+
+          if (ECMA_IS_VALUE_ERROR (result))
+          {
+            goto error;
+          }
+
+          stack_top_p -= argc;
+          *stack_top_p++ = result;
+          continue;
+        }
+        case VM_OC_STRING_CONCAT:
+        {
+          ecma_preferred_type_hint_t hint = ECMA_PREFERRED_TYPE_NO;
+
+          if (*byte_code_start_p == CBC_EXT_OPCODE)
+          {
+            hint = ECMA_PREFERRED_TYPE_STRING;
+          }
+
+          result = opfunc_concat_strings (&left_value, &right_value, hint);
+
+          if (ECMA_IS_VALUE_ERROR (result))
+          {
+            goto error;
+          }
+
+          *stack_top_p++ = result;
+          goto free_both_values;
         }
         case VM_OC_ADD:
         {

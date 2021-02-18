@@ -392,6 +392,7 @@ ecma_value_t ecma_string_pad (ecma_value_t original_string_p,
 #endif /* JERRY_ESNEXT */
 
 ecma_stringbuilder_t ecma_stringbuilder_create (void);
+ecma_stringbuilder_t ecma_stringbuilder_create_with_size (uint32_t required_size);
 ecma_stringbuilder_t ecma_stringbuilder_create_from (ecma_string_t *string_p);
 ecma_stringbuilder_t ecma_stringbuilder_create_raw (const lit_utf8_byte_t *data_p,
                                                     const lit_utf8_size_t data_size);

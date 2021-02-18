@@ -140,6 +140,7 @@ typedef enum
   LEXER_LEFT_SHIFT,              /**< "<<" (prec: 13) */
   LEXER_RIGHT_SHIFT,             /**< ">>" (prec: 13) */
   LEXER_UNS_RIGHT_SHIFT,         /**< ">>>" (prec: 13) */
+  LEXER_STRING_CONCAT_CHAIN,     /**< "+" operator specialized for string concatenation (prec: 14) */
   LEXER_ADD,                     /**< "+" (prec: 14) */
   LEXER_SUBTRACT,                /**< "-" (prec: 14) */
   LEXER_MULTIPLY,                /**< "*" (prec: 15) */
