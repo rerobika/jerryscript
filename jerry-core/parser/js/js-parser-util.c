@@ -21,6 +21,9 @@
 #include "jcontext.h"
 #endif /* JERRY_LINE_INFO */
 
+#include "ecma-literal-storage.h"
+#include "ecma-helpers.h"
+
 /** \addtogroup parser Parser
  * @{
  *
@@ -1436,6 +1439,56 @@ parser_error_to_string (parser_error_t error) /**< error code */
   }
 } /* parser_error_to_string */
 #endif /* JERRY_ERROR_MESSAGES */
+
+/**
+ * Perform static number arithmetic
+ */
+void
+parser_number_arithmetic (parser_context_t *context_p, /**< context */
+                          uint8_t token, /**< token */
+                          ecma_value_t lhs, /**< left value */
+                          ecma_value_t rhs) /**< right value */
+{
+  ecma_number_t l_num = ecma_get_number_from_value (lhs);
+  ecma_number_t r_num = ecma_get_number_from_value (rhs);
+  ecma_number_t result;
+
+  switch (token)
+  {
+    case LEXER_ADD:
+    {
+      result = l_num + r_num;
+      break;
+    }
+    case LEXER_SUBTRACT:
+    {
+      result = l_num - r_num;
+      break;
+    }
+    case LEXER_MULTIPLY:
+    {
+      result = l_num * r_num;
+      break;
+    }
+    case LEXER_DIVIDE:
+    {
+      result = l_num / r_num;
+      break;
+    }
+    default:
+    {
+      result = 0.0;
+      break;
+    }
+  }
+
+  lexer_literal_pool_add_number (context_p, ecma_find_or_create_literal_number (result));
+
+  context_p->last_cbc_opcode = CBC_PUSH_LITERAL;
+  context_p->last_cbc.literal_index = context_p->lit_object.index;
+  context_p->last_cbc.literal_type = LEXER_NUMBER_LITERAL;
+  context_p->last_cbc.literal_keyword_type = LEXER_LITERAL;
+} /* parser_number_arithmetic */
 
 /**
  * @}

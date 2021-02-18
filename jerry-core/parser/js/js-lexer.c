@@ -2620,10 +2620,7 @@ lexer_construct_number_object (parser_context_t *context_p, /**< context */
                                bool is_expr, /**< expression is parsed */
                                bool is_negative_number) /**< sign is negative */
 {
-  parser_list_iterator_t literal_iterator;
-  lexer_literal_t *literal_p;
   ecma_value_t lit_value;
-  uint32_t literal_index = 0;
   prop_length_t length = context_p->token.lit_location.length;
 
 #if JERRY_BUILTIN_BIGINT
@@ -2682,8 +2679,23 @@ lexer_construct_number_object (parser_context_t *context_p, /**< context */
           && int_num <= CBC_PUSH_NUMBER_BYTE_RANGE_END
           && (int_num != 0 || !is_negative_number))
       {
-        context_p->lit_object.index = (uint16_t) int_num;
-        return true;
+        if (PARSER_IS_PUSH_NUMBER (context_p->last_cbc_opcode)
+            && LEXER_IS_ARITHMETIC_OP_TOKEN (context_p->stack_top_uint8))
+        {
+          lexer_convert_push_number_to_push_literal (context_p);
+          if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
+          {
+            context_p->last_cbc_opcode = CBC_PUSH_LITERAL;
+            parser_flush_cbc (context_p);
+            context_p->last_cbc_opcode = CBC_PUSH_LITERAL;
+            context_p->last_cbc.literal_index = context_p->lit_object.index;
+          }
+        }
+        else
+        {
+          context_p->lit_object.index = (uint16_t) int_num;
+          return true;
+        }
       }
     }
 
@@ -2722,6 +2734,22 @@ lexer_construct_number_object (parser_context_t *context_p, /**< context */
   }
 #endif /* JERRY_BUILTIN_BIGINT */
 
+  lexer_literal_pool_add_number (context_p, lit_value);
+
+  return false;
+} /* lexer_construct_number_object */
+
+/**
+ * Add a new number literal to the literal pool
+ */
+void
+lexer_literal_pool_add_number (parser_context_t *context_p, /**< context */
+                               ecma_value_t lit_value) /**< number literal value */
+{
+  parser_list_iterator_t literal_iterator;
+  lexer_literal_t *literal_p;
+  uint32_t literal_index = 0;
+
   parser_list_iterator_init (&context_p->literal_pool, &literal_iterator);
 
   while ((literal_p = (lexer_literal_t *) parser_list_iterator_next (&literal_iterator)) != NULL)
@@ -2731,7 +2759,7 @@ lexer_construct_number_object (parser_context_t *context_p, /**< context */
     {
       context_p->lit_object.literal_p = literal_p;
       context_p->lit_object.index = (uint16_t) literal_index;
-      return false;
+      return;
     }
 
     literal_index++;
@@ -2754,8 +2782,7 @@ lexer_construct_number_object (parser_context_t *context_p, /**< context */
   context_p->lit_object.index = (uint16_t) literal_index;
 
   context_p->literal_count++;
-  return false;
-} /* lexer_construct_number_object */
+} /* lexer_literal_pool_add_number */
 
 /**
  * Convert a push number opcode to push literal opcode
@@ -2784,56 +2811,16 @@ lexer_convert_push_number_to_push_literal (parser_context_t *context_p) /**< con
   }
 
   ecma_value_t lit_value = ecma_make_integer_value (value);
-
-  parser_list_iterator_t literal_iterator;
-  parser_list_iterator_init (&context_p->literal_pool, &literal_iterator);
-
+  lexer_literal_pool_add_number (context_p, lit_value);
   context_p->last_cbc_opcode = two_literals ? CBC_PUSH_TWO_LITERALS : CBC_PUSH_LITERAL;
-
-  uint32_t literal_index = 0;
-  lexer_literal_t *literal_p;
-
-  while ((literal_p = (lexer_literal_t *) parser_list_iterator_next (&literal_iterator)) != NULL)
-  {
-    if (literal_p->type == LEXER_NUMBER_LITERAL
-        && literal_p->u.value == lit_value)
-    {
-      if (two_literals)
-      {
-        context_p->last_cbc.value = (uint16_t) literal_index;
-      }
-      else
-      {
-        context_p->last_cbc.literal_index = (uint16_t) literal_index;
-      }
-      return;
-    }
-
-    literal_index++;
-  }
-
-  JERRY_ASSERT (literal_index == context_p->literal_count);
-
-  if (literal_index >= PARSER_MAXIMUM_NUMBER_OF_LITERALS)
-  {
-    parser_raise_error (context_p, PARSER_ERR_LITERAL_LIMIT_REACHED);
-  }
-
-  literal_p = (lexer_literal_t *) parser_list_append (context_p, &context_p->literal_pool);
-  literal_p->u.value = lit_value;
-  literal_p->prop.length = 0; /* Unused. */
-  literal_p->type = LEXER_NUMBER_LITERAL;
-  literal_p->status_flags = 0;
-
-  context_p->literal_count++;
 
   if (two_literals)
   {
-    context_p->last_cbc.value = (uint16_t) literal_index;
+    context_p->last_cbc.value = context_p->lit_object.index;
   }
   else
   {
-    context_p->last_cbc.literal_index = (uint16_t) literal_index;
+    context_p->last_cbc.literal_index = context_p->lit_object.index;
   }
 } /* lexer_convert_push_number_to_push_literal */
 

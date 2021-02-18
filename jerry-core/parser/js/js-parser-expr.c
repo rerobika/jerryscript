@@ -3176,6 +3176,21 @@ parser_process_binary_opcodes (parser_context_t *context_p, /**< context */
       }
       else if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
       {
+        if (LEXER_IS_ARITHMETIC_OP_TOKEN (token)
+            && context_p->last_cbc.literal_type == LEXER_NUMBER_LITERAL
+            && context_p->last_cbc.literal_index < PARSER_REGISTER_START)
+        {
+          lexer_literal_t *lhs_lit_p = PARSER_GET_LITERAL (context_p->last_cbc.literal_index);
+
+          if (lhs_lit_p->type == LEXER_NUMBER_LITERAL)
+          {
+            lexer_literal_t *rhs_lit_p = PARSER_GET_LITERAL (context_p->last_cbc.value);
+            JERRY_ASSERT (rhs_lit_p->type == LEXER_NUMBER_LITERAL);
+            parser_number_arithmetic (context_p, token, lhs_lit_p->u.value, rhs_lit_p->u.value);
+            continue;
+          }
+        }
+
         JERRY_ASSERT (CBC_ARGS_EQ (opcode + CBC_BINARY_WITH_TWO_LITERALS,
                                    CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2));
         context_p->last_cbc_opcode = (uint16_t) (opcode + CBC_BINARY_WITH_TWO_LITERALS);

@@ -103,6 +103,12 @@ typedef enum
 #define LEXER_IS_BINARY_NON_LVALUE_OP_TOKEN(token_type) \
   ((token_type) >= LEXER_QUESTION_MARK && (token_type) <= LEXER_LAST_BINARY_OP)
 
+/**
+ * TODO
+ */
+#define LEXER_IS_ARITHMETIC_OP_TOKEN(token_type) \
+  (((token_type) >= LEXER_ADD && (token_type) <= LEXER_DIVIDE))
+
   LEXER_ASSIGN,                  /**< "=" (prec: 3) */
   LEXER_ASSIGN_ADD,              /**< "+=" (prec: 3) */
   LEXER_ASSIGN_SUBTRACT,         /**< "-=" (prec: 3) */

@@ -732,6 +732,8 @@ void parser_set_continues_to_current_position (parser_context_t *context_p, pars
 void parser_reverse_class_fields (parser_context_t *context_p, size_t fields_size);
 #endif /* JERRY_ESNEXT */
 
+void parser_number_arithmetic (parser_context_t *context_p, uint8_t token, ecma_value_t lhs, ecma_value_t rhs);
+
 /**
  * @}
  *
@@ -769,6 +771,7 @@ lexer_literal_t *lexer_construct_unused_literal (parser_context_t *context_p);
 void lexer_construct_literal_object (parser_context_t *context_p, const lexer_lit_location_t *lit_location_p,
                                      uint8_t literal_type);
 bool lexer_construct_number_object (parser_context_t *context_p, bool is_expr, bool is_negative_number);
+void lexer_literal_pool_add_number (parser_context_t *context_p, ecma_value_t lit_value);
 void lexer_convert_push_number_to_push_literal (parser_context_t *context_p);
 uint16_t lexer_construct_function_object (parser_context_t *context_p, uint32_t extra_status_flags);
 void lexer_construct_regexp_object (parser_context_t *context_p, bool parse_only);
