@@ -2405,6 +2405,11 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
         }
 #endif /* JERRY_ESNEXT */
 
+        if (PARSER_IS_PUSH_NUMBER_LITERAL (context_p->last_cbc_opcode))
+        {
+          lexer_convert_push_number_to_push_literal (context_p);
+        }
+
         if (PARSER_IS_MUTABLE_PUSH_LITERAL (context_p->last_cbc_opcode))
         {
           context_p->last_cbc_opcode = PARSER_PUSH_LITERAL_TO_PUSH_PROP_LITERAL (context_p->last_cbc_opcode);
