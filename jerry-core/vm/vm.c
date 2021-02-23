@@ -1009,6 +1009,15 @@ opfunc_construct (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 #define VM_LAST_CONTEXT_END() \
   (VM_GET_REGISTERS (frame_ctx_p) + register_end + frame_ctx_p->context_depth)
 
+#define VM_INNER_CASE(opcode, body) \
+  if (0) \
+  { \
+    case opcode: \
+    { \
+      (body); \
+    } \
+  }
+
 /**
  * Run generic byte code.
  *
@@ -2884,6 +2893,14 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
             *stack_top_p++ = result;
           }
           continue;
+        }
+        case VM_OC_PUSH_PROP_LIT_0:
+        {
+          right_value = ECMA_CREATE_DIRECT_UINT32_STRING_VALUE (0);
+
+          VM_INNER_CASE (VM_OC_PUSH_PROP_LIT_POS_BYTE,
+                         right_value = ECMA_CREATE_DIRECT_UINT32_STRING_VALUE ((*byte_code_p++) + 1));
+          /* FALLTHRU */
         }
         case VM_OC_PROP_GET:
         {

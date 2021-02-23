@@ -132,6 +132,8 @@ typedef enum
   VM_OC_IDENT_REFERENCE,         /**< ident reference */
   VM_OC_PROP_REFERENCE,          /**< prop reference */
   VM_OC_PROP_GET,                /**< prop get */
+  VM_OC_PUSH_PROP_LIT_0,
+  VM_OC_PUSH_PROP_LIT_POS_BYTE,
 
   /* These eight opcodes must be in this order. */
   VM_OC_PROP_PRE_INCR,           /**< prefix increment of a property */
