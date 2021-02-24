@@ -33,6 +33,21 @@
 #if JERRY_PARSER
 
 /**
+ * Free string or ident literal.
+ */
+void
+util_free_string_or_ident_literal (lexer_literal_t *literal_p) /**< literal */
+{
+  JERRY_ASSERT ((literal_p->type == LEXER_IDENT_LITERAL
+                 || literal_p->type == LEXER_STRING_LITERAL));
+
+  if (!(literal_p->status_flags & LEXER_FLAG_SOURCE_PTR))
+  {
+    jmem_heap_free_block ((void *) literal_p->u.char_p, literal_p->prop.length);
+  }
+} /* util_free_string_or_ident_literal */
+
+/**
  * Free literal.
  */
 void
@@ -41,10 +56,7 @@ util_free_literal (lexer_literal_t *literal_p) /**< literal */
   if (literal_p->type == LEXER_IDENT_LITERAL
       || literal_p->type == LEXER_STRING_LITERAL)
   {
-    if (!(literal_p->status_flags & LEXER_FLAG_SOURCE_PTR))
-    {
-      jmem_heap_free_block ((void *) literal_p->u.char_p, literal_p->prop.length);
-    }
+    util_free_string_or_ident_literal (literal_p);
   }
   else if ((literal_p->type == LEXER_FUNCTION_LITERAL)
            || (literal_p->type == LEXER_REGEXP_LITERAL))

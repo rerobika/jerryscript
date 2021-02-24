@@ -728,6 +728,8 @@ void parser_set_continues_to_current_position (parser_context_t *context_p, pars
 void parser_reverse_class_fields (parser_context_t *context_p, size_t fields_size);
 #endif /* JERRY_ESNEXT */
 
+bool parser_concat_string_literals (parser_context_t *context_p, uint16_t lhs_index, uint16_t rhs_index);
+
 /**
  * @}
  *

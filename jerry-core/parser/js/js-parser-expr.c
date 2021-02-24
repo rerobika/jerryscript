@@ -3190,6 +3190,14 @@ parser_process_binary_opcodes (parser_context_t *context_p, /**< context */
       }
       else if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
       {
+        if (token == LEXER_ADD
+            && context_p->last_cbc.literal_type == LEXER_STRING_LITERAL
+            && context_p->last_cbc.literal_index < PARSER_REGISTER_START
+            && parser_concat_string_literals (context_p, context_p->last_cbc.literal_index, context_p->last_cbc.value))
+        {
+          continue;
+        }
+
         JERRY_ASSERT (CBC_ARGS_EQ (opcode + CBC_BINARY_WITH_TWO_LITERALS,
                                    CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2));
         context_p->last_cbc_opcode = (uint16_t) (opcode + CBC_BINARY_WITH_TWO_LITERALS);

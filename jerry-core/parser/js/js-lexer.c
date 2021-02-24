@@ -2557,6 +2557,8 @@ lexer_construct_literal_object (parser_context_t *context_p, /**< context */
 
         literal_p->status_flags |= LEXER_FLAG_USED;
       }
+
+      literal_p->status_flags |= LEXER_FLAG_ALREADY_IN_POOL;
       return;
     }
 

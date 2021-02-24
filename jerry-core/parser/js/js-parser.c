@@ -175,7 +175,9 @@ parser_compute_indicies (parser_context_t *context_p, /**< context */
       case LEXER_STRING_LITERAL:
       case LEXER_NUMBER_LITERAL:
       {
-        JERRY_ASSERT ((literal_p->status_flags & ~(LEXER_FLAG_SOURCE_PTR | LEXER_FLAG_LATE_INIT)) == 0);
+        JERRY_ASSERT ((literal_p->status_flags & ~(LEXER_FLAG_SOURCE_PTR
+                                                   | LEXER_FLAG_LATE_INIT
+                                                   | LEXER_FLAG_ALREADY_IN_POOL)) == 0);
         literal_p->prop.index = const_literal_index;
         const_literal_index++;
         break;
@@ -191,8 +193,7 @@ parser_compute_indicies (parser_context_t *context_p, /**< context */
       }
       default:
       {
-        JERRY_ASSERT (literal_p->type == LEXER_UNUSED_LITERAL
-                      && literal_p->status_flags == LEXER_FLAG_FUNCTION_ARGUMENT);
+        JERRY_ASSERT (literal_p->type == LEXER_UNUSED_LITERAL);
         break;
       }
     }

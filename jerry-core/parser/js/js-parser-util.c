@@ -451,6 +451,7 @@ parser_emit_cbc_push_number (parser_context_t *context_p, /**< context */
 
   context_p->last_cbc_opcode = opcode;
   context_p->last_cbc.value = (uint16_t) (value - 1);
+  context_p->last_cbc.literal_type = LEXER_NUMBER_LITERAL;
 } /* parser_emit_cbc_push_number */
 
 #if JERRY_LINE_INFO
@@ -1436,6 +1437,128 @@ parser_error_to_string (parser_error_t error) /**< error code */
   }
 } /* parser_error_to_string */
 #endif /* JERRY_ERROR_MESSAGES */
+
+/**
+ * Concatenate the given to literals
+ *
+ * @return false - if the both literals are not strings
+ *         true - otherwise
+ */
+bool
+parser_concat_string_literals (parser_context_t *context_p,
+                               uint16_t lhs_index,
+                               uint16_t rhs_index)
+{
+  lexer_literal_t *lhs_p = PARSER_GET_LITERAL (lhs_index);
+
+  if (lhs_p->type != LEXER_STRING_LITERAL)
+  {
+    return false;
+  }
+
+  lexer_literal_t *rhs_p = PARSER_GET_LITERAL (rhs_index);
+
+  JERRY_ASSERT (lhs_p->type == LEXER_STRING_LITERAL);
+  JERRY_ASSERT (rhs_p->type == LEXER_STRING_LITERAL);
+
+  uint32_t total_size = (uint32_t) (lhs_p->prop.length + rhs_p->prop.length);
+
+  if (JERRY_UNLIKELY (total_size > PARSER_MAXIMUM_STRING_LENGTH))
+  {
+    parser_raise_error (context_p, PARSER_ERR_STRING_TOO_LONG);
+  }
+
+  uint8_t *buffer_p = (uint8_t *) jmem_heap_alloc_block (total_size);
+  memcpy ((uint8_t *) buffer_p, lhs_p->u.char_p, lhs_p->prop.length);
+  memcpy ((uint8_t *) buffer_p + lhs_p->prop.length, rhs_p->u.char_p, rhs_p->prop.length);
+
+  uint16_t literal_index = 0;
+  lexer_literal_t *literal_p;
+  parser_list_iterator_t literal_iterator;
+  parser_list_iterator_init (&context_p->literal_pool, &literal_iterator);
+
+  context_p->last_cbc_opcode = CBC_PUSH_LITERAL;
+
+  while ((literal_p = (lexer_literal_t *) parser_list_iterator_next (&literal_iterator)) != NULL)
+  {
+    if (literal_p->type == LEXER_STRING_LITERAL
+        && literal_p->prop.length == total_size
+        && memcmp (literal_p->u.char_p, buffer_p, total_size) == 0)
+    {
+      context_p->lit_object.literal_p = literal_p;
+      context_p->lit_object.index = (uint16_t) literal_index;
+      context_p->last_cbc.literal_index = context_p->lit_object.index;
+      jmem_heap_free_block (buffer_p, total_size);
+
+      if (!(lhs_p->status_flags & LEXER_FLAG_ALREADY_IN_POOL)
+          && lhs_p != literal_p)
+      {
+        util_free_string_or_ident_literal (lhs_p);
+        lhs_p->type = LEXER_UNUSED_LITERAL;
+      }
+
+      if (!(rhs_p->status_flags & LEXER_FLAG_ALREADY_IN_POOL)
+          && rhs_p != literal_p)
+      {
+        util_free_string_or_ident_literal (rhs_p);
+        rhs_p->type = LEXER_UNUSED_LITERAL;
+      }
+
+      return true;
+    }
+
+    literal_index++;
+  }
+
+  lexer_literal_t *free_lit_p = NULL;
+
+  if (!(lhs_p->status_flags & LEXER_FLAG_ALREADY_IN_POOL))
+  {
+    free_lit_p = lhs_p;
+    literal_index = lhs_index;
+  }
+  else if (!(rhs_p->status_flags & LEXER_FLAG_ALREADY_IN_POOL))
+  {
+    free_lit_p = rhs_p;
+    rhs_p = lhs_p;
+    literal_index = rhs_index;
+  }
+
+  if (free_lit_p != NULL)
+  {
+    util_free_string_or_ident_literal (free_lit_p);
+    free_lit_p->prop.length = (prop_length_t) total_size;
+    free_lit_p->u.char_p = buffer_p;
+    free_lit_p->status_flags = 0;
+
+    if (!(rhs_p->status_flags & LEXER_FLAG_ALREADY_IN_POOL))
+    {
+      util_free_string_or_ident_literal (rhs_p);
+      rhs_p->type = LEXER_UNUSED_LITERAL;
+    }
+
+    context_p->lit_object.index = literal_index;
+    context_p->last_cbc.literal_index = literal_index;
+    return true;
+  }
+
+  if (context_p->literal_count >= PARSER_MAXIMUM_NUMBER_OF_LITERALS)
+  {
+    parser_raise_error (context_p, PARSER_ERR_LITERAL_LIMIT_REACHED);
+  }
+
+  literal_p = (lexer_literal_t *) parser_list_append (context_p, &context_p->literal_pool);
+  literal_p->u.char_p = buffer_p;
+  literal_p->type = LEXER_STRING_LITERAL;
+  literal_p->prop.length = (prop_length_t) total_size;
+  literal_p->status_flags = 0;
+
+  context_p->lit_object.literal_p = literal_p;
+  context_p->lit_object.index = context_p->literal_count++;
+  context_p->last_cbc.literal_index = context_p->lit_object.index;
+
+  return true;
+} /* parser_concat_string_literals */
 
 /**
  * @}

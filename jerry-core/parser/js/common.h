@@ -77,6 +77,7 @@ typedef enum
 #if JERRY_ESNEXT
   LEXER_FLAG_GLOBAL = (1 << 4), /**< this local identifier is not a let or const declaration */
 #endif /* JERRY_ESNEXT */
+  LEXER_FLAG_ALREADY_IN_POOL = (1 << 5), /**< [[TODO]] */
 } lexer_literal_status_flags_t;
 
 /**
@@ -115,6 +116,7 @@ typedef struct
   uint8_t status_flags;                  /**< status flags */
 } lexer_literal_t;
 
+void util_free_string_or_ident_literal (lexer_literal_t *literal_p);
 void util_free_literal (lexer_literal_t *literal_p);
 
 #if JERRY_PARSER_DUMP_BYTE_CODE
