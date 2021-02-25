@@ -3813,13 +3813,6 @@ parser_process_ternary_expression (parser_context_t *context_p) /**< context */
   parser_branch_t uncond_branch;
 
   parser_push_result (context_p);
-
-  if (context_p->last_cbc_opcode == CBC_LOGICAL_NOT)
-  {
-    context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
-    opcode = CBC_BRANCH_IF_TRUE_FORWARD;
-  }
-
   parser_emit_cbc_forward_branch (context_p, (uint16_t) opcode, &cond_branch);
 
   lexer_next_token (context_p);

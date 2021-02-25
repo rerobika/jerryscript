@@ -3242,31 +3242,31 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_BRANCH_IF_TRUE:
         case VM_OC_BRANCH_IF_FALSE:
+        {
+          ecma_value_t value = *(--stack_top_p);
+          bool boolean_value = ecma_op_to_boolean (value);
+          ecma_fast_free_value (value);
+
+          if (boolean_value ^ (opcode >= CBC_BRANCH_IF_FALSE_FORWARD))
+          {
+            byte_code_p = byte_code_start_p + branch_offset;
+          }
+          continue;
+        }
         case VM_OC_BRANCH_IF_LOGICAL_TRUE:
         case VM_OC_BRANCH_IF_LOGICAL_FALSE:
         {
-          uint32_t opcode_flags = VM_OC_GROUP_GET_INDEX (opcode_data) - VM_OC_BRANCH_IF_TRUE;
-          ecma_value_t value = *(--stack_top_p);
+          bool boolean_value = ecma_op_to_boolean (stack_top_p[-1]);
 
-          bool boolean_value = ecma_op_to_boolean (value);
-
-          if (opcode_flags & VM_OC_BRANCH_IF_FALSE_FLAG)
-          {
-            boolean_value = !boolean_value;
-          }
-
-          if (boolean_value)
+          if (boolean_value ^ (opcode >= CBC_BRANCH_IF_LOGICAL_FALSE))
           {
             byte_code_p = byte_code_start_p + branch_offset;
-            if (opcode_flags & VM_OC_LOGICAL_BRANCH_FLAG)
-            {
-              /* "Push" the value back to the stack. */
-              ++stack_top_p;
-              continue;
-            }
+          }
+          else
+          {
+            ecma_fast_free_value (*(--stack_top_p));
           }
 
-          ecma_fast_free_value (value);
           continue;
         }
 #if JERRY_ESNEXT

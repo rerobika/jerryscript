@@ -967,12 +967,7 @@ parser_parse_do_while_statement_end (parser_context_t *context_p) /**< context *
   if (context_p->last_cbc_opcode != CBC_PUSH_FALSE)
   {
     cbc_opcode_t opcode = CBC_BRANCH_IF_TRUE_BACKWARD;
-    if (context_p->last_cbc_opcode == CBC_LOGICAL_NOT)
-    {
-      context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
-      opcode = CBC_BRANCH_IF_FALSE_BACKWARD;
-    }
-    else if (context_p->last_cbc_opcode == CBC_PUSH_TRUE)
+    if (context_p->last_cbc_opcode == CBC_PUSH_TRUE)
     {
       context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
       opcode = CBC_JUMP_BACKWARD;
@@ -1084,12 +1079,7 @@ parser_parse_while_statement_end (parser_context_t *context_p) /**< context */
   }
 
   opcode = CBC_BRANCH_IF_TRUE_BACKWARD;
-  if (context_p->last_cbc_opcode == CBC_LOGICAL_NOT)
-  {
-    context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
-    opcode = CBC_BRANCH_IF_FALSE_BACKWARD;
-  }
-  else if (context_p->last_cbc_opcode == CBC_PUSH_TRUE)
+  if (context_p->last_cbc_opcode == CBC_PUSH_TRUE)
   {
     context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
     opcode = CBC_JUMP_BACKWARD;
@@ -1718,12 +1708,7 @@ parser_parse_for_statement_end (parser_context_t *context_p) /**< context */
     }
 
     opcode = CBC_BRANCH_IF_TRUE_BACKWARD;
-    if (context_p->last_cbc_opcode == CBC_LOGICAL_NOT)
-    {
-      context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
-      opcode = CBC_BRANCH_IF_FALSE_BACKWARD;
-    }
-    else if (context_p->last_cbc_opcode == CBC_PUSH_TRUE)
+    if (context_p->last_cbc_opcode == CBC_PUSH_TRUE)
     {
       context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
       opcode = CBC_JUMP_BACKWARD;
@@ -1879,17 +1864,16 @@ parser_parse_switch_statement_start (parser_context_t *context_p) /**< context *
       parser_raise_error (context_p, PARSER_ERR_COLON_EXPECTED);
     }
 
-    uint16_t opcode = CBC_BRANCH_IF_STRICT_EQUAL;
+    parser_branch_node_t *new_case_p = parser_emit_cbc_forward_branch_item (context_p,
+                                                                            CBC_BRANCH_IF_STRICT_EQUAL,
+                                                                            NULL);
 
     if (case_info_p == NULL
         || (case_info_p->next_p == NULL && case_info_p->location.source_p[-1] == LIT_CHAR_LOWERCASE_T))
     {
       /* There are no more 'case' statements in the switch. */
-      parser_emit_cbc (context_p, CBC_STRICT_EQUAL);
-      opcode = CBC_BRANCH_IF_TRUE_FORWARD;
+      parser_emit_cbc (context_p, CBC_POP);
     }
-
-    parser_branch_node_t *new_case_p = parser_emit_cbc_forward_branch_item (context_p, opcode, NULL);
 
     if (case_branches_p == NULL)
     {
