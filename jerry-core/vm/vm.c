@@ -23,6 +23,7 @@
 #include "ecma-builtin-object.h"
 #include "ecma-comparison.h"
 #include "ecma-conversion.h"
+#include "ecma-eval.h"
 #include "ecma-exceptions.h"
 #include "ecma-function-object.h"
 #include "ecma-gc.h"
@@ -755,6 +756,145 @@ vm_spread_operation (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 #endif /* JERRY_ESNEXT */
 
 /**
+ * Call
+ */
+static void
+opfunc_eval (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
+{
+  JERRY_ASSERT (frame_ctx_p->call_operation == VM_EXEC_EVAL);
+
+  const uint8_t *byte_code_p = frame_ctx_p->byte_code_p + 1;
+  uint16_t opcode = frame_ctx_p->byte_code_p[0];
+
+  JERRY_ASSERT ((opcode >= CBC_CALL && opcode <= CBC_CALL2_PROP_BLOCK)
+                || (opcode == CBC_EXT_OPCODE
+                    && frame_ctx_p->byte_code_p[1] >= CBC_EXT_SPREAD_CALL
+                    && frame_ctx_p->byte_code_p[1] <= CBC_EXT_SPREAD_CALL_PROP_BLOCK));
+
+  uint32_t arguments_list_len;
+  ecma_collection_t *collection_p = NULL;
+  ecma_value_t *arguments_p;
+  ecma_value_t func_value;
+
+  if (opcode == CBC_EXT_OPCODE)
+  {
+    opcode = (uint16_t) (*byte_code_p + CBC_END + 1);
+    byte_code_p += 2;
+    ecma_value_t collection = *(--frame_ctx_p->stack_top_p);
+    func_value = frame_ctx_p->stack_top_p[-1];
+    collection_p = ECMA_GET_INTERNAL_VALUE_POINTER (ecma_collection_t, collection);
+    arguments_p = collection_p->buffer_p;
+    arguments_list_len = collection_p->item_count;
+  }
+  else
+  {
+    if (opcode >= CBC_CALL0)
+    {
+      arguments_list_len = (unsigned int) ((opcode - CBC_CALL0) / 6);
+    }
+    else
+    {
+      arguments_list_len = *byte_code_p++;
+    }
+
+    arguments_p = frame_ctx_p->stack_top_p - arguments_list_len;
+    func_value = arguments_p[-1];
+  }
+
+  ecma_value_t builtin_eval = ecma_make_object_value (ecma_builtin_get (ECMA_BUILTIN_ID_EVAL));
+
+  if (func_value != builtin_eval)
+  {
+    if (collection_p != NULL)
+    {
+      frame_ctx_p->stack_top_p++;
+      frame_ctx_p->call_operation = VM_EXEC_SPREAD_CALL;
+    }
+    return;
+  }
+
+  ecma_value_t result;
+
+  if (arguments_list_len < 1)
+  {
+    result = ECMA_VALUE_UNDEFINED;
+  }
+  else if (!ecma_is_value_string (arguments_p[0]))
+  {
+    result = ecma_copy_value (arguments_p[0]);
+  }
+  else
+  {
+    uint32_t parse_opts = ECMA_PARSE_DIRECT_EVAL;
+
+    if (frame_ctx_p->shared_p->bytecode_header_p->status_flags & CBC_CODE_FLAGS_STRICT_MODE)
+    {
+      parse_opts |= ECMA_PARSE_STRICT_MODE;
+    }
+
+#if JERRY_ESNEXT
+    parse_opts |= ECMA_GET_LOCAL_PARSE_OPTS ();
+#endif /* JERRY_ESNEXT */
+
+    result = ecma_op_eval (ecma_get_string_from_value (arguments_p[0]), parse_opts);
+  }
+
+  /* Free registers. */
+  for (uint32_t i = 0; i < arguments_list_len; i++)
+  {
+    ecma_fast_free_value (arguments_p[i]);
+  }
+
+  bool is_call_prop;
+
+  if (collection_p != NULL)
+  {
+    is_call_prop = opcode >= (CBC_EXT_SPREAD_CALL_PROP + CBC_END + 1);
+    ecma_collection_destroy (collection_p);
+  }
+  else
+  {
+    is_call_prop = ((opcode - CBC_CALL) % 6) >= 3;
+    frame_ctx_p->stack_top_p = arguments_p;
+  }
+
+  ecma_free_value (*(--frame_ctx_p->stack_top_p));
+
+  if (is_call_prop)
+  {
+    ecma_free_value (*(--frame_ctx_p->stack_top_p));
+    ecma_free_value (*(--frame_ctx_p->stack_top_p));
+  }
+
+  if (ECMA_IS_VALUE_ERROR (result))
+  {
+#if JERRY_DEBUGGER
+    JERRY_CONTEXT (debugger_exception_byte_code_p) = frame_ctx_p->byte_code_p;
+#endif /* JERRY_DEBUGGER */
+    frame_ctx_p->byte_code_p = (uint8_t *) vm_error_byte_code_p;
+  }
+  else
+  {
+    frame_ctx_p->byte_code_p = byte_code_p;
+    uint32_t opcode_data = vm_decode_table[opcode];
+
+    if (!(opcode_data & (VM_OC_PUT_STACK | VM_OC_PUT_BLOCK)))
+    {
+      ecma_fast_free_value (result);
+    }
+    else if (opcode_data & VM_OC_PUT_STACK)
+    {
+      *frame_ctx_p->stack_top_p++ = result;
+    }
+    else
+    {
+      ecma_fast_free_value (frame_ctx_p->block_result);
+      frame_ctx_p->block_result = result;
+    }
+  }
+} /* opfunc_eval */
+
+/**
  * 'Function call' opcode handler.
  *
  * See also: ECMA-262 v5, 11.2.3
@@ -796,8 +936,6 @@ opfunc_call (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
                                               stack_top_p,
                                               arguments_list_len);
   }
-
-  JERRY_CONTEXT (status_flags) &= (uint32_t) ~ECMA_STATUS_DIRECT_EVAL;
 
   /* Free registers. */
   for (uint32_t i = 0; i < arguments_list_len; i++)
@@ -2008,13 +2146,6 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           continue;
         }
 #if JERRY_ESNEXT
-        case VM_OC_LOCAL_EVAL:
-        {
-          ECMA_CLEAR_LOCAL_PARSE_OPTS ();
-          uint8_t parse_opts = *byte_code_p++;
-          ECMA_SET_LOCAL_PARSE_OPTS (parse_opts);
-          continue;
-        }
         case VM_OC_SUPER_CALL:
         {
           uint8_t arguments_list_len = *byte_code_p++;
@@ -2571,21 +2702,32 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_SPREAD_ARGUMENTS:
         {
-          uint8_t arguments_list_len = *byte_code_p++;
-          stack_top_p -= arguments_list_len;
-
-          ecma_collection_t *arguments_p = opfunc_spread_arguments (stack_top_p, arguments_list_len);
-
-          if (JERRY_UNLIKELY (arguments_p == NULL))
+          if (frame_ctx_p->call_operation != VM_EXEC_SPREAD_CALL)
           {
-            result = ECMA_VALUE_ERROR;
-            goto error;
+            uint8_t arguments_list_len = *byte_code_p++;
+            stack_top_p -= arguments_list_len;
+
+            ecma_collection_t *arguments_p = opfunc_spread_arguments (stack_top_p, arguments_list_len);
+
+            if (JERRY_UNLIKELY (arguments_p == NULL))
+            {
+              result = ECMA_VALUE_ERROR;
+              goto error;
+            }
+
+            stack_top_p++;
+            ECMA_SET_INTERNAL_VALUE_POINTER (stack_top_p[-1], arguments_p);
           }
 
-          stack_top_p++;
-          ECMA_SET_INTERNAL_VALUE_POINTER (stack_top_p[-1], arguments_p);
+          if (frame_ctx_p->call_operation == VM_EXEC_SPREAD_EVAL)
+          {
+            frame_ctx_p->call_operation = VM_EXEC_EVAL;
+          }
+          else
+          {
+            frame_ctx_p->call_operation = VM_EXEC_SPREAD_OP;
+          }
 
-          frame_ctx_p->call_operation = VM_EXEC_SPREAD_OP;
           frame_ctx_p->byte_code_p = byte_code_start_p;
           frame_ctx_p->stack_top_p = stack_top_p;
           return ECMA_VALUE_UNDEFINED;
@@ -3131,14 +3273,27 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           result = ecma_raise_reference_error (ECMA_ERR_MSG ("Undefined reference"));
           goto error;
         }
+#if JERRY_ESNEXT
+        case VM_OC_LOCAL_EVAL:
+        {
+          ECMA_CLEAR_LOCAL_PARSE_OPTS ();
+          uint8_t parse_opts = *byte_code_p++;
+          ECMA_SET_LOCAL_PARSE_OPTS (parse_opts);
+          /* FALLTHRU */
+        }
+#endif /* JERRY_ESNEXT */
         case VM_OC_EVAL:
         {
-          JERRY_CONTEXT (status_flags) |= ECMA_STATUS_DIRECT_EVAL;
-          JERRY_ASSERT ((*byte_code_p >= CBC_CALL && *byte_code_p <= CBC_CALL2_PROP_BLOCK)
-                        || (*byte_code_p == CBC_EXT_OPCODE
-                            && byte_code_p[1] >= CBC_EXT_SPREAD_CALL
-                            && byte_code_p[1] <= CBC_EXT_SPREAD_CALL_PROP_BLOCK));
-          continue;
+          if (*byte_code_p == CBC_EXT_OPCODE)
+          {
+            frame_ctx_p->call_operation = VM_EXEC_SPREAD_EVAL;
+            continue;
+          }
+
+          frame_ctx_p->call_operation = VM_EXEC_EVAL;
+          frame_ctx_p->byte_code_p = byte_code_p;
+          frame_ctx_p->stack_top_p = stack_top_p;
+          return ECMA_VALUE_UNDEFINED;
         }
         case VM_OC_CALL:
         {
@@ -5008,7 +5163,6 @@ vm_init_exec (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
     }
   }
 
-  JERRY_CONTEXT (status_flags) &= (uint32_t) ~ECMA_STATUS_DIRECT_EVAL;
   JERRY_CONTEXT (vm_top_context_p) = frame_ctx_p;
 } /* vm_init_exec */
 
@@ -5029,6 +5183,11 @@ vm_execute (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
       case VM_EXEC_CALL:
       {
         opfunc_call (frame_ctx_p);
+        break;
+      }
+      case VM_EXEC_EVAL:
+      {
+        opfunc_eval (frame_ctx_p);
         break;
       }
 #if JERRY_ESNEXT

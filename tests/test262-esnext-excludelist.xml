@@ -216,9 +216,6 @@
   <test id="language/expressions/async-arrow-function/await-as-param-nested-arrow-body-position.js"><reason></reason></test>
   <test id="language/expressions/async-arrow-function/await-as-param-nested-arrow-parameter-position.js"><reason></reason></test>
   <test id="language/expressions/async-arrow-function/await-as-param-rest-nested-arrow-parameter-position.js"><reason></reason></test>
-  <test id="language/expressions/call/eval-spread-empty-leading.js"><reason></reason></test>
-  <test id="language/expressions/call/eval-spread-empty-trailing.js"><reason></reason></test>
-  <test id="language/expressions/call/eval-spread.js"><reason></reason></test>
   <test id="language/expressions/class/accessor-name-inst/literal-numeric-leading-decimal.js"><reason></reason></test>
   <test id="language/expressions/class/accessor-name-static/literal-numeric-leading-decimal.js"><reason></reason></test>
   <test id="language/expressions/class/class-name-ident-let-escaped.js"><reason></reason></test>
@@ -8615,7 +8612,6 @@
   <test id="intl402/PluralRules/proto-from-ctor-realm.js"><reason></reason></test>
   <test id="intl402/RelativeTimeFormat/constructor/constructor/proto-from-ctor-realm.js"><reason></reason></test>
   <test id="intl402/Segmenter/constructor/constructor/proto-from-ctor-realm.js"><reason></reason></test>
-  <test id="language/expressions/call/eval-realm-indirect.js"><reason></reason></test>
   <test id="language/expressions/call/tco-cross-realm-class-construct.js"><reason></reason></test>
   <test id="language/expressions/call/tco-cross-realm-class-derived-construct.js"><reason></reason></test>
   <test id="language/expressions/call/tco-cross-realm-fun-call.js"><reason></reason></test>

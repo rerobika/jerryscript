@@ -471,6 +471,9 @@ typedef enum
   VM_NO_EXEC_OP,                 /**< do nothing */
   VM_EXEC_CALL,                  /**< invoke a function */
   VM_EXEC_SUPER_CALL,            /**< invoke a function through 'super' keyword */
+  VM_EXEC_EVAL,                  /**< perform direct eval */
+  VM_EXEC_SPREAD_CALL,           /**< perform direct eval */
+  VM_EXEC_SPREAD_EVAL,           /**< perform direct eval */
   VM_EXEC_SPREAD_OP,             /**< call/construct operation with spreaded argument list */
   VM_EXEC_RETURN,                /**< return with the completion value without freeing registers */
   VM_EXEC_CONSTRUCT,             /**< construct a new object */
@@ -485,9 +488,6 @@ ecma_value_t vm_run_module (ecma_module_t *module_p);
 
 ecma_value_t vm_run (vm_frame_ctx_shared_t *shared_p, ecma_value_t this_binding_value, ecma_object_t *lex_env_p);
 ecma_value_t vm_execute (vm_frame_ctx_t *frame_ctx_p);
-
-bool vm_is_strict_mode (void);
-bool vm_is_direct_eval_form_call (void);
 
 ecma_value_t vm_get_backtrace (uint32_t max_depth);
 

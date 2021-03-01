@@ -47,7 +47,6 @@ enum
   /* Note: these 5 routine ids must be in this order */
   ECMA_GLOBAL_IS_NAN,
   ECMA_GLOBAL_IS_FINITE,
-  ECMA_GLOBAL_EVAL,
   ECMA_GLOBAL_PARSE_INT,
   ECMA_GLOBAL_PARSE_FLOAT,
   ECMA_GLOBAL_DECODE_URI,
@@ -71,44 +70,6 @@ enum
  * \addtogroup global ECMA Global object built-in
  * @{
  */
-
-/**
- * The Global object's 'eval' routine
- *
- * See also:
- *          ECMA-262 v5, 15.1.2.1
- *
- * @return ecma value
- *         Returned value must be freed with ecma_free_value.
- */
-static ecma_value_t
-ecma_builtin_global_object_eval (ecma_value_t x) /**< routine's first argument */
-{
-  if (JERRY_UNLIKELY (!ecma_is_value_string (x)))
-  {
-    /* step 1 */
-    return ecma_copy_value (x);
-  }
-
-  uint32_t parse_opts = vm_is_direct_eval_form_call () ? ECMA_PARSE_DIRECT_EVAL : ECMA_PARSE_NO_OPTS;
-
-  /* See also: ECMA-262 v5, 10.1.1 */
-  if (parse_opts && vm_is_strict_mode ())
-  {
-    JERRY_ASSERT (parse_opts & ECMA_PARSE_DIRECT_EVAL);
-    parse_opts |= ECMA_PARSE_STRICT_MODE;
-  }
-
-#if JERRY_ESNEXT
-  if (vm_is_direct_eval_form_call ())
-  {
-    parse_opts |= ECMA_GET_LOCAL_PARSE_OPTS ();
-  }
-#endif /* JERRY_ESNEXT */
-
-  /* steps 2 to 8 */
-  return ecma_op_eval (ecma_get_string_from_value (x), parse_opts);
-} /* ecma_builtin_global_object_eval */
 
 /**
  * The Global object's 'isNaN' routine
@@ -603,11 +564,6 @@ ecma_builtin_global_dispatch_routine (uint8_t builtin_routine_id, /**< built-in 
   JERRY_UNUSED (arguments_number);
 
   ecma_value_t routine_arg_1 = arguments_list_p[0];
-
-  if (builtin_routine_id == ECMA_GLOBAL_EVAL)
-  {
-    return ecma_builtin_global_object_eval (routine_arg_1);
-  }
 
   if (builtin_routine_id <= ECMA_GLOBAL_IS_FINITE)
   {

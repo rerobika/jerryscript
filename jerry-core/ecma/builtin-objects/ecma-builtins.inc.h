@@ -747,6 +747,13 @@ BUILTIN_ROUTINE (ECMA_BUILTIN_ID_DATAVIEW,
                  dataview)
 #endif /* JERRY_BUILTIN_DATAVIEW */
 
+/* The eval routine (ECMA-262 v11, 18.2.1) */
+BUILTIN_ROUTINE (ECMA_BUILTIN_ID_EVAL,
+                 ECMA_OBJECT_TYPE_NATIVE_FUNCTION,
+                 ECMA_BUILTIN_ID_FUNCTION_PROTOTYPE,
+                 true,
+                 eval)
+
 /* The Global object (15.1) */
 BUILTIN (ECMA_BUILTIN_ID_GLOBAL,
          ECMA_OBJECT_TYPE_GENERAL,

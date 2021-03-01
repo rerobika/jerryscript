@@ -1320,7 +1320,6 @@ ecma_op_function_call_bound (ecma_object_t *func_obj_p, /**< Function object */
 {
   JERRY_ASSERT (ecma_get_object_type (func_obj_p) == ECMA_OBJECT_TYPE_BOUND_FUNCTION);
 
-  JERRY_CONTEXT (status_flags) &= (uint32_t) ~ECMA_STATUS_DIRECT_EVAL;
 
   ecma_collection_t *bound_arg_list_p = ecma_new_collection ();
   ecma_collection_push_back (bound_arg_list_p, ECMA_VALUE_EMPTY);
@@ -1374,10 +1373,7 @@ ecma_op_function_call (ecma_object_t *func_obj_p, /**< Function object */
 
 #if JERRY_ESNEXT
   ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target_p);
-  if (JERRY_UNLIKELY (!(JERRY_CONTEXT (status_flags) & ECMA_STATUS_DIRECT_EVAL)))
-  {
-    JERRY_CONTEXT (current_new_target_p) = NULL;
-  }
+  JERRY_CONTEXT (current_new_target_p) = NULL;
 #endif /* JERRY_ESNEXT */
 
   ecma_value_t result;

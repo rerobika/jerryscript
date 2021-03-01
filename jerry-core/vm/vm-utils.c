@@ -20,38 +20,6 @@
 #include "vm.h"
 
 /**
- * Check whether currently executed code is strict mode code
- *
- * @return true - current code is executed in strict mode,
- *         false - otherwise
- */
-bool
-vm_is_strict_mode (void)
-{
-  JERRY_ASSERT (JERRY_CONTEXT (vm_top_context_p) != NULL);
-
-  return JERRY_CONTEXT (vm_top_context_p)->status_flags & VM_FRAME_CTX_IS_STRICT;
-} /* vm_is_strict_mode */
-
-/**
- * Check whether currently performed call (on top of call-stack) is performed in form,
- * meeting conditions of 'Direct Call to Eval' (see also: ECMA-262 v5, 15.1.2.1.1)
- *
- * Warning:
- *         the function should only be called from implementation
- *         of built-in 'eval' routine of Global object
- *
- * @return true - currently performed call is performed through 'eval' identifier,
- *                without 'this' argument,
- *         false - otherwise
- */
-extern inline bool JERRY_ATTR_ALWAYS_INLINE
-vm_is_direct_eval_form_call (void)
-{
-  return (JERRY_CONTEXT (status_flags) & ECMA_STATUS_DIRECT_EVAL) != 0;
-} /* vm_is_direct_eval_form_call */
-
-/**
  * Get backtrace. The backtrace is an array of strings where
  * each string contains the position of the corresponding frame.
  * The array length is zero if the backtrace is not available.

@@ -167,6 +167,7 @@ set(SOURCE_CORE_FILES
   ecma/builtin-objects/ecma-builtin-date.c
   ecma/builtin-objects/ecma-builtin-error-prototype.c
   ecma/builtin-objects/ecma-builtin-error.c
+  ecma/builtin-objects/ecma-builtin-eval.c
   ecma/builtin-objects/ecma-builtin-evalerror-prototype.c
   ecma/builtin-objects/ecma-builtin-evalerror.c
   ecma/builtin-objects/ecma-builtin-function-prototype.c
@@ -353,6 +354,7 @@ if(ENABLE_AMALGAM)
     ecma/builtin-objects/ecma-builtin-date.inc.h
     ecma/builtin-objects/ecma-builtin-error-prototype.inc.h
     ecma/builtin-objects/ecma-builtin-error.inc.h
+    ecma/builtin-objects/ecma-builtin-eval.inc.h
     ecma/builtin-objects/ecma-builtin-evalerror-prototype.inc.h
     ecma/builtin-objects/ecma-builtin-evalerror.inc.h
     ecma/builtin-objects/ecma-builtin-function-prototype.h

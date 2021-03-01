@@ -66,13 +66,12 @@ typedef enum
 typedef enum
 {
   ECMA_STATUS_API_AVAILABLE     = (1u << 0), /**< api available */
-  ECMA_STATUS_DIRECT_EVAL       = (1u << 1), /**< eval is called directly */
 #if JERRY_PROPRETY_HASHMAP
-  ECMA_STATUS_HIGH_PRESSURE_GC  = (1u << 2), /**< last gc was under high pressure */
+  ECMA_STATUS_HIGH_PRESSURE_GC  = (1u << 1), /**< last gc was under high pressure */
 #endif /* JERRY_PROPRETY_HASHMAP */
-  ECMA_STATUS_EXCEPTION         = (1u << 3), /**< last exception is a normal exception */
-  ECMA_STATUS_ABORT             = (1u << 4), /**< last exception is an abort */
-  ECMA_STATUS_ERROR_UPDATE      = (1u << 5), /**< the error_object_created_callback_p is called */
+  ECMA_STATUS_EXCEPTION         = (1u << 2), /**< last exception is a normal exception */
+  ECMA_STATUS_ABORT             = (1u << 3), /**< last exception is an abort */
+  ECMA_STATUS_ERROR_UPDATE      = (1u << 4), /**< the error_object_created_callback_p is called */
 } ecma_status_flag_t;
 
 /**
@@ -739,7 +738,7 @@ typedef enum
 #define ECMA_SET_LOCAL_PARSE_OPTS(opts) \
   do \
   { \
-    JERRY_CONTEXT (status_flags) |= ((uint32_t) opts << ECMA_LOCAL_PARSE_OPTS_OFFSET) | ECMA_STATUS_DIRECT_EVAL; \
+    JERRY_CONTEXT (status_flags) |= ((uint32_t) opts << ECMA_LOCAL_PARSE_OPTS_OFFSET); \
   } while (0)
 
 /**
