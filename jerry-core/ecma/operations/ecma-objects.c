@@ -2877,6 +2877,9 @@ static const uint16_t ecma_class_object_magic_string_id[] = {
 #if JERRY_BUILTIN_WEAKREF
   LIT_MAGIC_STRING_WEAKREF_UL, /**< magic string id of ECMA_OBJECT_CLASS_WEAKREF */
 #endif /* JERRY_BUILTIN_WEAKREF */
+#if JERRY_BUILTIN_REALMS
+  LIT_MAGIC_STRING_OBJECT_UL, /**< magic string id of ECMA_OBJECT_CLASS_REALM_REFERENCE */
+#endif /* JERRY_BUILTIN_REALMS */
 };
 
 JERRY_STATIC_ASSERT (sizeof (ecma_class_object_magic_string_id) == ECMA_OBJECT_CLASS__MAX * sizeof (uint16_t),

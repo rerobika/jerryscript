@@ -423,7 +423,10 @@ scanner_scope_find_lexical_declaration (parser_context_t *context_p, /**< contex
 
   if (flags & ECMA_PARSE_DIRECT_EVAL)
   {
-    lex_env_p = JERRY_CONTEXT (vm_top_context_p)->lex_env_p;
+    ecma_call_frame_t *call_frame_p = JERRY_CONTEXT (call_stack_p);
+    JERRY_ASSERT (ECMA_CALL_FRAME_HAS_FRAME_CTX (call_frame_p));
+
+    lex_env_p = ((vm_frame_ctx_t *) call_frame_p)->lex_env_p;
 
     while (lex_env_p->type_flags_refs & ECMA_OBJECT_FLAG_BLOCK)
     {

@@ -15,6 +15,7 @@
 #ifndef VM_DEFINES_H
 #define VM_DEFINES_H
 
+#include "ecma-builtins.h"
 #include "ecma-globals.h"
 
 #include "byte-code.h"
@@ -42,7 +43,7 @@
 typedef enum
 {
   VM_FRAME_CTX_SHARED_HAS_ARG_LIST = (1 << 0), /**< has argument list */
-  VM_FRAME_CTX_SHARED_DIRECT_EVAL = (1 << 1), /**< direct eval call */
+  VM_FRAME_CTX_SHARED_EXECUTE_DIRECT_EVAL = (1 << 1), /**< execute directly evaluated code */
   VM_FRAME_CTX_SHARED_FREE_THIS = (1 << 2), /**< free this binding */
   VM_FRAME_CTX_SHARED_FREE_LOCAL_ENV = (1 << 3), /**< free local environment */
 #if JERRY_ESNEXT
@@ -51,6 +52,7 @@ typedef enum
   VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS = (1 << 6), /**< has class fields */
   VM_FRAME_CTX_SHARED_EXECUTABLE = (1 << 7), /**< frame is an executable object constructed
                                               *   with opfunc_create_executable_object */
+  VM_FRAME_CTX_SHARED_CONSTUCTOR_CALL = (1 << 8),
 #endif /* JERRY_ESNEXT */
 } vm_frame_ctx_shared_flags_t;
 
@@ -60,7 +62,6 @@ typedef enum
 typedef struct
 {
   const ecma_compiled_code_t *bytecode_header_p; /**< currently executed byte-code data */
-  ecma_object_t *function_object_p; /**< function obj */
   uint32_t status_flags; /**< combination of vm_frame_ctx_shared_flags_t bits */
 } vm_frame_ctx_shared_t;
 
@@ -73,6 +74,17 @@ typedef struct
   const ecma_value_t *arg_list_p; /**< arguments list */
   uint32_t arg_list_len; /**< arguments list length */
 } vm_frame_ctx_shared_args_t;
+
+/**
+ * Shared data extended with arguments and new.target
+ */
+typedef struct
+{
+  vm_frame_ctx_shared_args_t header; /**< shared data header */
+#if JERRY_ESNEXT
+  ecma_object_t *new_target_p; /**< new.target */
+#endif /* JERRY_ESNEXT */
+} vm_frame_ctx_new_target_shared_args_t;
 
 #if JERRY_ESNEXT
 
@@ -98,8 +110,13 @@ typedef struct
  */
 typedef enum
 {
-  VM_FRAME_CTX_DIRECT_EVAL = (1 << 1), /**< direct eval call */
+  VM_FRAME_CTX_EXECUTE_DIRECT_EVAL = (1 << 1), /**< The currently executed code is directly evaluated */
   VM_FRAME_CTX_IS_STRICT = (1 << 2), /**< strict mode */
+  VM_FRAME_CTX_PREPARE_DIRECT_EVAL = (1 << 3), /**< The next call is going to perform direct eval */
+#if JERRY_ESNEXT
+  VM_FRAME_CTX_PREPARE_DIRECT_LOCAL_EVAL = (1 << 4), /**< The next call is going to perform direct eval
+                                                      *   and parse options are present */
+#endif /* JERRY_ESNEXT */
 } vm_frame_ctx_flags_t;
 
 /**
@@ -107,13 +124,13 @@ typedef enum
  */
 typedef struct vm_frame_ctx_t
 {
+  ecma_call_frame_t call_frame;
   vm_frame_ctx_shared_t *shared_p; /**< shared information */
   const uint8_t *byte_code_p; /**< current byte code pointer */
   const uint8_t *byte_code_start_p; /**< byte code start pointer */
   ecma_value_t *stack_top_p; /**< stack top pointer */
   ecma_value_t *literal_start_p; /**< literal list start pointer */
   ecma_object_t *lex_env_p; /**< current lexical environment */
-  struct vm_frame_ctx_t *prev_context_p; /**< previous context */
   ecma_value_t this_binding; /**< this binding */
   uint16_t context_depth; /**< current context depth */
   uint8_t status_flags; /**< combination of vm_frame_ctx_flags_t bits */

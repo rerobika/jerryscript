@@ -249,9 +249,9 @@ ecma_builtin_is_global (ecma_object_t *object_p) /**< pointer to an object */
 extern inline ecma_object_t *JERRY_ATTR_ALWAYS_INLINE
 ecma_builtin_get_global (void)
 {
-  JERRY_ASSERT (JERRY_CONTEXT (global_object_p) != NULL);
+  JERRY_ASSERT (jcontext_get_global_object () != NULL);
 
-  return (ecma_object_t *) JERRY_CONTEXT (global_object_p);
+  return (ecma_object_t *) jcontext_get_global_object ();
 } /* ecma_builtin_get_global */
 
 /**

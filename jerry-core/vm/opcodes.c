@@ -620,7 +620,7 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
     }
 
     JERRY_ASSERT (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC);
-    proto_p = ecma_op_get_prototype_from_constructor (frame_ctx_p->shared_p->function_object_p, default_proto_id);
+    proto_p = ecma_op_get_prototype_from_constructor (frame_ctx_p->call_frame.callee_p, default_proto_id);
   }
 
   ecma_object_t *object_p = ecma_create_object (proto_p, total_size, ECMA_OBJECT_TYPE_CLASS);
@@ -637,7 +637,7 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
   ECMA_SET_INTERNAL_VALUE_ANY_POINTER (executable_object_p->extended_object.u.cls.u3.head, NULL);
   executable_object_p->iterator = ECMA_VALUE_UNDEFINED;
 
-  JERRY_ASSERT (!(frame_ctx_p->status_flags & VM_FRAME_CTX_DIRECT_EVAL));
+  JERRY_ASSERT (!(frame_ctx_p->status_flags & VM_FRAME_CTX_EXECUTE_DIRECT_EVAL));
 
   /* Copy shared data and frame context. */
   vm_frame_ctx_shared_t *new_shared_p = &(executable_object_p->shared);
@@ -689,7 +689,7 @@ opfunc_create_executable_object (vm_frame_ctx_t *frame_ctx_p, /**< frame context
 
   new_frame_ctx_p->this_binding = ecma_copy_value_if_not_object (new_frame_ctx_p->this_binding);
 
-  JERRY_CONTEXT (vm_top_context_p) = new_frame_ctx_p->prev_context_p;
+  JERRY_CONTEXT (call_stack_p) = new_frame_ctx_p->call_frame.prev_p;
 
   return executable_object_p;
 } /* opfunc_create_executable_object */
@@ -762,25 +762,11 @@ opfunc_resume_executable_object (vm_executable_object_t *executable_object_p, /*
 
   executable_object_p->extended_object.u.cls.u2.executable_obj_flags |= ECMA_EXECUTABLE_OBJECT_RUNNING;
 
-  executable_object_p->frame_ctx.prev_context_p = JERRY_CONTEXT (vm_top_context_p);
-  JERRY_CONTEXT (vm_top_context_p) = &executable_object_p->frame_ctx;
-
-  /* inside the generators the "new.target" is always "undefined" as it can't be invoked with "new" */
-  ecma_object_t *old_new_target = JERRY_CONTEXT (current_new_target_p);
-  JERRY_CONTEXT (current_new_target_p) = NULL;
-
-#if JERRY_BUILTIN_REALMS
-  ecma_global_object_t *saved_global_object_p = JERRY_CONTEXT (global_object_p);
-  JERRY_CONTEXT (global_object_p) = ecma_op_function_get_realm (bytecode_header_p);
-#endif /* JERRY_BUILTIN_REALMS */
+  executable_object_p->frame_ctx.call_frame.prev_p = JERRY_CONTEXT (call_stack_p);
+  JERRY_CONTEXT (call_stack_p) = &executable_object_p->frame_ctx.call_frame;
 
   ecma_value_t result = vm_execute (&executable_object_p->frame_ctx);
 
-#if JERRY_BUILTIN_REALMS
-  JERRY_CONTEXT (global_object_p) = saved_global_object_p;
-#endif /* JERRY_BUILTIN_REALMS */
-
-  JERRY_CONTEXT (current_new_target_p) = old_new_target;
   executable_object_p->extended_object.u.cls.u2.executable_obj_flags &= (uint8_t) ~ECMA_EXECUTABLE_OBJECT_RUNNING;
 
   if (executable_object_p->frame_ctx.call_operation != VM_EXEC_RETURN)
@@ -792,7 +778,7 @@ opfunc_resume_executable_object (vm_executable_object_t *executable_object_p, /*
     return result;
   }
 
-  JERRY_CONTEXT (vm_top_context_p) = executable_object_p->frame_ctx.prev_context_p;
+  JERRY_CONTEXT (call_stack_p) = executable_object_p->frame_ctx.call_frame.prev_p;
 
   register_p = VM_GET_REGISTERS (&executable_object_p->frame_ctx);
   stack_top_p = executable_object_p->frame_ctx.stack_top_p;
@@ -915,7 +901,7 @@ opfunc_init_class_fields (ecma_object_t *class_object_p, /**< the function itsel
   }
 
   vm_frame_ctx_shared_class_fields_t shared_class_fields;
-  shared_class_fields.header.status_flags = VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS;
+  shared_class_fields.header.status_flags = VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS | VM_FRAME_CTX_SHARED_NON_ARROW_FUNC;
   shared_class_fields.computed_class_fields_p = NULL;
 
   name_p = ecma_get_internal_string (LIT_INTERNAL_MAGIC_STRING_CLASS_FIELD_COMPUTED);
@@ -933,12 +919,11 @@ opfunc_init_class_fields (ecma_object_t *class_object_p, /**< the function itsel
   ecma_extended_object_t *ext_function_p;
   ext_function_p = (ecma_extended_object_t *) ecma_get_object_from_value (property_value_p->value);
   shared_class_fields.header.bytecode_header_p = ecma_op_function_get_compiled_code (ext_function_p);
-  shared_class_fields.header.function_object_p = &ext_function_p->object;
 
   ecma_object_t *scope_p =
     ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t, ext_function_p->u.function.scope_cp);
 
-  ecma_value_t result = vm_run (&shared_class_fields.header, this_val, scope_p);
+  ecma_value_t result = vm_run (&ext_function_p->object, &shared_class_fields.header, this_val, scope_p);
 
   JERRY_ASSERT (ECMA_IS_VALUE_ERROR (result) || result == ECMA_VALUE_UNDEFINED);
   return result;
@@ -962,8 +947,7 @@ opfunc_init_static_class_fields (ecma_value_t function_object, /**< the function
   ecma_property_t *class_field_property_p = ecma_find_named_property (function_object_p, name_p);
 
   vm_frame_ctx_shared_class_fields_t shared_class_fields;
-  shared_class_fields.header.function_object_p = function_object_p;
-  shared_class_fields.header.status_flags = VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS;
+  shared_class_fields.header.status_flags = VM_FRAME_CTX_SHARED_HAS_CLASS_FIELDS | VM_FRAME_CTX_SHARED_NON_ARROW_FUNC;
   shared_class_fields.computed_class_fields_p = NULL;
 
   if (class_field_property_p != NULL)
@@ -978,7 +962,7 @@ opfunc_init_static_class_fields (ecma_value_t function_object, /**< the function
   ecma_object_t *scope_p =
     ECMA_GET_NON_NULL_POINTER_FROM_POINTER_TAG (ecma_object_t, ext_function_p->u.function.scope_cp);
 
-  ecma_value_t result = vm_run (&shared_class_fields.header, this_val, scope_p);
+  ecma_value_t result = vm_run (function_object_p, &shared_class_fields.header, this_val, scope_p);
 
   JERRY_ASSERT (ECMA_IS_VALUE_ERROR (result) || result == ECMA_VALUE_UNDEFINED);
   return result;
@@ -1660,7 +1644,7 @@ opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *frame_ctx_p, /**< f
   JERRY_ASSERT (ecma_get_lex_env_type (frame_ctx_p->lex_env_p) == ECMA_LEXICAL_ENVIRONMENT_DECLARATIVE);
 
 #if JERRY_BUILTIN_REALMS
-  JERRY_ASSERT (frame_ctx_p->this_binding == JERRY_CONTEXT (global_object_p)->this_binding);
+  JERRY_ASSERT (frame_ctx_p->this_binding == jcontext_get_global_object ()->this_binding);
 #else /* !JERRY_BUILTIN_REALMS */
   JERRY_ASSERT (frame_ctx_p->this_binding == ecma_builtin_get_global ());
 #endif /* JERRY_BUILTIN_REALMS */
@@ -1674,7 +1658,7 @@ opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *frame_ctx_p, /**< f
   }
 
 #if JERRY_BUILTIN_REALMS
-  ecma_object_t *const global_scope_p = ecma_get_global_scope ((ecma_object_t *) JERRY_CONTEXT (global_object_p));
+  ecma_object_t *const global_scope_p = ecma_get_global_scope ((ecma_object_t *) jcontext_get_global_object ());
 #else /* !JERRY_BUILTIN_REALMS */
   ecma_object_t *const global_scope_p = ecma_get_global_scope (global_obj_p);
 #endif /* JERRY_BUILTIN_REALMS */

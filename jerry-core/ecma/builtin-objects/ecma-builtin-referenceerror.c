@@ -70,8 +70,8 @@ ecma_builtin_reference_error_dispatch_construct (const ecma_value_t *arguments_l
 #if !JERRY_ESNEXT
   return ecma_builtin_reference_error_dispatch_call (arguments_list_p, arguments_list_len);
 #else /* JERRY_ESNEXT */
-  ecma_object_t *proto_p = ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target_p),
-                                                                   ECMA_BUILTIN_ID_REFERENCE_ERROR_PROTOTYPE);
+  ecma_object_t *proto_p =
+    ecma_op_get_prototype_from_constructor (jcontext_get_new_target (), ECMA_BUILTIN_ID_REFERENCE_ERROR_PROTOTYPE);
 
   if (proto_p == NULL)
   {

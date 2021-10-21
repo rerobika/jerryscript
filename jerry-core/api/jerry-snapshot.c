@@ -964,7 +964,7 @@ jerry_exec_snapshot (const uint32_t *snapshot_p, /**< snapshot */
     CBC_SCRIPT_SET_TYPE (script_p, user_value, CBC_SCRIPT_REF_ONE);
 
 #if JERRY_BUILTIN_REALMS
-    script_p->realm_p = (ecma_object_t *) JERRY_CONTEXT (global_object_p);
+    script_p->realm_p = (ecma_object_t *) jcontext_get_global_object ();
 #endif /* JERRY_BUILTIN_REALMS */
 
 #if JERRY_RESOURCE_NAME
@@ -1041,7 +1041,11 @@ jerry_exec_snapshot (const uint32_t *snapshot_p, /**< snapshot */
   }
   else
   {
-    ret_val = vm_run_global (bytecode_p, NULL);
+    ecma_extended_object_t func_obj;
+    func_obj.object.type_flags_refs = ECMA_OBJECT_TYPE_FUNCTION;
+    ECMA_SET_INTERNAL_VALUE_POINTER (func_obj.u.function.bytecode_cp, bytecode_p);
+
+    ret_val = vm_run_script (bytecode_p, &func_obj.object);
     if (!(bytecode_p->status_flags & CBC_CODE_FLAGS_STATIC_FUNCTION))
     {
       ecma_bytecode_deref (bytecode_p);

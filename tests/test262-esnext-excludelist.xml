@@ -100,9 +100,6 @@
   <test id="language/expressions/async-arrow-function/await-as-param-nested-arrow-body-position.js"><reason></reason></test>
   <test id="language/expressions/async-arrow-function/await-as-param-nested-arrow-parameter-position.js"><reason></reason></test>
   <test id="language/expressions/async-arrow-function/await-as-param-rest-nested-arrow-parameter-position.js"><reason></reason></test>
-  <test id="language/expressions/call/eval-spread-empty-leading.js"><reason></reason></test>
-  <test id="language/expressions/call/eval-spread-empty-trailing.js"><reason></reason></test>
-  <test id="language/expressions/call/eval-spread.js"><reason></reason></test>
   <test id="language/expressions/class/accessor-name-inst/literal-numeric-leading-decimal.js"><reason></reason></test>
   <test id="language/expressions/class/accessor-name-static/literal-numeric-leading-decimal.js"><reason></reason></test>
   <test id="language/expressions/class/class-name-ident-let-escaped.js"><reason></reason></test>

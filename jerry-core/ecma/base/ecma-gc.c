@@ -663,7 +663,7 @@ ecma_gc_mark_executable_object (ecma_object_t *object_p) /**< object */
   }
 
   ecma_gc_set_object_visited (executable_object_p->frame_ctx.lex_env_p);
-  ecma_gc_set_object_visited (executable_object_p->shared.function_object_p);
+  ecma_gc_set_object_visited (executable_object_p->frame_ctx.call_frame.callee_p);
 
   if (!ECMA_EXECUTABLE_OBJECT_IS_SUSPENDED (executable_object_p))
   {
@@ -1865,6 +1865,13 @@ ecma_gc_free_object (ecma_object_t *object_p) /**< object to free */
           break;
         }
 #endif /* JERRY_BUILTIN_WEAKREF */
+#if JERRY_BUILTIN_REALMS
+        case ECMA_OBJECT_CLASS_REALM_REFERENCE:
+        {
+          ext_object_size = sizeof (ecma_realm_reference_t);
+          break;
+        }
+#endif /* JERRY_BUILTIN_REALMS */
 #if JERRY_BUILTIN_CONTAINER
         case ECMA_OBJECT_CLASS_CONTAINER:
         {

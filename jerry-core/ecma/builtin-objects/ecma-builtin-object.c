@@ -126,10 +126,12 @@ ecma_builtin_object_dispatch_construct (const ecma_value_t *arguments_list_p, /*
                                         uint32_t arguments_list_len) /**< number of arguments */
 {
 #if JERRY_ESNEXT
-  if (JERRY_CONTEXT (current_new_target_p) != ecma_builtin_get (ECMA_BUILTIN_ID_OBJECT))
+  ecma_object_t *new_target_p = jcontext_get_new_target ();
+
+  if (new_target_p != ecma_builtin_get (ECMA_BUILTIN_ID_OBJECT))
   {
     ecma_object_t *prototype_obj_p =
-      ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target_p), ECMA_BUILTIN_ID_OBJECT_PROTOTYPE);
+      ecma_op_get_prototype_from_constructor (new_target_p, ECMA_BUILTIN_ID_OBJECT_PROTOTYPE);
     if (JERRY_UNLIKELY (prototype_obj_p == NULL))
     {
       return ECMA_VALUE_ERROR;

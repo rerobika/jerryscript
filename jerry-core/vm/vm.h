@@ -481,7 +481,7 @@ typedef enum
   VM_EXEC_CONSTRUCT, /**< construct a new object */
 } vm_call_operation;
 
-ecma_value_t vm_run_global (const ecma_compiled_code_t *bytecode_p, ecma_object_t *function_object_p);
+ecma_value_t vm_run_script (const ecma_compiled_code_t *bytecode_p, ecma_object_t *function_object_p);
 ecma_value_t vm_run_eval (ecma_compiled_code_t *bytecode_data_p, uint32_t parse_opts);
 
 #if JERRY_MODULE_SYSTEM
@@ -489,13 +489,11 @@ ecma_value_t vm_run_module (ecma_module_t *module_p);
 ecma_value_t vm_init_module_scope (ecma_module_t *module_p);
 #endif /* JERRY_MODULE_SYSTEM */
 
-ecma_value_t vm_run (vm_frame_ctx_shared_t *shared_p, ecma_value_t this_binding_value, ecma_object_t *lex_env_p);
+ecma_value_t vm_run (ecma_object_t *func_obj_p,
+                     vm_frame_ctx_shared_t *shared_p,
+                     ecma_value_t this_binding_value,
+                     ecma_object_t *lex_env_p);
 ecma_value_t vm_execute (vm_frame_ctx_t *frame_ctx_p);
-
-bool vm_is_strict_mode (void);
-bool vm_is_direct_eval_form_call (void);
-
-ecma_value_t vm_get_backtrace (uint32_t max_depth);
 
 /**
  * @}

@@ -127,14 +127,17 @@ main (void)
   result_value = jerry_set_realm (realm_value);
   TEST_ASSERT (result_value == global_value);
   TEST_ASSERT (eval_and_get_number ("a") == -1.25);
+  TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (result_value)));
 
   result_value = jerry_set_realm (global_value);
   TEST_ASSERT (result_value == realm_value);
   TEST_ASSERT (eval_and_get_number ("b") == 7.25);
+  TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (result_value)));
 
   result_value = jerry_set_realm (realm_value);
   TEST_ASSERT (result_value == global_value);
   TEST_ASSERT (eval_and_get_number ("b") == -6.75);
+  TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (result_value)));
 
   result_value = jerry_set_realm (global_value);
   TEST_ASSERT (result_value == realm_value);
@@ -159,7 +162,7 @@ main (void)
   result_value = jerry_set_realm (realm_value);
   TEST_ASSERT (!jerry_value_is_error (result_value));
   object_value = jerry_create_object ();
-  jerry_set_realm (result_value);
+  TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (result_value)));
 
   number_value = jerry_create_number (7);
   check_type_error (jerry_realm_set_this (realm_value, number_value));
@@ -176,7 +179,7 @@ main (void)
   result_value = jerry_set_realm (realm_value);
   TEST_ASSERT (!jerry_value_is_error (result_value));
   TEST_ASSERT (eval_and_get_number ("var z = -5.5; x + this.y") == 8.5);
-  jerry_set_realm (result_value);
+  TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (result_value)));
 
   TEST_ASSERT (get_number_property (object_value, "z") == -5.5);
 
@@ -201,7 +204,7 @@ main (void)
     jerry_value_t old_realm_value = jerry_set_realm (target_value);
     TEST_ASSERT (!jerry_value_is_error (old_realm_value));
     TEST_ASSERT (eval_and_get_number ("var z = 1.5; z") == 1.5);
-    jerry_set_realm (old_realm_value);
+    TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (old_realm_value)));
 
     TEST_ASSERT (get_number_property (target_value, "z") == 1.5);
     jerry_release_value (target_value);
@@ -220,7 +223,7 @@ main (void)
     TEST_ASSERT (!jerry_value_is_error (old_realm_value));
     script_p = "var z = 1.5";
     result_value = jerry_eval ((const jerry_char_t *) script_p, strlen (script_p), JERRY_PARSE_NO_OPTS);
-    jerry_set_realm (old_realm_value);
+    TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (old_realm_value)));
     jerry_release_value (target_value);
 
     TEST_ASSERT (jerry_value_is_error (result_value));
@@ -238,7 +241,7 @@ main (void)
   jerry_value_t script_value = jerry_parse ((const jerry_char_t *) script_p, strlen (script_p), NULL);
 
   TEST_ASSERT (!jerry_value_is_error (script_value));
-  jerry_set_realm (result_value);
+  TEST_ASSERT (!jerry_value_is_error (jerry_restore_realm (result_value)));
 
   /* Script is compiled in another realm. */
   create_number_property (realm_value, "global1", 7.5);

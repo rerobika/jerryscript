@@ -575,7 +575,7 @@ jerry_run (const jerry_value_t func_val) /**< function to run */
 
   JERRY_ASSERT (CBC_FUNCTION_GET_TYPE (bytecode_data_p->status_flags) == CBC_FUNCTION_SCRIPT);
 
-  return jerry_return (vm_run_global (bytecode_data_p, object_p));
+  return jerry_return (vm_run_script (bytecode_data_p, object_p));
 } /* jerry_run */
 
 /**
@@ -1562,6 +1562,9 @@ static const uint8_t jerry_class_object_type[] = {
 #if JERRY_BUILTIN_WEAKREF
   JERRY_OBJECT_TYPE_WEAKREF, /**< type of ECMA_OBJECT_CLASS_WEAKREF */
 #endif /* JERRY_BUILTIN_WEAKREF */
+#if JERRY_BUILTIN_REALMS
+  JERRY_OBJECT_TYPE_GENERIC, /**< type if ECMA_OBJECT_CLASS_REALM_REFERENCE */
+#endif /* JERRY_BUILTIN_REALMS */
 };
 
 JERRY_STATIC_ASSERT (sizeof (jerry_class_object_type) == ECMA_OBJECT_CLASS__MAX,
@@ -2900,6 +2903,8 @@ jerry_create_realm (void)
   jerry_assert_api_available ();
 
 #if JERRY_BUILTIN_REALMS
+  JERRY_CONTEXT (status_flags) |= ECMA_STATUS_API_REALM_CREATED;
+
   ecma_global_object_t *global_object_p = ecma_builtin_create_global_object ();
   return ecma_make_object_value ((ecma_object_t *) global_object_p);
 #else /* !JERRY_BUILTIN_REALMS */
@@ -5248,7 +5253,7 @@ jerry_set_vm_exec_stop_callback (jerry_vm_exec_stop_callback_t stop_cb, /**< per
 jerry_value_t
 jerry_get_backtrace (uint32_t max_depth) /**< depth limit of the backtrace */
 {
-  return vm_get_backtrace (max_depth);
+  return jcontext_get_backtrace (max_depth);
 } /* jerry_get_backtrace */
 
 /**
@@ -5260,19 +5265,59 @@ jerry_backtrace_capture (jerry_backtrace_callback_t callback, /**< callback func
                          void *user_p) /**< user pointer passed to the callback function */
 {
   jerry_backtrace_frame_t frame;
-  vm_frame_ctx_t *context_p = JERRY_CONTEXT (vm_top_context_p);
+  ecma_call_frame_t *call_frame_p = JERRY_CONTEXT (call_stack_p);
 
-  while (context_p != NULL)
+  while (call_frame_p != NULL)
   {
-    frame.context_p = context_p;
-    frame.frame_type = JERRY_BACKTRACE_FRAME_JS;
+    ecma_object_t *callee_p = call_frame_p->callee_p;
+    frame.function = ecma_make_object_value (callee_p);
+    frame.context_p = NULL;
+
+    switch (ecma_get_object_type (callee_p))
+    {
+      case ECMA_OBJECT_TYPE_FUNCTION:
+      {
+        frame.context_p = (vm_frame_ctx_t *) call_frame_p;
+        frame.frame_type = JERRY_BACKTRACE_FRAME_JS;
+        break;
+      }
+      case ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION:
+      {
+        frame.frame_type = JERRY_BACKTRACE_FRAME_BUILTIN;
+        break;
+      }
+      case ECMA_OBJECT_TYPE_NATIVE_FUNCTION:
+      {
+        frame.frame_type = JERRY_BACKTRACE_FRAME_NATIVE;
+        break;
+      }
+      case ECMA_OBJECT_TYPE_BUILT_IN_GENERAL:
+      {
+        ecma_global_object_t *global_object_p = (ecma_global_object_t *) callee_p;
+        JERRY_ASSERT (global_object_p->extended_object.u.built_in.id == ECMA_BUILTIN_ID_GLOBAL);
+
+        /* FALLTHRU */
+      }
+#if JERRY_ESNEXT
+      case ECMA_OBJECT_TYPE_PROXY:
+#endif /* JERRY_ESNEXT */
+      case ECMA_OBJECT_TYPE_BOUND_FUNCTION:
+      {
+        call_frame_p = call_frame_p->prev_p;
+        continue;
+      }
+      default:
+      {
+        break;
+      }
+    }
 
     if (!callback (&frame, user_p))
     {
       return;
     }
 
-    context_p = context_p->prev_context_p;
+    call_frame_p = call_frame_p->prev_p;
   }
 } /* jerry_backtrace_capture */
 
@@ -5326,24 +5371,12 @@ jerry_backtrace_get_location (jerry_backtrace_frame_t *frame_p) /**< frame point
  * Initialize and return with the called function private field of a backtrace frame.
  * The backtrace frame is created for running the code bound to this function.
  *
- * @return pointer to the called function - if the function is available,
- *         NULL - otherwise
+ * @return pointer to the called function
  */
 const jerry_value_t *
 jerry_backtrace_get_function (jerry_backtrace_frame_t *frame_p) /**< frame pointer */
 {
-  if (frame_p->frame_type == JERRY_BACKTRACE_FRAME_JS)
-  {
-    vm_frame_ctx_t *context_p = frame_p->context_p;
-
-    if (context_p->shared_p->function_object_p != NULL)
-    {
-      frame_p->function = ecma_make_object_value (context_p->shared_p->function_object_p);
-      return &frame_p->function;
-    }
-  }
-
-  return NULL;
+  return &frame_p->function;
 } /* jerry_backtrace_get_function */
 
 /**
@@ -5379,6 +5412,32 @@ jerry_backtrace_is_strict (jerry_backtrace_frame_t *frame_p) /**< frame pointer 
           && (frame_p->context_p->status_flags & VM_FRAME_CTX_IS_STRICT) != 0);
 } /* jerry_backtrace_is_strict */
 
+#if JERRY_RESOURCE_NAME
+/**
+ * TODO
+ *
+ * @return top vm frame context - if exists
+ *         NULL - otherwise
+ */
+static vm_frame_ctx_t *
+jerry_top_vm_frame_ctx (void)
+{
+  ecma_call_frame_t *call_frame_p = JERRY_CONTEXT (call_stack_p);
+
+  while (call_frame_p)
+  {
+    if (ECMA_CALL_FRAME_HAS_FRAME_CTX (call_frame_p))
+    {
+      return (vm_frame_ctx_t *) call_frame_p;
+    }
+
+    call_frame_p = call_frame_p->prev_p;
+  }
+
+  return NULL;
+} /* jerry_top_vm_frame_ctx */
+#endif /* JERRY_RESOURCE_NAME */
+
 /**
  * Get the resource name (usually a file name) of the currently executed script or the given function object
  *
@@ -5393,9 +5452,14 @@ jerry_value_t
 jerry_get_resource_name (const jerry_value_t value) /**< jerry api value */
 {
 #if JERRY_RESOURCE_NAME
-  if (ecma_is_value_undefined (value) && JERRY_CONTEXT (vm_top_context_p) != NULL)
+  if (ecma_is_value_undefined (value))
   {
-    return ecma_copy_value (ecma_get_resource_name (JERRY_CONTEXT (vm_top_context_p)->shared_p->bytecode_header_p));
+    vm_frame_ctx_t *top_vm_ctx_p = jerry_top_vm_frame_ctx ();
+
+    if (top_vm_ctx_p)
+    {
+      return ecma_copy_value (ecma_get_resource_name (top_vm_ctx_p->shared_p->bytecode_header_p));
+    }
   }
 
   ecma_value_t script_value = ecma_script_get_from_value (value);
@@ -5669,9 +5733,16 @@ jerry_set_realm (jerry_value_t realm_value) /**< jerry api value */
 
     if (ecma_builtin_is_global (object_p))
     {
-      ecma_global_object_t *previous_global_object_p = JERRY_CONTEXT (global_object_p);
-      JERRY_CONTEXT (global_object_p) = (ecma_global_object_t *) object_p;
-      return ecma_make_object_value ((ecma_object_t *) previous_global_object_p);
+      ecma_object_t *realm_ref_obj_p =
+        ecma_create_object (NULL, sizeof (ecma_realm_reference_t), ECMA_OBJECT_TYPE_CLASS);
+      ecma_realm_reference_t *realm_ref_p = (ecma_realm_reference_t *) realm_ref_obj_p;
+      realm_ref_p->header.u.cls.type = ECMA_OBJECT_CLASS_REALM_REFERENCE;
+      realm_ref_p->frame.callee_p = object_p;
+      realm_ref_p->frame.prev_p = JERRY_CONTEXT (call_stack_p);
+
+      JERRY_CONTEXT (call_stack_p) = &realm_ref_p->frame;
+
+      return ecma_make_object_value (realm_ref_obj_p);
     }
   }
 
@@ -5681,6 +5752,49 @@ jerry_set_realm (jerry_value_t realm_value) /**< jerry api value */
   return jerry_throw (ecma_raise_reference_error (ECMA_ERR_MSG ("Realm is not available")));
 #endif /* JERRY_BUILTIN_REALMS */
 } /* jerry_set_realm */
+
+/**
+ * TODO
+ *
+ * @return previous realm value - if the passed value is a realm
+ *         exception - otherwise
+ */
+jerry_value_t
+jerry_restore_realm (jerry_value_t realm_reference_value) /**< jerry api value */
+{
+  jerry_assert_api_available ();
+
+#if JERRY_BUILTIN_REALMS
+
+  if (!ecma_is_value_object (realm_reference_value))
+  {
+    ecma_free_value (realm_reference_value);
+    return jerry_throw (ecma_raise_type_error (ECMA_ERR_MSG ("Passed argument is not a realm")));
+  }
+
+  ecma_call_frame_t *call_frame_p = JERRY_CONTEXT (call_stack_p);
+  ecma_object_t *realm_ref_obj_p = ecma_get_object_from_value (realm_reference_value);
+
+  jerry_value_t result = ECMA_VALUE_UNDEFINED;
+
+  if (call_frame_p == NULL || !ECMA_CALL_FRAME_IS_REALM (call_frame_p)
+      || call_frame_p->callee_p != ((ecma_realm_reference_t *) realm_ref_obj_p)->frame.callee_p)
+  {
+    result = jerry_throw (ecma_raise_type_error (ECMA_ERR_MSG ("Realm reference mismatch")));
+  }
+  else
+  {
+    JERRY_CONTEXT (call_stack_p) = call_frame_p->prev_p;
+  }
+
+  ecma_deref_object (realm_ref_obj_p);
+
+  return result;
+#else /* !JERRY_BUILTIN_REALMS */
+  ecma_free_value (realm_reference_value);
+  return jerry_throw (ecma_raise_reference_error (ECMA_ERR_MSG ("Realm is not available")));
+#endif /* JERRY_BUILTIN_REALMS */
+} /* jerry_restore_realm */
 
 /**
  * Gets the 'this' binding of a realm
@@ -6307,14 +6421,19 @@ jerry_create_dataview (const jerry_value_t array_buffer, /**< arraybuffer to cre
   ecma_value_t arguments_p[3] = { array_buffer,
                                   ecma_make_uint32_value (byte_offset),
                                   ecma_make_uint32_value (byte_length) };
-  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target_p);
-  if (old_new_target_p == NULL)
-  {
-    JERRY_CONTEXT (current_new_target_p) = ecma_builtin_get (ECMA_BUILTIN_ID_DATAVIEW);
-  }
+
+  ecma_builtin_call_frame_t builtin_frame;
+  builtin_frame.new_target_p = ecma_builtin_get (ECMA_BUILTIN_ID_DATAVIEW);
+  builtin_frame.header.callee_p = builtin_frame.new_target_p;
+
+  builtin_frame.header.prev_p = JERRY_CONTEXT (call_stack_p);
+
+  JERRY_CONTEXT (call_stack_p) = &builtin_frame.header;
 
   ecma_value_t dataview_value = ecma_op_dataview_create (arguments_p, 3);
-  JERRY_CONTEXT (current_new_target_p) = old_new_target_p;
+
+  JERRY_CONTEXT (call_stack_p) = builtin_frame.header.prev_p;
+
   return jerry_return (dataview_value);
 #else /* !JERRY_BUILTIN_DATAVIEW */
   JERRY_UNUSED (array_buffer);
@@ -6852,16 +6971,19 @@ jerry_create_container (jerry_container_type_t container_type, /**< Type of the 
       return jerry_throw (ecma_raise_type_error (ECMA_ERR_MSG ("Invalid container type")));
     }
   }
-  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target_p);
 
-  if (old_new_target_p == NULL)
-  {
-    JERRY_CONTEXT (current_new_target_p) = ecma_builtin_get (ctor_id);
-  }
+  ecma_builtin_call_frame_t builtin_frame;
+
+  builtin_frame.new_target_p = ecma_builtin_get (ctor_id);
+  builtin_frame.header.callee_p = builtin_frame.new_target_p;
+  builtin_frame.header.prev_p = JERRY_CONTEXT (call_stack_p);
+
+  JERRY_CONTEXT (call_stack_p) = &builtin_frame.header;
 
   ecma_value_t container_value = ecma_op_container_create (arguments_list_p, arguments_list_len, lit_id, proto_id);
 
-  JERRY_CONTEXT (current_new_target_p) = old_new_target_p;
+  JERRY_CONTEXT (call_stack_p) = builtin_frame.header.prev_p;
+
   return container_value;
 #else /* !JERRY_BUILTIN_CONTAINER */
   JERRY_UNUSED (arguments_list_p);

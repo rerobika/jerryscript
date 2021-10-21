@@ -1914,9 +1914,11 @@ parser_parse_source (void *source_p, /**< source code */
 
   context.user_value = ECMA_VALUE_EMPTY;
 
-  if ((context.global_status_flags & ECMA_PARSE_EVAL) && JERRY_CONTEXT (vm_top_context_p) != NULL)
+  ecma_call_frame_t *call_frame_p = JERRY_CONTEXT (call_stack_p);
+
+  if ((context.global_status_flags & ECMA_PARSE_EVAL) && ECMA_CALL_FRAME_HAS_FRAME_CTX (call_frame_p))
   {
-    const ecma_compiled_code_t *bytecode_header_p = JERRY_CONTEXT (vm_top_context_p)->shared_p->bytecode_header_p;
+    const ecma_compiled_code_t *bytecode_header_p = ((vm_frame_ctx_t *) call_frame_p)->shared_p->bytecode_header_p;
 
 #if JERRY_SNAPSHOT_EXEC
     if (JERRY_LIKELY (!(bytecode_header_p->status_flags & CBC_CODE_FLAGS_STATIC_FUNCTION)))
@@ -2089,7 +2091,7 @@ parser_parse_source (void *source_p, /**< source code */
     }
 
 #if JERRY_BUILTIN_REALMS
-    context.script_p->realm_p = (ecma_object_t *) JERRY_CONTEXT (global_object_p);
+    context.script_p->realm_p = (ecma_object_t *) jcontext_get_global_object ();
 #endif /* JERRY_BUILTIN_REALMS */
 
 #if JERRY_RESOURCE_NAME

@@ -67,10 +67,10 @@ ecma_builtin_weakref_dispatch_construct (const ecma_value_t *arguments_list_p, /
     return ecma_raise_type_error (ECMA_ERR_MSG ("WeakRef target must be an object"));
   }
 
-  JERRY_ASSERT (JERRY_CONTEXT (current_new_target_p) != NULL);
+  JERRY_ASSERT (jcontext_get_new_target () != NULL);
 
   ecma_object_t *proto_p =
-    ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target_p), ECMA_BUILTIN_ID_WEAKREF_PROTOTYPE);
+    ecma_op_get_prototype_from_constructor (jcontext_get_new_target (), ECMA_BUILTIN_ID_WEAKREF_PROTOTYPE);
 
   if (JERRY_UNLIKELY (proto_p == NULL))
   {

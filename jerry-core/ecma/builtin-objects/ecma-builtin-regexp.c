@@ -52,7 +52,7 @@ ecma_builtin_regexp_dispatch_helper (const ecma_value_t *arguments_list_p, /**< 
 #if JERRY_ESNEXT
   bool create_regexp_from_bc = false;
   bool free_arguments = false;
-  ecma_object_t *new_target_p = JERRY_CONTEXT (current_new_target_p);
+  ecma_object_t *new_target_p = jcontext_get_new_target ();
 #else /* !JERRY_ESNEXT */
   ecma_object_t *new_target_p = NULL;
 #endif /* JERRY_ESNEXT */

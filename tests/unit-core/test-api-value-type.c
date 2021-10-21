@@ -147,7 +147,7 @@ main (void)
     jerry_release_value (old_realm_this);
 
     /* Restore the old realm as per docs */
-    jerry_set_realm (old_realm);
+    jerry_restore_realm (old_realm);
   }
 
   jerry_cleanup ();

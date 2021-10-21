@@ -253,8 +253,8 @@ ecma_op_create_arraybuffer_object (const ecma_value_t *arguments_list_p, /**< li
 {
   JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
 
-  ecma_object_t *proto_p = ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target_p),
-                                                                   ECMA_BUILTIN_ID_ARRAYBUFFER_PROTOTYPE);
+  ecma_object_t *proto_p =
+    ecma_op_get_prototype_from_constructor (jcontext_get_new_target (), ECMA_BUILTIN_ID_ARRAYBUFFER_PROTOTYPE);
 
   if (proto_p == NULL)
   {

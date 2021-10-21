@@ -51,7 +51,7 @@ ecma_op_dataview_create (const ecma_value_t *arguments_list_p, /**< arguments li
                          uint32_t arguments_list_len) /**< number of arguments */
 {
   JERRY_ASSERT (arguments_list_len == 0 || arguments_list_p != NULL);
-  JERRY_ASSERT (JERRY_CONTEXT (current_new_target_p));
+  JERRY_ASSERT (jcontext_get_new_target ());
 
   ecma_value_t buffer = arguments_list_len > 0 ? arguments_list_p[0] : ECMA_VALUE_UNDEFINED;
 
@@ -126,7 +126,8 @@ ecma_op_dataview_create (const ecma_value_t *arguments_list_p, /**< arguments li
 
   /* 9. */
   ecma_object_t *prototype_obj_p =
-    ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target_p), ECMA_BUILTIN_ID_DATAVIEW_PROTOTYPE);
+    ecma_op_get_prototype_from_constructor (jcontext_get_new_target (), ECMA_BUILTIN_ID_DATAVIEW_PROTOTYPE);
+
   if (JERRY_UNLIKELY (prototype_obj_p == NULL))
   {
     return ECMA_VALUE_ERROR;

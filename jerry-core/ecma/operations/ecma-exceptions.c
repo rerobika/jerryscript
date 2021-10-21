@@ -159,7 +159,7 @@ ecma_new_standard_error (jerry_error_t error_type, /**< native error type */
       ecma_create_named_data_property (error_object_p, stack_str_p, ECMA_PROPERTY_CONFIGURABLE_WRITABLE, NULL);
     ecma_deref_ecma_string (stack_str_p);
 
-    ecma_value_t backtrace_value = vm_get_backtrace (0);
+    ecma_value_t backtrace_value = jcontext_get_backtrace (0);
 
     prop_value_p->value = backtrace_value;
     ecma_deref_object (ecma_get_object_from_value (backtrace_value));

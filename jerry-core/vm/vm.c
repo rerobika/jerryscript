@@ -254,7 +254,7 @@ static const uint16_t vm_decode_table[] JERRY_ATTR_CONST_DATA = { CBC_OPCODE_LIS
  * @return ecma value
  */
 ecma_value_t
-vm_run_global (const ecma_compiled_code_t *bytecode_p, /**< pointer to bytecode to run */
+vm_run_script (const ecma_compiled_code_t *bytecode_p, /**< pointer to bytecode to run */
                ecma_object_t *function_object_p) /**< function object if available */
 {
 #if JERRY_BUILTIN_REALMS
@@ -274,26 +274,18 @@ vm_run_global (const ecma_compiled_code_t *bytecode_p, /**< pointer to bytecode 
 
   vm_frame_ctx_shared_t shared;
   shared.bytecode_header_p = bytecode_p;
-  shared.function_object_p = function_object_p;
   shared.status_flags = 0;
 
 #if JERRY_BUILTIN_REALMS
   ecma_value_t this_binding = ((ecma_global_object_t *) global_obj_p)->this_binding;
-
-  ecma_global_object_t *saved_global_object_p = JERRY_CONTEXT (global_object_p);
-  JERRY_CONTEXT (global_object_p) = (ecma_global_object_t *) global_obj_p;
 #else /* !JERRY_BUILTIN_REALMS */
   ecma_value_t this_binding = ecma_make_object_value (global_obj_p);
 #endif /* JERRY_BUILTIN_REALMS */
 
-  ecma_value_t result = vm_run (&shared, this_binding, global_scope_p);
-
-#if JERRY_BUILTIN_REALMS
-  JERRY_CONTEXT (global_object_p) = saved_global_object_p;
-#endif /* JERRY_BUILTIN_REALMS */
+  ecma_value_t result = vm_run (function_object_p, &shared, this_binding, global_scope_p);
 
   return result;
-} /* vm_run_global */
+} /* vm_run_script */
 
 /**
  * Run specified eval-mode bytecode
@@ -310,8 +302,13 @@ vm_run_eval (ecma_compiled_code_t *bytecode_data_p, /**< byte-code data */
   /* ECMA-262 v5, 10.4.2 */
   if (parse_opts & ECMA_PARSE_DIRECT_EVAL)
   {
-    this_binding = ecma_copy_value (JERRY_CONTEXT (vm_top_context_p)->this_binding);
-    lex_env_p = JERRY_CONTEXT (vm_top_context_p)->lex_env_p;
+    ecma_call_frame_t *call_frame_p = JERRY_CONTEXT (call_stack_p);
+    JERRY_ASSERT (ECMA_CALL_FRAME_HAS_FRAME_CTX (call_frame_p));
+    vm_frame_ctx_t *top_frame_ctx_p = (vm_frame_ctx_t *) call_frame_p;
+    JERRY_ASSERT (top_frame_ctx_p->status_flags & VM_FRAME_CTX_PREPARE_DIRECT_EVAL);
+
+    this_binding = ecma_copy_value (top_frame_ctx_p->this_binding);
+    lex_env_p = top_frame_ctx_p->lex_env_p;
 
 #if JERRY_DEBUGGER
     uint32_t chain_index = parse_opts >> ECMA_PARSE_CHAIN_INDEX_SHIFT;
@@ -369,12 +366,16 @@ vm_run_eval (ecma_compiled_code_t *bytecode_data_p, /**< byte-code data */
     lex_env_p = lex_block_p;
   }
 
+  ecma_extended_object_t func_obj;
+  func_obj.object.type_flags_refs = ECMA_OBJECT_TYPE_FUNCTION;
+  ECMA_SET_INTERNAL_VALUE_POINTER (func_obj.u.function.bytecode_cp, bytecode_data_p);
+  ECMA_SET_NON_NULL_POINTER_TAG (func_obj.u.function.scope_cp, lex_env_p, 0);
+
   vm_frame_ctx_shared_t shared;
   shared.bytecode_header_p = bytecode_data_p;
-  shared.function_object_p = NULL;
-  shared.status_flags = (parse_opts & ECMA_PARSE_DIRECT_EVAL) ? VM_FRAME_CTX_SHARED_DIRECT_EVAL : 0;
+  shared.status_flags = (parse_opts & ECMA_PARSE_DIRECT_EVAL) ? VM_FRAME_CTX_SHARED_EXECUTE_DIRECT_EVAL : 0;
 
-  ecma_value_t completion_value = vm_run (&shared, this_binding, lex_env_p);
+  ecma_value_t completion_value = vm_run (&func_obj.object, &shared, this_binding, lex_env_p);
 
   ecma_deref_object (lex_env_p);
   ecma_free_value (this_binding);
@@ -413,10 +414,9 @@ vm_run_module (ecma_module_t *module_p) /**< module to be executed */
 
   vm_frame_ctx_shared_t shared;
   shared.bytecode_header_p = module_p->u.compiled_code_p;
-  shared.function_object_p = &module_p->header.object;
   shared.status_flags = 0;
 
-  return vm_run (&shared, ECMA_VALUE_UNDEFINED, module_p->scope_p);
+  return vm_run (&module_p->header.object, &shared, ECMA_VALUE_UNDEFINED, module_p->scope_p);
 } /* vm_run_module */
 
 #endif /* JERRY_MODULE_SYSTEM */
@@ -521,7 +521,7 @@ vm_get_class_function (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
   if (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC)
   {
-    return frame_ctx_p->shared_p->function_object_p;
+    return frame_ctx_p->call_frame.callee_p;
   }
 
   ecma_environment_record_t *environment_record_p = ecma_op_get_environment_record (frame_ctx_p->lex_env_p);
@@ -574,7 +574,7 @@ vm_super_call (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
   {
     ecma_object_t *func_obj_p = ecma_get_object_from_value (func_value);
     completion_value =
-      ecma_op_function_construct (func_obj_p, JERRY_CONTEXT (current_new_target_p), arguments_p, arguments_list_len);
+      ecma_op_function_construct (func_obj_p, jcontext_get_new_target (), arguments_p, arguments_list_len);
 
     if (!ECMA_IS_VALUE_ERROR (completion_value) && ecma_op_this_binding_is_initialized (environment_record_p))
     {
@@ -760,8 +760,6 @@ opfunc_call (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
   ecma_value_t completion_value =
     ecma_op_function_validated_call (func_value, this_value, stack_top_p, arguments_list_len);
-
-  JERRY_CONTEXT (status_flags) &= (uint32_t) ~ECMA_STATUS_DIRECT_EVAL;
 
   /* Free registers. */
   for (uint32_t i = 0; i < arguments_list_len; i++)
@@ -1377,7 +1375,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 
           if (ecma_is_value_false (result))
           {
-            bool is_configurable = (frame_ctx_p->status_flags & VM_FRAME_CTX_DIRECT_EVAL) != 0;
+            bool is_configurable = (frame_ctx_p->status_flags & VM_FRAME_CTX_EXECUTE_DIRECT_EVAL) != 0;
             prop_p = ecma_op_create_mutable_binding (lex_env_p, name_p, is_configurable);
 
             if (JERRY_UNLIKELY (prop_p == ECMA_PROPERTY_POINTER_ERROR))
@@ -1492,6 +1490,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           JERRY_ASSERT (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_HAS_ARG_LIST);
 
           result = ecma_op_create_arguments_object ((vm_frame_ctx_shared_args_t *) (frame_ctx_p->shared_p),
+                                                    frame_ctx_p->call_frame.callee_p,
                                                     frame_ctx_p->lex_env_p);
 
           if (literal_index < register_end)
@@ -1951,9 +1950,8 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 #if JERRY_ESNEXT
         case VM_OC_LOCAL_EVAL:
         {
-          ECMA_CLEAR_LOCAL_PARSE_OPTS ();
-          uint8_t parse_opts = *byte_code_p++;
-          ECMA_SET_LOCAL_PARSE_OPTS (parse_opts);
+          frame_ctx_p->status_flags |= VM_FRAME_CTX_PREPARE_DIRECT_EVAL | VM_FRAME_CTX_PREPARE_DIRECT_LOCAL_EVAL;
+          byte_code_p++;
           continue;
         }
         case VM_OC_SUPER_CALL:
@@ -2047,7 +2045,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         case VM_OC_RUN_FIELD_INIT:
         {
           JERRY_ASSERT (frame_ctx_p->shared_p->status_flags & VM_FRAME_CTX_SHARED_NON_ARROW_FUNC);
-          result = opfunc_init_class_fields (frame_ctx_p->shared_p->function_object_p, frame_ctx_p->this_binding);
+          result = opfunc_init_class_fields (frame_ctx_p->call_frame.callee_p, frame_ctx_p->this_binding);
 
           if (ECMA_IS_VALUE_ERROR (result))
           {
@@ -2716,7 +2714,8 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PUSH_NEW_TARGET:
         {
-          ecma_object_t *new_target_object_p = JERRY_CONTEXT (current_new_target_p);
+          ecma_object_t *new_target_object_p = jcontext_get_new_target ();
+
           if (new_target_object_p == NULL)
           {
             *stack_top_p++ = ECMA_VALUE_UNDEFINED;
@@ -3069,7 +3068,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_EVAL:
         {
-          JERRY_CONTEXT (status_flags) |= ECMA_STATUS_DIRECT_EVAL;
+          frame_ctx_p->status_flags |= VM_FRAME_CTX_PREPARE_DIRECT_EVAL;
           JERRY_ASSERT ((*byte_code_p >= CBC_CALL && *byte_code_p <= CBC_CALL2_PROP_BLOCK)
                         || (*byte_code_p == CBC_EXT_OPCODE && byte_code_p[1] >= CBC_EXT_SPREAD_CALL
                             && byte_code_p[1] <= CBC_EXT_SPREAD_CALL_PROP_BLOCK));
@@ -5020,8 +5019,8 @@ vm_init_module_scope (ecma_module_t *module_p) /**< module without scope */
 #undef READ_LITERAL
 #undef READ_LITERAL_INDEX
 
-JERRY_STATIC_ASSERT ((int) VM_FRAME_CTX_SHARED_DIRECT_EVAL == (int) VM_FRAME_CTX_DIRECT_EVAL,
-                     vm_frame_ctx_shared_direct_eval_must_be_equal_to_frame_ctx_direct_eval);
+JERRY_STATIC_ASSERT ((int) VM_FRAME_CTX_SHARED_EXECUTE_DIRECT_EVAL == (int) VM_FRAME_CTX_EXECUTE_DIRECT_EVAL,
+                     vm_frame_ctx_shared_direct_execute_eval_must_be_equal_to_frame_ctx_direct_eval);
 
 JERRY_STATIC_ASSERT ((int) CBC_CODE_FLAGS_STRICT_MODE == (int) VM_FRAME_CTX_IS_STRICT,
                      cbc_code_flags_strict_mode_must_be_equal_to_vm_frame_ctx_is_strict);
@@ -5038,9 +5037,8 @@ vm_init_exec (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
   vm_frame_ctx_shared_t *shared_p = frame_ctx_p->shared_p;
   const ecma_compiled_code_t *bytecode_header_p = shared_p->bytecode_header_p;
 
-  frame_ctx_p->prev_context_p = JERRY_CONTEXT (vm_top_context_p);
   frame_ctx_p->context_depth = 0;
-  frame_ctx_p->status_flags = (uint8_t) ((shared_p->status_flags & VM_FRAME_CTX_DIRECT_EVAL)
+  frame_ctx_p->status_flags = (uint8_t) ((shared_p->status_flags & VM_FRAME_CTX_SHARED_EXECUTE_DIRECT_EVAL)
                                          | (bytecode_header_p->status_flags & VM_FRAME_CTX_IS_STRICT));
 
   uint16_t argument_end, register_end;
@@ -5106,9 +5104,6 @@ vm_init_exec (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
       *stack_p++ = ECMA_VALUE_UNDEFINED;
     }
   }
-
-  JERRY_CONTEXT (status_flags) &= (uint32_t) ~ECMA_STATUS_DIRECT_EVAL;
-  JERRY_CONTEXT (vm_top_context_p) = frame_ctx_p;
 } /* vm_init_exec */
 
 /**
@@ -5183,7 +5178,6 @@ vm_execute (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
 #endif /* JERRY_DEBUGGER */
 
-        JERRY_CONTEXT (vm_top_context_p) = frame_ctx_p->prev_context_p;
         return completion_value;
       }
     }
@@ -5196,7 +5190,8 @@ vm_execute (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
  * @return ecma value
  */
 ecma_value_t
-vm_run (vm_frame_ctx_shared_t *shared_p, /**< shared data */
+vm_run (ecma_object_t *func_obj_p,
+        vm_frame_ctx_shared_t *shared_p, /**< shared data */
         ecma_value_t this_binding_value, /**< value of 'ThisBinding' */
         ecma_object_t *lex_env_p) /**< lexical environment to use */
 {
@@ -5223,8 +5218,16 @@ vm_run (vm_frame_ctx_shared_t *shared_p, /**< shared data */
   frame_ctx_p->lex_env_p = lex_env_p;
   frame_ctx_p->this_binding = this_binding_value;
 
+  frame_ctx_p->call_frame.callee_p = func_obj_p;
+  frame_ctx_p->call_frame.prev_p = JERRY_CONTEXT (call_stack_p);
+  JERRY_CONTEXT (call_stack_p) = &frame_ctx_p->call_frame;
+
   vm_init_exec (frame_ctx_p);
-  return vm_execute (frame_ctx_p);
+  ecma_value_t result = vm_execute (frame_ctx_p);
+
+  JERRY_CONTEXT (call_stack_p) = frame_ctx_p->call_frame.prev_p;
+
+  return result;
 } /* vm_run */
 
 /**

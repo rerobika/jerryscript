@@ -124,7 +124,7 @@ struct jerry_context_t
 #endif /* JERRY_EXTERNAL_CONTEXT */
 
   /* Update JERRY_CONTEXT_FIRST_MEMBER if the first non-external member changes */
-  ecma_global_object_t *global_object_p; /**< current global object */
+  ecma_global_object_t *global_object_p; /**< global object */
   jmem_heap_free_t *jmem_heap_list_skip_p; /**< improves deallocation performance */
   jmem_pools_chunk_t *jmem_free_8_byte_chunk_p; /**< list of free eight byte pool chunks */
 #if JERRY_BUILTIN_REGEXP
@@ -161,7 +161,7 @@ struct jerry_context_t
   void *module_import_callback_user_p; /**< user pointer for module_import_callback_p */
 #endif /* JERRY_MODULE_SYSTEM */
 
-  vm_frame_ctx_t *vm_top_context_p; /**< top (current) interpreter context */
+  ecma_call_frame_t *call_stack_p; /**< TODO */
   jerry_context_data_header_t *context_data_p; /**< linked list of user-provided context-specific pointers */
   jerry_external_string_free_callback_t external_string_free_callback_p; /**< free callback for external strings */
   void *error_object_created_callback_user_p; /**< user pointer for error_object_update_callback_p */
@@ -250,15 +250,6 @@ struct jerry_context_t
   /** hash table for caching the last access of properties */
   ecma_lcache_hash_entry_t lcache[ECMA_LCACHE_HASH_ROWS_COUNT][ECMA_LCACHE_HASH_ROW_LENGTH];
 #endif /* JERRY_LCACHE */
-
-#if JERRY_ESNEXT
-  /**
-   * Allowed values and it's meaning:
-   * * NULL (0x0): the current "new.target" is undefined, that is the execution is inside a normal method.
-   * * Any other valid function object pointer: the current "new.target" is valid and it is constructor call.
-   */
-  ecma_object_t *current_new_target_p;
-#endif /* JERRY_ESNEXT */
 };
 
 #if JERRY_EXTERNAL_CONTEXT
@@ -352,6 +343,14 @@ void jcontext_raise_exception (ecma_value_t error);
 void jcontext_release_exception (void);
 
 ecma_value_t jcontext_take_exception (void);
+
+ecma_global_object_t *jcontext_get_global_object (void);
+
+#if JERRY_ESNEXT
+ecma_object_t *jcontext_get_new_target (void);
+#endif /* JERRY_ESNEXT */
+
+ecma_value_t jcontext_get_backtrace (uint32_t max_depth);
 
 /**
  * @}

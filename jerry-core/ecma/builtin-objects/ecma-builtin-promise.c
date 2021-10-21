@@ -475,9 +475,7 @@ ecma_builtin_promise_dispatch_construct (const ecma_value_t *arguments_list_p, /
     return ecma_raise_type_error (ECMA_ERR_MSG ("First parameter must be callable"));
   }
 
-  return ecma_op_create_promise_object (arguments_list_p[0],
-                                        ECMA_VALUE_UNDEFINED,
-                                        JERRY_CONTEXT (current_new_target_p));
+  return ecma_op_create_promise_object (arguments_list_p[0], ECMA_VALUE_UNDEFINED, jcontext_get_new_target ());
 } /* ecma_builtin_promise_dispatch_construct */
 
 /**

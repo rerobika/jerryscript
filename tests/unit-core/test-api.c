@@ -967,7 +967,7 @@ main (void)
       jerry_release_value (run_result);
       jerry_release_value (parse_result);
 
-      jerry_set_realm (old_realm);
+      jerry_restore_realm (old_realm);
 
       jerry_release_value (new_realm_value);
       jerry_release_value (proxy);
@@ -993,7 +993,7 @@ main (void)
       jerry_release_value (run_result);
       jerry_release_value (parse_result);
 
-      jerry_set_realm (old_realm);
+      jerry_restore_realm (old_realm);
 
       jerry_release_value (new_realm_value);
       jerry_release_value (proxy);

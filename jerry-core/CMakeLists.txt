@@ -325,7 +325,6 @@ set(SOURCE_CORE_FILES
   vm/opcodes-ecma-relational-equality.c
   vm/opcodes.c
   vm/vm-stack.c
-  vm/vm-utils.c
   vm/vm.c
 )
 

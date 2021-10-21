@@ -437,6 +437,8 @@ typedef enum
 typedef enum
 {
   JERRY_BACKTRACE_FRAME_JS, /**< indicates that the frame is created for a JavaScript function/method */
+  JERRY_BACKTRACE_FRAME_BUILTIN, /**< indicates that the frame is created for a builtin JavaScript function/method */
+  JERRY_BACKTRACE_FRAME_NATIVE, /**< indicates that the frame is created for external function */
 } jerry_backtrace_frame_types_t;
 
 /**

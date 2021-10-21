@@ -713,10 +713,10 @@ static ecma_value_t
 ecma_builtin_date_create (ecma_number_t tv)
 {
 #if JERRY_ESNEXT
-  JERRY_ASSERT (JERRY_CONTEXT (current_new_target_p) != NULL);
+  JERRY_ASSERT (jcontext_get_new_target () != NULL);
 
   ecma_object_t *prototype_obj_p =
-    ecma_op_get_prototype_from_constructor (JERRY_CONTEXT (current_new_target_p), ECMA_BUILTIN_ID_DATE_PROTOTYPE);
+    ecma_op_get_prototype_from_constructor (jcontext_get_new_target (), ECMA_BUILTIN_ID_DATE_PROTOTYPE);
 
   if (JERRY_UNLIKELY (prototype_obj_p == NULL))
   {

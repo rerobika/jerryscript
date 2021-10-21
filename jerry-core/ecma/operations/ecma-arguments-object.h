@@ -21,7 +21,9 @@
 
 #include "vm-defines.h"
 
-ecma_value_t ecma_op_create_arguments_object (vm_frame_ctx_shared_args_t *shared_p, ecma_object_t *lex_env_p);
+ecma_value_t ecma_op_create_arguments_object (vm_frame_ctx_shared_args_t *shared_p,
+                                              ecma_object_t *func_obj_p,
+                                              ecma_object_t *lex_env_p);
 
 ecma_value_t ecma_op_arguments_object_define_own_property (ecma_object_t *object_p,
                                                            ecma_string_t *property_name_p,

@@ -81,10 +81,6 @@ ecma_op_eval_chars_buffer (void *source_p, /**< source code */
 
   parse_opts |= ECMA_PARSE_EVAL;
 
-#if JERRY_ESNEXT
-  ECMA_CLEAR_LOCAL_PARSE_OPTS ();
-#endif /* JERRY_ESNEXT */
-
   ecma_compiled_code_t *bytecode_p = parser_parse_script (source_p, parse_opts, NULL);
 
   if (JERRY_UNLIKELY (bytecode_p == NULL))

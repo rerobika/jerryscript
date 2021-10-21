@@ -309,6 +309,7 @@ jerry_value_t jerry_get_symbol_descriptive_string (const jerry_value_t symbol);
  * Realm functions.
  */
 jerry_value_t jerry_set_realm (jerry_value_t realm_value);
+jerry_value_t jerry_restore_realm (jerry_value_t realm_value);
 jerry_value_t jerry_realm_get_this (jerry_value_t realm_value);
 jerry_value_t jerry_realm_set_this (jerry_value_t realm_value, jerry_value_t this_value);
 

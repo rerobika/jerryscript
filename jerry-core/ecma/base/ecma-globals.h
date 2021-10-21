@@ -57,16 +57,18 @@
 typedef enum
 {
   ECMA_STATUS_API_AVAILABLE = (1u << 0), /**< api available */
-  ECMA_STATUS_DIRECT_EVAL = (1u << 1), /**< eval is called directly */
 #if JERRY_PROPERTY_HASHMAP
-  ECMA_STATUS_HIGH_PRESSURE_GC = (1u << 2), /**< last gc was under high pressure */
+  ECMA_STATUS_HIGH_PRESSURE_GC = (1u << 1), /**< last gc was under high pressure */
 #endif /* JERRY_PROPERTY_HASHMAP */
-  ECMA_STATUS_EXCEPTION = (1u << 3), /**< last exception is a normal exception */
-  ECMA_STATUS_ABORT = (1u << 4), /**< last exception is an abort */
-  ECMA_STATUS_ERROR_UPDATE = (1u << 5), /**< the error_object_created_callback_p is called */
+  ECMA_STATUS_EXCEPTION = (1u << 2), /**< last exception is a normal exception */
+  ECMA_STATUS_ABORT = (1u << 3), /**< last exception is an abort */
+  ECMA_STATUS_ERROR_UPDATE = (1u << 4), /**< the error_object_created_callback_p is called */
 #if JERRY_VM_THROW
-  ECMA_STATUS_ERROR_THROWN = (1u << 6), /**< the vm_throw_callback_p is called */
+  ECMA_STATUS_ERROR_THROWN = (1u << 5), /**< the vm_throw_callback_p is called */
 #endif /* JERRY_VM_THROW */
+#if JERRY_BUILTIN_REALMS
+  ECMA_STATUS_API_REALM_CREATED = (1u << 6), /**< A new [[Realm]] has been created from the API */
+#endif /* JERRY_BUILTIN_REALMS */
 } ecma_status_flag_t;
 
 /**
@@ -145,6 +147,11 @@ typedef enum
   ECMA_PARSE_INTERNAL_FOR_IN_OFF_CONTEXT_ERROR = (1u << 30),
 #endif /* !JERRY_NDEBUG */
 } ecma_parse_opts_t;
+
+/**
+ * Offset for restoring ecma_parse options
+ */
+#define ECMA_PARSE_OPTIONS_SAVED_FLAGS_OFFSET JERRY_LOG2 (ECMA_PARSE_ALLOW_SUPER)
 
 /**
  * Description of an ecma value
@@ -808,6 +815,9 @@ typedef enum
 #if JERRY_BUILTIN_WEAKREF
   ECMA_OBJECT_CLASS_WEAKREF, /**< WeakRef (Not standardized yet) */
 #endif /* JERRY_BUILTIN_WEAKREF */
+#if JERRY_BUILTIN_REALMS
+  ECMA_OBJECT_CLASS_REALM_REFERENCE, /**< [[Realm]] object reference */
+#endif /* JERRY_BUILTIN_REALMS */
 
   ECMA_OBJECT_CLASS__MAX /**< maximum value */
 } ecma_object_class_type_t;
@@ -843,35 +853,6 @@ typedef enum
 } ecma_iterator_kind_t;
 
 #endif /* JERRY_ESNEXT */
-
-/**
- * Offset for JERRY_CONTEXT (status_flags) top 8 bits.
- */
-#define ECMA_LOCAL_PARSE_OPTS_OFFSET ((sizeof (uint32_t) - sizeof (uint8_t)) * JERRY_BITSINBYTE)
-
-/**
- * Set JERRY_CONTEXT (status_flags) top 8 bits to the specified 'opts'.
- */
-#define ECMA_SET_LOCAL_PARSE_OPTS(opts)                                                                          \
-  do                                                                                                             \
-  {                                                                                                              \
-    JERRY_CONTEXT (status_flags) |= ((uint32_t) opts << ECMA_LOCAL_PARSE_OPTS_OFFSET) | ECMA_STATUS_DIRECT_EVAL; \
-  } while (0)
-
-/**
- * Get JERRY_CONTEXT (status_flags) top 8 bits.
- */
-#define ECMA_GET_LOCAL_PARSE_OPTS() \
-  (JERRY_CONTEXT (status_flags) >> (ECMA_LOCAL_PARSE_OPTS_OFFSET - JERRY_LOG2 (ECMA_PARSE_ALLOW_SUPER)))
-
-/**
- * Clear JERRY_CONTEXT (status_flags) top 8 bits.
- */
-#define ECMA_CLEAR_LOCAL_PARSE_OPTS()                                          \
-  do                                                                           \
-  {                                                                            \
-    JERRY_CONTEXT (status_flags) &= ((1 << ECMA_LOCAL_PARSE_OPTS_OFFSET) - 1); \
-  } while (0)
 
 /**
  * Ecma object type mask for getting the object type.
@@ -2482,6 +2463,40 @@ typedef struct
   ecma_value_t sync_next_method; /**< IteratorRecord [[NextMethod]] internal slot */
 } ecma_async_from_sync_iterator_object_t;
 #endif /* JERRY_ESNEXT */
+
+#define ECMA_CALL_FRAME_HAS_FRAME_CTX(call_frame_p)                                 \
+  ((call_frame_p) != NULL                                                           \
+   && (ecma_get_object_type ((call_frame_p)->callee_p) == ECMA_OBJECT_TYPE_FUNCTION \
+       || ecma_get_object_type ((call_frame_p)->callee_p) == ECMA_OBJECT_TYPE_CLASS))
+
+#define ECMA_CALL_FRAME_IS_REALM(call_frame_p) \
+  (ecma_get_object_type ((call_frame_p)->callee_p) == ECMA_OBJECT_TYPE_BUILT_IN_GENERAL)
+
+typedef struct ecma_call_frame_t
+{
+  ecma_object_t *callee_p;
+  struct ecma_call_frame_t *prev_p;
+} ecma_call_frame_t;
+
+typedef struct
+{
+  ecma_call_frame_t header;
+#if JERRY_ESNEXT
+  ecma_object_t *new_target_p;
+#endif /* ECMA_ESNEXT */
+} ecma_builtin_call_frame_t;
+
+typedef struct
+{
+  ecma_extended_object_t header;
+  ecma_call_frame_t frame;
+} ecma_realm_reference_t;
+
+typedef struct
+{
+  ecma_call_frame_t header;
+  jerry_call_info_t info;
+} ecma_native_call_frame_t;
 
 /**
  * @}

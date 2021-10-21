@@ -165,7 +165,7 @@ test262_create_realm (const jerry_call_info_t *call_info_p, /**< call informatio
   jerry_value_t previous_realm = jerry_set_realm (realm_object);
   assert (!jerry_value_is_error (previous_realm));
   jerry_value_t test262_object = create_test262 (realm_object);
-  jerry_set_realm (previous_realm);
+  jerry_restore_realm (previous_realm);
   jerry_release_value (realm_object);
 
   return test262_object;

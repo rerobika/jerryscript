@@ -62,10 +62,6 @@ ecma_init (void)
   ecma_job_queue_init ();
 #endif /* JERRY_ESNEXT */
 
-#if JERRY_ESNEXT
-  JERRY_CONTEXT (current_new_target_p) = NULL;
-#endif /* JERRY_ESNEXT */
-
 #if JERRY_BUILTIN_TYPEDARRAY
   JERRY_CONTEXT (arraybuffer_compact_allocation_limit) = 256;
 #endif /* JERRY_BUILTIN_TYPEDARRAY */
@@ -77,10 +73,6 @@ ecma_init (void)
 void
 ecma_finalize (void)
 {
-#if JERRY_ESNEXT
-  JERRY_ASSERT (JERRY_CONTEXT (current_new_target_p) == NULL);
-#endif /* JERRY_ESNEXT */
-
   ecma_finalize_global_environment ();
   uint8_t runs = 0;
 

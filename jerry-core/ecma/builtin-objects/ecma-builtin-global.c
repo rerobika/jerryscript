@@ -91,23 +91,52 @@ ecma_builtin_global_object_eval (ecma_value_t x) /**< routine's first argument *
     return ecma_copy_value (x);
   }
 
-  uint32_t parse_opts = vm_is_direct_eval_form_call () ? ECMA_PARSE_DIRECT_EVAL : ECMA_PARSE_NO_OPTS;
+  ecma_call_frame_t *top_call_frame_p = JERRY_CONTEXT (call_stack_p);
+  JERRY_ASSERT (top_call_frame_p != NULL);
+  JERRY_ASSERT (ecma_get_object_type (top_call_frame_p->callee_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION);
 
-  /* See also: ECMA-262 v5, 10.1.1 */
-  if (parse_opts && vm_is_strict_mode ())
+  ecma_call_frame_t *call_frame_p = top_call_frame_p->prev_p;
+
+  uint32_t parse_opts = ECMA_PARSE_NO_OPTS;
+  vm_frame_ctx_t *top_frame_ctx_p = (vm_frame_ctx_t *) call_frame_p;
+
+  if (ECMA_CALL_FRAME_HAS_FRAME_CTX (call_frame_p)
+      && (top_frame_ctx_p->status_flags & VM_FRAME_CTX_PREPARE_DIRECT_EVAL))
   {
-    JERRY_ASSERT (parse_opts & ECMA_PARSE_DIRECT_EVAL);
-    parse_opts |= ECMA_PARSE_STRICT_MODE;
-  }
+    /* Enter the current execution context's frame */
+    JERRY_CONTEXT (call_stack_p) = call_frame_p;
+
+    parse_opts = ECMA_PARSE_DIRECT_EVAL;
 
 #if JERRY_ESNEXT
-  if (vm_is_direct_eval_form_call ())
-  {
-    parse_opts |= ECMA_GET_LOCAL_PARSE_OPTS ();
-  }
+    if (top_frame_ctx_p->status_flags & VM_FRAME_CTX_PREPARE_DIRECT_LOCAL_EVAL)
+    {
+      JERRY_ASSERT (top_frame_ctx_p->byte_code_p[-3] == CBC_EXT_OPCODE);
+      JERRY_ASSERT (top_frame_ctx_p->byte_code_p[-2] == CBC_EXT_LOCAL_EVAL);
+      parse_opts |= (uint32_t) (top_frame_ctx_p->byte_code_p[-1] << ECMA_PARSE_OPTIONS_SAVED_FLAGS_OFFSET);
+    }
 #endif /* JERRY_ESNEXT */
 
-  /* steps 2 to 8 */
+    if (top_frame_ctx_p->status_flags & VM_FRAME_CTX_IS_STRICT)
+    {
+      parse_opts |= ECMA_PARSE_STRICT_MODE;
+    }
+
+    ecma_value_t result = ecma_op_eval (x, parse_opts);
+
+#if JERRY_ESNEXT
+    const uint8_t eval_flags = VM_FRAME_CTX_PREPARE_DIRECT_EVAL | VM_FRAME_CTX_PREPARE_DIRECT_LOCAL_EVAL;
+#else /* JERRY_ESNEXT */
+    const uint8_t eval_flags = VM_FRAME_CTX_PREPARE_DIRECT_EVAL;
+#endif /* JERRY_ESNEXT */
+
+    /* Restore the builtin call's frame */
+    JERRY_CONTEXT (call_stack_p) = top_call_frame_p;
+    top_frame_ctx_p->status_flags = (uint8_t) (top_frame_ctx_p->status_flags & ~eval_flags);
+
+    return result;
+  }
+
   return ecma_op_eval (x, parse_opts);
 } /* ecma_builtin_global_object_eval */
 
