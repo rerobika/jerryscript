@@ -139,6 +139,7 @@ typedef enum
   PARSER_ERR_DUPLICATED_LABEL, /**< duplicated label */
   PARSER_ERR_OBJECT_PROPERTY_REDEFINED, /**< property of object literal redefined */
 #if JERRY_ESNEXT
+  PARSER_ERR_CLASS_PRIVATE_CONSTRUCTOR, /**< class constructor is private */
   PARSER_ERR_VARIABLE_REDECLARED, /**< a variable redeclared */
   PARSER_ERR_LEXICAL_SINGLE_STATEMENT, /**< lexical declaration in single statement context */
   PARSER_ERR_GENERATOR_IN_SINGLE_STATEMENT_POS, /**< generator func not allowed in single statement position */
@@ -168,6 +169,11 @@ typedef enum
   PARSER_ERR_INVALID_NULLISH_COALESCING, /**< Cannot chain nullish with logical AND or OR. */
   PARSER_ERR_NEW_TARGET_EXPECTED, /**< expected new.target expression */
   PARSER_ERR_NEW_TARGET_NOT_ALLOWED, /**< new.target is not allowed in the given context */
+  PARSER_ERR_DUPLICATED_PRIVATE_FIELD, /**< duplicated private field */
+  PARSER_ERR_UNDECLARED_PRIVATE_FIELD, /**< undeclated private field */
+  PARSER_ERR_DELETE_PRIVATE_FIELD, /**< deleting a private field */
+  PARSER_ERR_UNEXPECTED_PRIVATE_FIELD, /**< unexpected private field */
+  PARSER_ERR_UNIMPLEMENTED_BYTECODE, /**< unimplemented bytecode */
 #endif /* JERRY_ESNEXT */
 #if JERRY_MODULE_SYSTEM
   PARSER_ERR_FILE_NOT_FOUND, /**< file not found*/
