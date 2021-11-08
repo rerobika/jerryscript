@@ -1997,6 +1997,31 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           *stack_top_p++ = opfunc_create_implicit_class_constructor (opcode, frame_ctx_p->shared_p->bytecode_header_p);
           continue;
         }
+        case VM_OC_ASSIGN_PRIVATE:
+        {
+          for (int32_t i = 0; i < 3; i++)
+          {
+            ecma_free_value (*(--stack_top_p));
+          }
+
+          result = ECMA_VALUE_UNDEFINED;
+
+          if (opcode_data & VM_OC_PUT_STACK)
+          {
+            *stack_top_p++ = result;
+          }
+          else if (opcode_data & VM_OC_PUT_BLOCK)
+          {
+            ecma_fast_free_value (VM_GET_REGISTER (frame_ctx_p, 0));
+            VM_GET_REGISTERS (frame_ctx_p)[0] = result;
+          }
+
+          continue;
+        }
+        case VM_OC_ASSIGN_PROP_THIS_PRIVATE:
+        {
+          goto free_both_values;
+        }
         case VM_OC_PRIVATE_PROP_GET:
         {
           *stack_top_p++ = ECMA_VALUE_UNDEFINED;
@@ -2007,7 +2032,7 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           *stack_top_p++ = ECMA_VALUE_TRUE;
           goto free_both_values;
         }
-        case VM_OC_SET_PRIVATE_PROP:
+        case VM_OC_SET_PRIVATE_METHOD:
         case VM_OC_PRIVATE_PROP_GETTER:
         case VM_OC_PRIVATE_PROP_SETTER:
         {

@@ -990,13 +990,13 @@ parser_parse_class_body (parser_context_t *context_p, /**< context */
 
     if (is_static)
     {
-      context_p->last_cbc_opcode = is_private ? PARSER_TO_EXT_OPCODE (CBC_EXT_SET_STATIC_PRIVATE_PROP)
+      context_p->last_cbc_opcode = is_private ? PARSER_TO_EXT_OPCODE (CBC_EXT_SET_STATIC_PRIVATE_METHOD)
                                               : PARSER_TO_EXT_OPCODE (CBC_EXT_SET_STATIC_PROPERTY_LITERAL);
       is_static = false;
     }
     else if (is_private)
     {
-      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_SET_PRIVATE_PROP);
+      context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_SET_PRIVATE_METHOD);
     }
     else
     {
@@ -3099,6 +3099,12 @@ parser_append_binary_single_assignment_token (parser_context_t *context_p, /**< 
     parser_stack_push_uint8 (context_p, CBC_EXT_ASSIGN_SUPER);
     assign_opcode = CBC_EXT_OPCODE;
   }
+  else if (context_p->last_cbc_opcode == PARSER_TO_EXT_OPCODE (CBC_EXT_PUSH_PRIVATE_PROP_LITERAL))
+  {
+    context_p->last_cbc_opcode = CBC_PUSH_LITERAL;
+    parser_stack_push_uint8 (context_p, CBC_EXT_ASSIGN_PRIVATE);
+    assign_opcode = CBC_EXT_OPCODE;
+  }
 #endif /* JERRY_ESNEXT */
   else
   {
@@ -3274,7 +3280,8 @@ parser_process_binary_opcodes (parser_context_t *context_p, /**< context */
       if (JERRY_UNLIKELY (opcode == CBC_EXT_OPCODE))
       {
         parser_stack_pop_uint8 (context_p);
-        JERRY_ASSERT (context_p->stack_top_uint8 == CBC_EXT_ASSIGN_SUPER);
+        JERRY_ASSERT (context_p->stack_top_uint8 == CBC_EXT_ASSIGN_SUPER
+                      || context_p->stack_top_uint8 == CBC_EXT_ASSIGN_PRIVATE);
         opcode = PARSER_TO_EXT_OPCODE (context_p->stack_top_uint8);
         parser_stack_pop_uint8 (context_p);
       }

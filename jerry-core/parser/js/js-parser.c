@@ -22,6 +22,7 @@
 #include "debugger.h"
 #include "jcontext.h"
 #include "js-parser-internal.h"
+#include "lit-char-helpers.h"
 
 #if JERRY_PARSER
 
@@ -2816,10 +2817,11 @@ parser_parse_class_fields (parser_context_t *context_p) /**< context */
     }
 
     uint16_t literal_index = 0;
-
+    bool is_private = false;
     if (class_field_type & PARSER_CLASS_FIELD_NORMAL)
     {
       scanner_set_location (context_p, &range.start_location);
+      is_private = context_p->source_p[-1] == LIT_CHAR_HASHMARK;
       context_p->source_end_p = source_end_p;
       scanner_seek (context_p);
 
@@ -2868,7 +2870,14 @@ parser_parse_class_fields (parser_context_t *context_p) /**< context */
 
     if (class_field_type & PARSER_CLASS_FIELD_NORMAL)
     {
-      parser_emit_cbc_literal (context_p, CBC_ASSIGN_PROP_THIS_LITERAL, literal_index);
+      if (is_private)
+      {
+        parser_emit_cbc_ext_literal (context_p, CBC_EXT_ASSIGN_PROP_THIS_PRIVATE_LITERAL, literal_index);
+      }
+      else
+      {
+        parser_emit_cbc_literal (context_p, CBC_ASSIGN_PROP_THIS_LITERAL, literal_index);
+      }
 
       /* Prepare stack slot for assignment property reference base. Needed by vm.c */
       if (context_p->stack_limit == context_p->stack_depth)
