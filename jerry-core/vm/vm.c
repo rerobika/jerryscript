@@ -235,6 +235,96 @@ vm_op_set_value (ecma_value_t base, /**< base object */
   return result;
 } /* vm_op_set_value */
 
+/**
+ * Get private field of class
+ */
+static ecma_value_t
+vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
+{
+  ecma_object_t *obj_p = ecma_get_object_from_value (obj_val);
+
+  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
+
+  /*   if (ecma_op_object_is_fast_array (obj_p))
+    {
+      return jerry_return (ECMA_VALUE_UNDEFINED);
+    } */
+
+  // maybe not needed, bc. parser throws error on this case
+  ecma_property_t *property_p = ecma_find_named_property (obj_p, internal_string_p);
+
+  if (property_p == NULL)
+  {
+    return ECMA_VALUE_UNDEFINED;
+  }
+
+  // maybe faszom kivan, belepofázik ádám
+  ecma_object_t *internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
+  property_p = ecma_find_named_property (internal_object_p, ecma_get_prop_name_from_value (property));
+
+  if (property_p == NULL)
+  {
+    return ECMA_VALUE_UNDEFINED;
+  }
+
+  return ecma_copy_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
+}
+/**
+ * Set private field of class
+ */
+static void
+vm_op_set_private_field (ecma_value_t base, /**< this object */
+                         ecma_value_t property, /**< property name */
+                         ecma_value_t value) /**< ecma value */
+{
+  ecma_object_t *obj_p = ecma_get_object_from_value (base);
+
+  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
+
+  ecma_property_t *property_p = ecma_find_named_property (obj_p, internal_string_p);
+  ecma_object_t *internal_object_p;
+
+  if (property_p == NULL)
+  {
+    ecma_property_value_t *value_p =
+      ecma_create_named_data_property (obj_p, internal_string_p, ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE, NULL);
+
+    internal_object_p = ecma_create_object (NULL, sizeof (ecma_extended_object_t), ECMA_OBJECT_TYPE_CLASS);
+    {
+      ecma_extended_object_t *container_p = (ecma_extended_object_t *) internal_object_p;
+      container_p->u.cls.type = ECMA_OBJECT_CLASS_INTERNAL_OBJECT;
+    }
+
+    value_p->value = ecma_make_object_value (internal_object_p);
+    ecma_deref_object (internal_object_p);
+  }
+  else
+  {
+    internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
+  }
+
+  ecma_string_t *prop_name_p = ecma_get_prop_name_from_value (property);
+
+  // maybe not used
+  property_p = ecma_find_named_property (internal_object_p, prop_name_p);
+
+  if (property_p == NULL)
+  {
+    ecma_property_value_t *value_p = ecma_create_named_data_property (internal_object_p,
+                                                                      prop_name_p,
+                                                                      ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE,
+                                                                      NULL);
+
+    value_p->value = ecma_copy_value_if_not_object (value);
+  }
+  else
+  {
+    ecma_named_data_property_assign_value (internal_object_p, ECMA_PROPERTY_VALUE_PTR (property_p), value);
+  }
+
+  // return true;
+}
+
 /** Compact bytecode define */
 #define CBC_OPCODE(arg1, arg2, arg3, arg4) arg4,
 
@@ -2020,11 +2110,19 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_ASSIGN_PROP_THIS_PRIVATE:
         {
+          vm_op_set_private_field (frame_ctx_p->this_binding, right_value, left_value);
           goto free_both_values;
         }
         case VM_OC_PRIVATE_PROP_GET:
         {
-          *stack_top_p++ = ECMA_VALUE_UNDEFINED;
+          // TODO: this should be checked in "vm_op_get_private_field ()"
+          if (frame_ctx_p->this_binding != left_value)
+          {
+            goto error;
+          }
+
+          result = vm_op_get_private_field (left_value, right_value);
+          *stack_top_p++ = result;
           goto free_both_values;
         }
         case VM_OC_PRIVATE_PROP_IN:

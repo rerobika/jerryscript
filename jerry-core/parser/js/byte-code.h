@@ -611,7 +611,6 @@
               CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
               0,                                                                                                       \
               VM_OC_SET_PRIVATE_METHOD | VM_OC_GET_LITERAL_LITERAL)                                                    \
-                                                                                                                       \
   CBC_OPCODE (CBC_EXT_ASSIGN_PROP_THIS_PRIVATE_LITERAL,                                                                \
               CBC_HAS_LITERAL_ARG,                                                                                     \
               -1,                                                                                                      \
