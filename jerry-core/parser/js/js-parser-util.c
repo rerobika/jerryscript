@@ -868,6 +868,32 @@ parser_reverse_class_fields (parser_context_t *context_p, /**< context */
 } /* parser_reverse_class_fields */
 
 /**
+ * Find private identifier in nested scopes
+ */
+static bool
+find_private_identifier (parser_context_t *context_p, parser_private_fields_t *private_fields_p)
+{
+  if (private_fields_p == NULL)
+  {
+    return false;
+  }
+
+  scanner_class_private_member_t *iter = private_fields_p->private_ident_pool;
+
+  while (iter != NULL)
+  {
+    if (lexer_compare_identifiers (context_p, &context_p->token.lit_location, &iter->loc))
+    {
+      return true;
+    }
+
+    iter = iter->prev_p;
+  }
+
+  return find_private_identifier (context_p, private_fields_p->prev_p);
+}
+
+/**
  * Check if private field is declared
  */
 bool
@@ -883,19 +909,11 @@ is_private_field_declared (parser_context_t *context_p)
     return true;
   }
 
-  scanner_class_private_member_t *iter = context_p->private_fields_p->private_ident_pool;
+  // scanner_class_private_member_t *iter = context_p->private_fields_p->private_ident_pool;
+  parser_private_fields_t *private_fields_p = context_p->private_fields_p;
 
-  while (iter != NULL)
-  {
-    if (lexer_compare_identifiers (context_p, &context_p->token.lit_location, &iter->loc))
-    {
-      return true;
-    }
+  return find_private_identifier (context_p, private_fields_p);
 
-    iter = iter->prev_p;
-  }
-
-  return false;
 } /* is_private_field_declared */
 
 #endif /* JERRY_ESNEXT */
