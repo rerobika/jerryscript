@@ -132,6 +132,7 @@ typedef enum
   VM_OC_APPEND_ARRAY, /**< append array */
   VM_OC_IDENT_REFERENCE, /**< ident reference */
   VM_OC_PROP_REFERENCE, /**< prop reference */
+  VM_OC_PROP_CALL_REFERENCE, /**< prop call reference */
   VM_OC_PROP_GET, /**< prop get */
 
   /* These eight opcodes must be in this order. */
@@ -159,6 +160,7 @@ typedef enum
 
   VM_OC_EVAL, /**< eval */
   VM_OC_CALL, /**< call */
+  VM_OC_CALL_PROP, /**< call property method */
   VM_OC_NEW, /**< new */
   VM_OC_RESOLVE_BASE_FOR_CALL, /**< resolve base value before call */
   VM_OC_ERROR, /**< error while the vm_loop is suspended */
@@ -475,6 +477,7 @@ typedef enum
 {
   VM_NO_EXEC_OP, /**< do nothing */
   VM_EXEC_CALL, /**< invoke a function */
+  VM_EXEC_CALL_PROP, /**< invoke a method */
   VM_EXEC_SUPER_CALL, /**< invoke a function through 'super' keyword */
   VM_EXEC_SPREAD_OP, /**< call/construct operation with spreaded argument list */
   VM_EXEC_RETURN, /**< return with the completion value without freeing registers */

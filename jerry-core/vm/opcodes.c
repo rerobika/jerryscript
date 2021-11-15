@@ -1442,7 +1442,6 @@ opfunc_form_super_reference (ecma_value_t **vm_stack_top_p, /**< current vm stac
   if (opcode == CBC_EXT_SUPER_PROP_LITERAL_REFERENCE || opcode == CBC_EXT_SUPER_PROP_REFERENCE)
   {
     *stack_top_p++ = ecma_copy_value (frame_ctx_p->this_binding);
-    *stack_top_p++ = ECMA_VALUE_UNDEFINED;
   }
 
   *stack_top_p++ = result;

@@ -283,8 +283,8 @@ typedef struct
 #define PARSER_PUSH_PROP_TO_PUSH_PROP_REFERENCE(opcode) \
   (uint16_t) ((opcode) + (CBC_PUSH_PROP_REFERENCE - CBC_PUSH_PROP))
 
-#define PARSER_PUSH_PROP_REFERENCE_TO_PUSH_PROP(opcode) \
-  (uint16_t) ((opcode) - (CBC_PUSH_PROP_REFERENCE - CBC_PUSH_PROP))
+#define PARSER_PUSH_PROP_TO_PUSH_PROP_CALL_REFERENCE(opcode) \
+  (uint16_t) ((opcode) + (CBC_PUSH_PROP_CALL_REFERENCE - CBC_PUSH_PROP))
 
 #define PARSER_GET_LITERAL(literal_index) \
   ((lexer_literal_t *) parser_list_get (&context_p->literal_pool, (literal_index)))

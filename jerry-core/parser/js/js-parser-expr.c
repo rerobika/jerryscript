@@ -2444,7 +2444,7 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
           if (PARSER_IS_PUSH_PROP (context_p->last_cbc_opcode))
           {
             opcode = CBC_CALL_PROP;
-            context_p->last_cbc_opcode = PARSER_PUSH_PROP_TO_PUSH_PROP_REFERENCE (context_p->last_cbc_opcode);
+            context_p->last_cbc_opcode = PARSER_PUSH_PROP_TO_PUSH_PROP_CALL_REFERENCE (context_p->last_cbc_opcode);
           }
 #if JERRY_ESNEXT
           else if (context_p->last_cbc_opcode == PARSER_TO_EXT_OPCODE (CBC_EXT_PUSH_SUPER_CONSTRUCTOR))
@@ -2632,10 +2632,6 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
           }
           if (opcode == CBC_CALL_PROP)
           {
-            parser_flush_cbc (context_p);
-            /* Manually adjusting stack usage. */
-            JERRY_ASSERT (context_p->stack_depth > 0);
-            context_p->stack_depth--;
             parser_emit_cbc (context_p, CBC_CALL2_PROP);
             continue;
           }
