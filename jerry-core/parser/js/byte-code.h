@@ -281,6 +281,7 @@
               1,                                                                                                    \
               VM_OC_PROP_GET | VM_OC_GET_THIS_LITERAL | VM_OC_PUT_STACK)                                            \
   CBC_OPCODE (CBC_PUSH_IDENT_REFERENCE, CBC_HAS_LITERAL_ARG, 3, VM_OC_IDENT_REFERENCE | VM_OC_PUT_STACK)            \
+  CBC_OPCODE (CBC_PUSH_REG_IDENT_REFERENCE, CBC_HAS_LITERAL_ARG, 3, VM_OC_REG_IDENT_REFERENCE | VM_OC_PUT_STACK)    \
   /* Note: These 4 opcodes must me in this order */                                                                 \
   CBC_OPCODE (CBC_PUSH_PROP_REFERENCE, CBC_NO_FLAG, 1, VM_OC_PROP_REFERENCE | VM_OC_PUT_STACK)                      \
   CBC_OPCODE (CBC_PUSH_PROP_LITERAL_REFERENCE,                                                                      \

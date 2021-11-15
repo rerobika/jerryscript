@@ -197,29 +197,43 @@ static void
 parser_emit_ident_reference (parser_context_t *context_p, /**< context */
                              uint16_t opcode) /* opcode */
 {
-  if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
-  {
-    context_p->last_cbc_opcode = opcode;
-    return;
-  }
-
   uint16_t literal_index;
 
-  if (context_p->last_cbc_opcode == CBC_PUSH_TWO_LITERALS)
+  switch (context_p->last_cbc_opcode)
   {
-    context_p->last_cbc_opcode = CBC_PUSH_LITERAL;
-    literal_index = context_p->last_cbc.value;
+    case CBC_PUSH_LITERAL:
+    {
+      context_p->last_cbc_opcode = PARSER_CBC_UNAVAILABLE;
+      literal_index = context_p->last_cbc.literal_index;
+      break;
+    }
+    case CBC_PUSH_TWO_LITERALS:
+    {
+      context_p->last_cbc_opcode = CBC_PUSH_LITERAL;
+      literal_index = context_p->last_cbc.value;
+      break;
+    }
+    case CBC_PUSH_THREE_LITERALS:
+    {
+      context_p->last_cbc_opcode = CBC_PUSH_TWO_LITERALS;
+      literal_index = context_p->last_cbc.third_literal_index;
+      break;
+    }
+    case CBC_PUSH_THIS_LITERAL:
+    {
+      context_p->last_cbc_opcode = CBC_PUSH_THIS;
+      literal_index = context_p->last_cbc.literal_index;
+      break;
+    }
+    default:
+    {
+      JERRY_UNREACHABLE ();
+    }
   }
-  else if (context_p->last_cbc_opcode == CBC_PUSH_THIS_LITERAL)
+
+  if (opcode == CBC_PUSH_IDENT_REFERENCE && literal_index >= PARSER_REGISTER_START)
   {
-    context_p->last_cbc_opcode = CBC_PUSH_THIS;
-    literal_index = context_p->last_cbc.literal_index;
-  }
-  else
-  {
-    JERRY_ASSERT (context_p->last_cbc_opcode == CBC_PUSH_THREE_LITERALS);
-    context_p->last_cbc_opcode = CBC_PUSH_TWO_LITERALS;
-    literal_index = context_p->last_cbc.third_literal_index;
+    opcode = CBC_PUSH_REG_IDENT_REFERENCE;
   }
 
   parser_emit_cbc_literal (context_p, opcode, literal_index);

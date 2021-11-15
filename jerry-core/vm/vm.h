@@ -131,6 +131,7 @@ typedef enum
   VM_OC_PUSH_ELISON, /**< push elison */
   VM_OC_APPEND_ARRAY, /**< append array */
   VM_OC_IDENT_REFERENCE, /**< ident reference */
+  VM_OC_REG_IDENT_REFERENCE, /**< register stored ident reference */
   VM_OC_PROP_REFERENCE, /**< prop reference */
   VM_OC_PROP_GET, /**< prop get */
 

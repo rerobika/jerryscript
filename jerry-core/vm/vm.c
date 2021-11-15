@@ -2776,39 +2776,41 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
 #endif /* JERRY_ESNEXT */
           continue;
         }
+        case VM_OC_REG_IDENT_REFERENCE:
+        {
+          uint16_t literal_index;
+          READ_LITERAL_INDEX (literal_index);
+          JERRY_ASSERT (literal_index < register_end);
+
+          stack_top_p += 3;
+          stack_top_p[-1] = ecma_fast_copy_value (VM_GET_REGISTER (frame_ctx_p, literal_index));
+          stack_top_p[-2] = ecma_make_integer_value (literal_index);
+          stack_top_p[-3] = ECMA_VALUE_REGISTER_REF;
+          continue;
+        }
         case VM_OC_IDENT_REFERENCE:
         {
           uint16_t literal_index;
-
           READ_LITERAL_INDEX (literal_index);
+          JERRY_ASSERT (literal_index < ident_end && literal_index >= register_end);
 
-          JERRY_ASSERT (literal_index < ident_end);
+          ecma_string_t *name_p = ecma_get_string_from_value (literal_start_p[literal_index]);
 
-          if (literal_index < register_end)
+          ecma_object_t *ref_base_lex_env_p;
+
+          result = ecma_op_get_value_lex_env_base (frame_ctx_p->lex_env_p, &ref_base_lex_env_p, name_p);
+
+          if (ECMA_IS_VALUE_ERROR (result))
           {
-            *stack_top_p++ = ECMA_VALUE_REGISTER_REF;
-            *stack_top_p++ = ecma_make_integer_value (literal_index);
-            *stack_top_p++ = ecma_fast_copy_value (VM_GET_REGISTER (frame_ctx_p, literal_index));
+            goto error;
           }
-          else
-          {
-            ecma_string_t *name_p = ecma_get_string_from_value (literal_start_p[literal_index]);
 
-            ecma_object_t *ref_base_lex_env_p;
-
-            result = ecma_op_get_value_lex_env_base (frame_ctx_p->lex_env_p, &ref_base_lex_env_p, name_p);
-
-            if (ECMA_IS_VALUE_ERROR (result))
-            {
-              goto error;
-            }
-
-            ecma_ref_object (ref_base_lex_env_p);
-            ecma_ref_ecma_string (name_p);
-            *stack_top_p++ = ecma_make_object_value (ref_base_lex_env_p);
-            *stack_top_p++ = ecma_make_string_value (name_p);
-            *stack_top_p++ = result;
-          }
+          ecma_ref_object (ref_base_lex_env_p);
+          ecma_ref_ecma_string (name_p);
+          stack_top_p += 3;
+          stack_top_p[-1] = result;
+          stack_top_p[-2] = ecma_make_string_value (name_p);
+          stack_top_p[-3] = ecma_make_object_value (ref_base_lex_env_p);
           continue;
         }
         case VM_OC_PROP_GET:
