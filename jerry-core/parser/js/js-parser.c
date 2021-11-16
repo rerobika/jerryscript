@@ -15,14 +15,18 @@
 
 #include "ecma-exceptions.h"
 #include "ecma-extended-info.h"
+#include "ecma-globals.h"
 #include "ecma-helpers.h"
 #include "ecma-literal-storage.h"
 #include "ecma-module.h"
 
+#include "common.h"
 #include "debugger.h"
 #include "jcontext.h"
 #include "js-parser-internal.h"
+#include "js-scanner.h"
 #include "lit-char-helpers.h"
+#include <bits/stdint-uintn.h>
 
 #if JERRY_PARSER
 
@@ -1426,15 +1430,75 @@ parser_post_processing (parser_context_t *context_p) /**< context */
 #undef PARSER_NEXT_BYTE_UPDATE
 
 #if JERRY_ESNEXT
+void
+parser_resolve_private_identifier (parser_context_t *context_p) /**< context */
+{
+  parser_private_context_t *context_iter_p = context_p->private_context_p;
+
+  while (context_iter_p)
+  {
+    if (context_iter_p == NULL || !(context_iter_p->opts & SCANNER_PRIVATE_FIELD_ACTIVE))
+    {
+      parser_raise_error (context_p, PARSER_ERR_UNDECLARED_PRIVATE_FIELD);
+    }
+
+    if (!(context_iter_p->opts & SCANNER_SUCCESSFUL_CLASS_SCAN))
+    {
+      return;
+    }
+
+    parser_private_context_t *private_context_p = context_iter_p;
+
+    if (private_context_p == NULL)
+    {
+      parser_raise_error (context_p, PARSER_ERR_UNDECLARED_PRIVATE_FIELD);
+    }
+
+    scanner_class_private_member_t *ident_iter = private_context_p->members_p;
+    ecma_value_t *symbol_p = context_iter_p->symbols_p + 1;
+
+    while (ident_iter)
+    {
+      if (lexer_compare_identifiers (context_p, &context_p->token.lit_location, &ident_iter->loc))
+      {
+        lexer_construct_private_identifier_reference (context_p, *symbol_p);
+        return;
+      }
+
+      ident_iter = ident_iter->prev_p;
+      symbol_p++;
+    }
+
+    context_iter_p = context_iter_p->prev_p;
+  }
+
+  parser_raise_error (context_p, PARSER_ERR_UNDECLARED_PRIVATE_FIELD);
+}
+
 /**
  * Save private field context
  */
 void
-parser_save_private_context (parser_context_t *context_p, parser_private_fields_t *private_ctx_p)
+parser_save_private_context (parser_context_t *context_p,
+                             parser_private_context_t *private_ctx_p,
+                             scanner_class_info_t *class_info_p)
 {
-  private_ctx_p->private_ident_pool = NULL;
-  private_ctx_p->prev_p = context_p->private_fields_p;
-  context_p->private_fields_p = private_ctx_p;
+  private_ctx_p->symbols_p = ecma_new_compact_collection ();
+
+  private_ctx_p->prev_p = context_p->private_context_p;
+  context_p->private_context_p = private_ctx_p;
+
+  scanner_class_private_member_t *iter = class_info_p->members;
+
+  while (iter)
+  {
+    lexer_construct_private_identifier (context_p, &iter->loc);
+    iter = iter->prev_p;
+  }
+
+  context_p->private_context_p->members_p = class_info_p->members;
+  context_p->private_context_p->opts = class_info_p->info.u8_arg;
+  class_info_p->members = NULL;
 } /* parser_save_private_context */
 
 /**
@@ -1443,12 +1507,13 @@ parser_save_private_context (parser_context_t *context_p, parser_private_fields_
 static void
 parser_free_private_fields (parser_context_t *context_p)
 {
-  parser_private_fields_t *iter = context_p->private_fields_p;
+  parser_private_context_t *iter = context_p->private_context_p;
 
   while (iter != NULL)
   {
-    parser_private_fields_t *prev_p = iter->prev_p;
-    scanner_release_private_fields (iter->private_ident_pool);
+    parser_private_context_t *prev_p = iter->prev_p;
+    scanner_release_private_fields (iter->members_p);
+    ecma_compact_collection_free (iter->symbols_p);
     iter = prev_p;
   }
 } /* parser_free_private_fields */
@@ -1457,11 +1522,11 @@ parser_free_private_fields (parser_context_t *context_p)
  * Restore contexts private fields
  */
 void
-parser_restore_private_context (parser_context_t *context_p, parser_private_fields_t *private_ctx_p)
+parser_restore_private_context (parser_context_t *context_p, parser_private_context_t *private_ctx_p)
 {
-  scanner_release_private_fields (context_p->private_fields_p->private_ident_pool);
-  context_p->private_fields_p = private_ctx_p->prev_p;
-
+  scanner_release_private_fields (context_p->private_context_p->members_p);
+  ecma_compact_collection_free (context_p->private_context_p->symbols_p);
+  context_p->private_context_p = private_ctx_p->prev_p;
 } /* parser_restore_private_context */
 #endif /* JERRY_ESNEXT */
 
@@ -2034,7 +2099,7 @@ parser_parse_source (void *source_p, /**< source code */
 #if JERRY_ESNEXT
   context.scope_stack_global_end = 0;
   context.tagged_template_literal_cp = JMEM_CP_NULL;
-  context.private_fields_p = NULL;
+  context.private_context_p = NULL;
 #endif /* JERRY_ESNEXT */
 
 #ifndef JERRY_NDEBUG

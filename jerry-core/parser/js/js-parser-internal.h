@@ -16,6 +16,7 @@
 #ifndef JS_PARSER_INTERNAL_H
 #define JS_PARSER_INTERNAL_H
 
+#include "ecma-globals.h"
 #include "ecma-module.h"
 
 #include "byte-code.h"
@@ -484,12 +485,13 @@ typedef struct
 /**
  * List of private field contexts
  */
-typedef struct parser_private_fields_t
+typedef struct parser_private_context_t
 {
-  scanner_class_private_member_t *private_ident_pool; /**< current private field context members */
-  struct parser_private_fields_t *prev_p; /**< previous private field context */
+  scanner_class_private_member_t *members_p; /**< current private field context members */
+  ecma_value_t *symbols_p; /**< current private field symbols */
+  struct parser_private_context_t *prev_p; /**< previous private field context */
   uint8_t opts; /**< options */
-} parser_private_fields_t;
+} parser_private_context_t;
 #endif /* JERRY_ESNEXT */
 
 /**
@@ -616,7 +618,7 @@ typedef struct
 #if JERRY_ESNEXT
   uint16_t scope_stack_global_end; /**< end of global declarations of a function */
   ecma_value_t tagged_template_literal_cp; /**< compessed pointer to the tagged template literal collection */
-  parser_private_fields_t *private_fields_p; /**< list of private field contexts */
+  parser_private_context_t *private_context_p; /**< private context */
 #endif /* JERRY_ESNEXT */
   uint8_t stack_top_uint8; /**< top byte stored on the stack */
 
@@ -790,6 +792,12 @@ const uint8_t *lexer_convert_literal_to_chars (parser_context_t *context_p,
                                                lexer_string_options_t opts);
 void lexer_expect_object_literal_id (parser_context_t *context_p, uint32_t ident_opts);
 lexer_literal_t *lexer_construct_unused_literal (parser_context_t *context_p);
+
+#if JERRY_ESNEXT
+void lexer_construct_private_identifier (parser_context_t *context_p, lexer_lit_location_t *lit_loc_p);
+void lexer_construct_private_identifier_reference (parser_context_t *context_p, ecma_value_t symbol);
+#endif /* JERRY_ESNEXT */
+
 void lexer_construct_literal_object (parser_context_t *context_p,
                                      const lexer_lit_location_t *lit_location_p,
                                      uint8_t literal_type);
@@ -826,8 +834,11 @@ void parser_parse_block_expression (parser_context_t *context_p, int options);
 void parser_parse_expression_statement (parser_context_t *context_p, int options);
 void parser_parse_expression (parser_context_t *context_p, int options);
 #if JERRY_ESNEXT
-void parser_save_private_context (parser_context_t *context_p, parser_private_fields_t *private_ctx_p);
-void parser_restore_private_context (parser_context_t *context_p, parser_private_fields_t *private_ctx_p);
+void parser_resolve_private_identifier (parser_context_t *context_p);
+void parser_save_private_context (parser_context_t *context_p,
+                                  parser_private_context_t *private_ctx_p,
+                                  scanner_class_info_t *class_info_p);
+void parser_restore_private_context (parser_context_t *context_p, parser_private_context_t *private_ctx_p);
 void parser_parse_class (parser_context_t *context_p, bool is_statement);
 void parser_parse_initializer (parser_context_t *context_p, parser_pattern_flags_t flags);
 void parser_parse_initializer_by_next_char (parser_context_t *context_p, parser_pattern_flags_t flags);

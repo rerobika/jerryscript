@@ -871,14 +871,14 @@ parser_reverse_class_fields (parser_context_t *context_p, /**< context */
  * Find private identifier in nested scopes
  */
 static bool
-find_private_identifier (parser_context_t *context_p, parser_private_fields_t *private_fields_p)
+find_private_identifier (parser_context_t *context_p, parser_private_context_t *private_context_p)
 {
-  if (private_fields_p == NULL)
+  if (private_context_p == NULL)
   {
     return false;
   }
 
-  scanner_class_private_member_t *iter = private_fields_p->private_ident_pool;
+  scanner_class_private_member_t *iter = private_context_p->members_p;
 
   while (iter != NULL)
   {
@@ -890,7 +890,7 @@ find_private_identifier (parser_context_t *context_p, parser_private_fields_t *p
     iter = iter->prev_p;
   }
 
-  return find_private_identifier (context_p, private_fields_p->prev_p);
+  return find_private_identifier (context_p, private_context_p->prev_p);
 }
 
 /**
@@ -899,20 +899,20 @@ find_private_identifier (parser_context_t *context_p, parser_private_fields_t *p
 bool
 is_private_field_declared (parser_context_t *context_p)
 {
-  if (context_p->private_fields_p == NULL || !(context_p->private_fields_p->opts & SCANNER_PRIVATE_FIELD_ACTIVE))
+  if (context_p->private_context_p == NULL || !(context_p->private_context_p->opts & SCANNER_PRIVATE_FIELD_ACTIVE))
   {
     return false;
   }
 
-  if (!(context_p->private_fields_p->opts & SCANNER_SUCCESSFUL_CLASS_SCAN))
+  if (!(context_p->private_context_p->opts & SCANNER_SUCCESSFUL_CLASS_SCAN))
   {
     return true;
   }
 
-  // scanner_class_private_member_t *iter = context_p->private_fields_p->private_ident_pool;
-  parser_private_fields_t *private_fields_p = context_p->private_fields_p;
+  // scanner_class_private_member_t *iter = context_p->private_context_p->private_ident_pool;
+  parser_private_context_t *private_context_p = context_p->private_context_p;
 
-  return find_private_identifier (context_p, private_fields_p);
+  return find_private_identifier (context_p, private_context_p);
 
 } /* is_private_field_declared */
 

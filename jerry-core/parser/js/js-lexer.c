@@ -13,13 +13,17 @@
  * limitations under the License.
  */
 
+#include "js-lexer.h"
+
 #include "ecma-alloc.h"
 #include "ecma-bigint.h"
 #include "ecma-function-object.h"
+#include "ecma-globals.h"
 #include "ecma-helpers.h"
 #include "ecma-literal-storage.h"
 #include "ecma-symbol-object.h"
 
+#include "common.h"
 #include "jcontext.h"
 #include "js-parser-internal.h"
 #include "lit-char-helpers.h"
@@ -2432,6 +2436,72 @@ lexer_construct_unused_literal (parser_context_t *context_p) /**< context */
   return literal_p;
 } /* lexer_construct_unused_literal */
 
+#if JERRY_ESNEXT
+void
+lexer_construct_private_identifier (parser_context_t *context_p, /**< context */
+                                    lexer_lit_location_t *lit_loc_p) /**< literal location */
+{
+  uint8_t local_byte_array[LEXER_MAX_LITERAL_LOCAL_BUFFER_SIZE];
+
+  const uint8_t *char_p = lexer_convert_literal_to_chars (context_p, lit_loc_p, local_byte_array, LEXER_STRING_NO_OPTS);
+
+  if (context_p->literal_count >= PARSER_MAXIMUM_NUMBER_OF_LITERALS)
+  {
+    parser_raise_error (context_p, PARSER_ERR_LITERAL_LIMIT_REACHED);
+  }
+
+  ecma_value_t descriptor =
+    ecma_find_or_create_literal_string (char_p,
+                                        lit_loc_p->length,
+                                        (lit_loc_p->status_flags & LEXER_LIT_LOCATION_IS_ASCII) != 0);
+  ecma_compact_collection_push_back (context_p->private_context_p->symbols_p, ecma_op_create_symbol (&descriptor, 1));
+
+  if (char_p == context_p->u.allocated_buffer_p)
+  {
+    parser_free_allocated_buffer (context_p);
+  }
+
+  JERRY_ASSERT (context_p->u.allocated_buffer_p == NULL);
+} /* lexer_construct_private_identifier */
+
+void
+lexer_construct_private_identifier_reference (parser_context_t *context_p, /**< context */
+                                              ecma_value_t symbol) /**< symbol */
+{
+  parser_list_iterator_t literal_iterator;
+  lexer_literal_t *literal_p;
+  uint32_t literal_index = 0;
+  parser_list_iterator_init (&context_p->literal_pool, &literal_iterator);
+
+  while ((literal_p = (lexer_literal_t *) parser_list_iterator_next (&literal_iterator)) != NULL)
+  {
+    if (literal_p->type == LEXER_PRIVATE_FIELD_LITERAL && literal_p->u.value == symbol)
+    {
+      context_p->lit_object.literal_p = literal_p;
+      context_p->lit_object.index = (uint16_t) literal_index;
+      return;
+    }
+
+    literal_index++;
+  }
+
+  JERRY_ASSERT (literal_index == context_p->literal_count);
+
+  if (literal_index >= PARSER_MAXIMUM_NUMBER_OF_LITERALS)
+  {
+    parser_raise_error (context_p, PARSER_ERR_LITERAL_LIMIT_REACHED);
+  }
+
+  literal_p = (lexer_literal_t *) parser_list_append (context_p, &context_p->literal_pool);
+  literal_p->type = LEXER_PRIVATE_FIELD_LITERAL;
+  literal_p->status_flags = 0;
+  literal_p->u.value = symbol;
+
+  context_p->lit_object.literal_p = literal_p;
+  context_p->lit_object.index = (uint16_t) context_p->literal_count++;
+} /* lexer_construct_private_identifier */
+#endif /* JERRY_ESNEXT */
+
 /**
  * Construct a literal object from an identifier.
  */
@@ -2466,8 +2536,8 @@ lexer_construct_literal_object (parser_context_t *context_p, /**< context */
 
   while ((literal_p = (lexer_literal_t *) parser_list_iterator_next (&literal_iterator)) != NULL)
   {
-    if (literal_type != LEXER_PRIVATE_FIELD_LITERAL && literal_p->type == literal_type
-        && literal_p->prop.length == length && memcmp (literal_p->u.char_p, char_p, length) == 0)
+    if (literal_p->type == literal_type && literal_p->prop.length == length
+        && memcmp (literal_p->u.char_p, char_p, length) == 0)
     {
       context_p->lit_object.literal_p = literal_p;
       context_p->lit_object.index = (uint16_t) literal_index;
@@ -2541,15 +2611,6 @@ lexer_construct_literal_object (parser_context_t *context_p, /**< context */
   if (lit_location_p->status_flags & LEXER_LIT_LOCATION_IS_ASCII)
   {
     literal_p->status_flags |= LEXER_FLAG_ASCII;
-  }
-
-  if (literal_type == LEXER_PRIVATE_FIELD_LITERAL)
-  {
-    printf ("USE THIS AS A BREAKPOINT\n");
-    /// TODO create symbol value in place
-    // similar to lit_value = ecma_find_or_create_literal_number (num); in num_obj creation
-    const ecma_value_t value = literal_index;
-    literal_p->u.value = ecma_op_create_symbol (&value, 1);
   }
 
   literal_p->status_flags = status_flags;
@@ -3037,7 +3098,7 @@ lexer_expect_identifier (parser_context_t *context_p, /**< context */
                          uint8_t literal_type) /**< literal type */
 {
   JERRY_ASSERT (literal_type == LEXER_STRING_LITERAL || literal_type == LEXER_IDENT_LITERAL
-                || literal_type == LEXER_NEW_IDENT_LITERAL || literal_type == LEXER_PRIVATE_FIELD_LITERAL);
+                || literal_type == LEXER_NEW_IDENT_LITERAL);
 
   lexer_skip_spaces (context_p);
   context_p->token.keyword_type = LEXER_EOS;
@@ -3292,7 +3353,7 @@ lexer_expect_object_literal_id (parser_context_t *context_p, /**< context */
 
     if (ident_opts & LEXER_OBJ_IDENT_CLASS_PRIVATE)
     {
-      lexer_construct_literal_object (context_p, &context_p->token.lit_location, LEXER_PRIVATE_FIELD_LITERAL);
+      parser_resolve_private_identifier (context_p);
       return;
     }
 #endif /* JERRY_ESNEXT */

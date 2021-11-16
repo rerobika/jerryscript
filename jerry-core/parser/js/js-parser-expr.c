@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#include "common.h"
 #include "js-parser-internal.h"
 
 #if JERRY_PARSER
@@ -526,8 +527,8 @@ parser_check_duplicated_private_field (parser_context_t *context_p, /**< context
                                        uint8_t opts) /**< options */
 {
   JERRY_ASSERT (context_p->token.type == LEXER_LITERAL);
-  JERRY_ASSERT (context_p->private_fields_p);
-  scanner_class_private_member_t *iter = context_p->private_fields_p->private_ident_pool;
+  JERRY_ASSERT (context_p->private_context_p);
+  scanner_class_private_member_t *iter = context_p->private_context_p->members_p;
 
   bool search_for_property = (opts & SCANNER_PRIVATE_FIELD_PROPERTY);
 
@@ -748,13 +749,15 @@ parser_parse_class_body (parser_context_t *context_p, /**< context */
 
         if (is_getter)
         {
-          opcode = is_static ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_GETTER : CBC_EXT_SET_STATIC_GETTER
-                             : is_private ? CBC_EXT_SET_PRIVATE_GETTER : CBC_EXT_SET_GETTER;
+          opcode = is_static    ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_GETTER : CBC_EXT_SET_STATIC_GETTER
+                   : is_private ? CBC_EXT_SET_PRIVATE_GETTER
+                                : CBC_EXT_SET_GETTER;
         }
         else
         {
-          opcode = is_static ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_SETTER : CBC_EXT_SET_STATIC_SETTER
-                             : is_private ? CBC_EXT_SET_PRIVATE_SETTER : CBC_EXT_SET_SETTER;
+          opcode = is_static    ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_SETTER : CBC_EXT_SET_STATIC_SETTER
+                   : is_private ? CBC_EXT_SET_PRIVATE_SETTER
+                                : CBC_EXT_SET_SETTER;
         }
       }
 
@@ -1065,21 +1068,17 @@ parser_parse_class (parser_context_t *context_p, /**< context */
   parser_class_literal_opts_t opts = PARSER_CLASS_LITERAL_NO_OPTS;
   scanner_info_t *scanner_info_p = context_p->next_scanner_info_p;
 
-  parser_private_fields_t private_ctx;
-  parser_save_private_context (context_p, &private_ctx);
-
   JERRY_ASSERT (scanner_info_p->source_p == context_p->source_p);
   JERRY_ASSERT (scanner_info_p->type == SCANNER_TYPE_CLASS_CONSTRUCTOR);
+
+  scanner_class_info_t *class_info_p = (scanner_class_info_t *) scanner_info_p;
+  parser_private_context_t private_ctx;
+  parser_save_private_context (context_p, &private_ctx, class_info_p);
 
   if (scanner_info_p->u8_arg & SCANNER_CONSTRUCTOR_EXPLICIT)
   {
     opts |= PARSER_CLASS_LITERAL_CTOR_PRESENT;
   }
-
-  scanner_class_info_t *class_info_p = (scanner_class_info_t *) scanner_info_p;
-  context_p->private_fields_p->private_ident_pool = class_info_p->members;
-  context_p->private_fields_p->opts = scanner_info_p->u8_arg;
-  class_info_p->members = NULL;
 
   scanner_release_next (context_p, sizeof (scanner_class_info_t));
 
@@ -1164,7 +1163,7 @@ parser_parse_class (parser_context_t *context_p, /**< context */
     parser_raise_error (context_p, PARSER_ERR_LEFT_BRACE_EXPECTED);
   }
 
-  context_p->private_fields_p->opts |= SCANNER_PRIVATE_FIELD_ACTIVE;
+  context_p->private_context_p->opts |= SCANNER_PRIVATE_FIELD_ACTIVE;
 
   /* ClassDeclaration is parsed. Continue with class body. */
   bool has_static_field = parser_parse_class_body (context_p, opts);
@@ -2100,12 +2099,7 @@ parser_parse_unary_expression (parser_context_t *context_p, /**< context */
         parser_raise_error (context_p, PARSER_ERR_INVALID_CHARACTER);
       }
 
-      if (!is_private_field_declared (context_p))
-      {
-        parser_raise_error (context_p, PARSER_ERR_UNDECLARED_PRIVATE_FIELD);
-      }
-      //////// ittene
-      lexer_construct_literal_object (context_p, &context_p->token.lit_location, LEXER_PRIVATE_FIELD_LITERAL);
+      parser_resolve_private_identifier (context_p);
 
       lexer_next_token (context_p);
 
@@ -2508,7 +2502,6 @@ static void
 parser_process_unary_expression (parser_context_t *context_p, /**< context */
                                  size_t grouping_level) /**< grouping level */
 {
-  uint8_t token_flags = LEXER_STRING_LITERAL;
   /* Parse postfix part of a primary expression. */
   while (true)
   {
@@ -2522,8 +2515,6 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
         parser_push_result (context_p);
 
 #if JERRY_ESNEXT
-        bool is_private = false;
-
         if (lexer_check_next_character (context_p, LIT_CHAR_HASHMARK))
         {
           lexer_next_token (context_p);
@@ -2533,31 +2524,23 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
             parser_raise_error (context_p, PARSER_ERR_UNEXPECTED_PRIVATE_FIELD);
           }
 
-          is_private = true;
-          context_p->token.flags |= LEXER_NO_SKIP_SPACES;
-          token_flags = LEXER_PRIVATE_FIELD_LITERAL;
-        }
-#endif /* JERRY_ESNEXT */
-        lexer_expect_identifier (context_p, token_flags);
-
-        JERRY_ASSERT (context_p->token.type == LEXER_LITERAL
-                      && (context_p->lit_object.literal_p->type == LEXER_STRING_LITERAL
-                          || context_p->lit_object.literal_p->type == LEXER_PRIVATE_FIELD_LITERAL));
-        context_p->token.lit_location.type = LEXER_STRING_LITERAL;
-
-#if JERRY_ESNEXT
-        if (is_private)
-        {
-          if (!is_private_field_declared (context_p))
+          if (!lexer_scan_private_identifier (context_p))
           {
-            parser_raise_error (context_p, PARSER_ERR_UNDECLARED_PRIVATE_FIELD);
+            parser_raise_error (context_p, PARSER_ERR_IDENTIFIER_EXPECTED);
           }
+
+          parser_resolve_private_identifier (context_p);
 
           parser_emit_cbc_ext_literal (context_p, CBC_EXT_PUSH_PRIVATE_PROP_LITERAL, context_p->lit_object.index);
           lexer_next_token (context_p);
           continue;
         }
 #endif /* JERRY_ESNEXT */
+        lexer_expect_identifier (context_p, LEXER_STRING_LITERAL);
+
+        JERRY_ASSERT (context_p->token.type == LEXER_LITERAL
+                      && context_p->lit_object.literal_p->type == LEXER_STRING_LITERAL);
+        context_p->token.lit_location.type = LEXER_STRING_LITERAL;
 
         if (context_p->last_cbc_opcode == CBC_PUSH_LITERAL)
         {
