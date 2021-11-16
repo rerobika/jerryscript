@@ -122,10 +122,13 @@ util_print_bigint (ecma_value_t bigint) /**< bigint to print */
 
 #endif /* JERRY_BUILTIN_BIGINT */
 
+/**
+ * Debug util to print private identifier
+ */
 static void
-util_print_private_field (ecma_value_t p_field)
+util_print_private_field (ecma_value_t field)
 {
-  ecma_string_t *symbol_p = ecma_get_symbol_from_value (p_field);
+  ecma_string_t *symbol_p = ecma_get_symbol_from_value (field);
   ecma_value_t desc = ecma_get_symbol_description (symbol_p);
 
   ecma_string_t *desc_p = ecma_get_string_from_value (desc);
@@ -136,7 +139,7 @@ util_print_private_field (ecma_value_t p_field)
 
   util_print_chars (buffer_p, size);
   jmem_heap_free_block (buffer_p, string_size);
-}
+} /* util_print_private_field */
 
 /**
  * Print literal

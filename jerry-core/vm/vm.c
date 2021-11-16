@@ -262,7 +262,8 @@ vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
   }
 
   return ecma_copy_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
-}
+} /* vm_op_get_private_field */
+
 /**
  * Set private field of class
  */
@@ -272,7 +273,6 @@ vm_op_set_private_field (ecma_value_t base, /**< this object */
                          ecma_value_t value) /**< ecma value */
 {
   ecma_object_t *obj_p = ecma_get_object_from_value (base);
-
   ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
 
   ecma_property_t *property_p = ecma_find_named_property (obj_p, internal_string_p);
@@ -307,7 +307,7 @@ vm_op_set_private_field (ecma_value_t base, /**< this object */
                                                                     NULL);
 
   value_p->value = ecma_copy_value_if_not_object (value);
-}
+} /* vm_op_set_private_field */
 
 /** Compact bytecode define */
 #define CBC_OPCODE(arg1, arg2, arg3, arg4) arg4,

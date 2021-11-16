@@ -891,7 +891,7 @@ find_private_identifier (parser_context_t *context_p, parser_private_context_t *
   }
 
   return find_private_identifier (context_p, private_context_p->prev_p);
-}
+} /* find_private_identifier */
 
 /**
  * Check if private field is declared

@@ -1430,6 +1430,9 @@ parser_post_processing (parser_context_t *context_p) /**< context */
 #undef PARSER_NEXT_BYTE_UPDATE
 
 #if JERRY_ESNEXT
+/**
+ * Resolve private identifier
+ */
 void
 parser_resolve_private_identifier (parser_context_t *context_p) /**< context */
 {
@@ -1473,7 +1476,7 @@ parser_resolve_private_identifier (parser_context_t *context_p) /**< context */
   }
 
   parser_raise_error (context_p, PARSER_ERR_UNDECLARED_PRIVATE_FIELD);
-}
+} /* parser_resolve_private_identifier */
 
 /**
  * Save private field context

@@ -749,15 +749,13 @@ parser_parse_class_body (parser_context_t *context_p, /**< context */
 
         if (is_getter)
         {
-          opcode = is_static    ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_GETTER : CBC_EXT_SET_STATIC_GETTER
-                   : is_private ? CBC_EXT_SET_PRIVATE_GETTER
-                                : CBC_EXT_SET_GETTER;
+          opcode = is_static ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_GETTER : CBC_EXT_SET_STATIC_GETTER
+                             : is_private ? CBC_EXT_SET_PRIVATE_GETTER : CBC_EXT_SET_GETTER;
         }
         else
         {
-          opcode = is_static    ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_SETTER : CBC_EXT_SET_STATIC_SETTER
-                   : is_private ? CBC_EXT_SET_PRIVATE_SETTER
-                                : CBC_EXT_SET_SETTER;
+          opcode = is_static ? is_private ? CBC_EXT_SET_STATIC_PRIVATE_SETTER : CBC_EXT_SET_STATIC_SETTER
+                             : is_private ? CBC_EXT_SET_PRIVATE_SETTER : CBC_EXT_SET_SETTER;
         }
       }
 
