@@ -248,6 +248,13 @@ util_print_literal_value (ecma_compiled_code_t *compiled_code_p, /**< compiled c
     util_print_bigint (value);
   }
 #endif /* JERRY_BUILTIN_BIGINT */
+#if JERRY_ESNEXT
+  else if (ecma_is_value_symbol (value))
+  {
+    // util_print_private_field
+    JERRY_DEBUG_MSG ("private_field( *debug msg not implemented yet* )");
+  }
+#endif /* JERRY_ESNEXT */
   else
   {
     ecma_string_t *literal_p = ecma_get_string_from_value (value);

@@ -18,6 +18,7 @@
 #include "ecma-function-object.h"
 #include "ecma-helpers.h"
 #include "ecma-literal-storage.h"
+#include "ecma-symbol-object.h"
 
 #include "jcontext.h"
 #include "js-parser-internal.h"
@@ -2455,7 +2456,8 @@ lexer_construct_literal_object (parser_context_t *context_p, /**< context */
     literal_type = LEXER_IDENT_LITERAL;
   }
 
-  JERRY_ASSERT (literal_type == LEXER_IDENT_LITERAL || literal_type == LEXER_STRING_LITERAL);
+  JERRY_ASSERT (literal_type == LEXER_IDENT_LITERAL || literal_type == LEXER_STRING_LITERAL
+                || literal_type == LEXER_PRIVATE_FIELD_LITERAL);
 
   JERRY_ASSERT (literal_type != LEXER_IDENT_LITERAL || length <= PARSER_MAXIMUM_IDENT_LENGTH);
   JERRY_ASSERT (literal_type != LEXER_STRING_LITERAL || length <= PARSER_MAXIMUM_STRING_LENGTH);
@@ -2464,8 +2466,8 @@ lexer_construct_literal_object (parser_context_t *context_p, /**< context */
 
   while ((literal_p = (lexer_literal_t *) parser_list_iterator_next (&literal_iterator)) != NULL)
   {
-    if (literal_p->type == literal_type && literal_p->prop.length == length
-        && memcmp (literal_p->u.char_p, char_p, length) == 0)
+    if (literal_type != LEXER_PRIVATE_FIELD_LITERAL && literal_p->type == literal_type
+        && literal_p->prop.length == length && memcmp (literal_p->u.char_p, char_p, length) == 0)
     {
       context_p->lit_object.literal_p = literal_p;
       context_p->lit_object.index = (uint16_t) literal_index;
@@ -2539,6 +2541,15 @@ lexer_construct_literal_object (parser_context_t *context_p, /**< context */
   if (lit_location_p->status_flags & LEXER_LIT_LOCATION_IS_ASCII)
   {
     literal_p->status_flags |= LEXER_FLAG_ASCII;
+  }
+
+  if (literal_type == LEXER_PRIVATE_FIELD_LITERAL)
+  {
+    printf ("USE THIS AS A BREAKPOINT\n");
+    /// TODO create symbol value in place
+    // similar to lit_value = ecma_find_or_create_literal_number (num); in num_obj creation
+    const ecma_value_t value = literal_index;
+    literal_p->u.value = ecma_op_create_symbol (&value, 1);
   }
 
   literal_p->status_flags = status_flags;
@@ -3026,7 +3037,7 @@ lexer_expect_identifier (parser_context_t *context_p, /**< context */
                          uint8_t literal_type) /**< literal type */
 {
   JERRY_ASSERT (literal_type == LEXER_STRING_LITERAL || literal_type == LEXER_IDENT_LITERAL
-                || literal_type == LEXER_NEW_IDENT_LITERAL);
+                || literal_type == LEXER_NEW_IDENT_LITERAL || literal_type == LEXER_PRIVATE_FIELD_LITERAL);
 
   lexer_skip_spaces (context_p);
   context_p->token.keyword_type = LEXER_EOS;
@@ -3276,6 +3287,12 @@ lexer_expect_object_literal_id (parser_context_t *context_p, /**< context */
 #if JERRY_ESNEXT
     if (ident_opts & LEXER_OBJ_IDENT_CLASS_IDENTIFIER)
     {
+      return;
+    }
+
+    if (ident_opts & LEXER_OBJ_IDENT_CLASS_PRIVATE)
+    {
+      lexer_construct_literal_object (context_p, &context_p->token.lit_location, LEXER_PRIVATE_FIELD_LITERAL);
       return;
     }
 #endif /* JERRY_ESNEXT */

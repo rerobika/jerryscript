@@ -2104,8 +2104,8 @@ parser_parse_unary_expression (parser_context_t *context_p, /**< context */
       {
         parser_raise_error (context_p, PARSER_ERR_UNDECLARED_PRIVATE_FIELD);
       }
-
-      lexer_construct_literal_object (context_p, &context_p->token.lit_location, LEXER_STRING_LITERAL);
+      //////// ittene
+      lexer_construct_literal_object (context_p, &context_p->token.lit_location, LEXER_PRIVATE_FIELD_LITERAL);
 
       lexer_next_token (context_p);
 
@@ -2508,6 +2508,7 @@ static void
 parser_process_unary_expression (parser_context_t *context_p, /**< context */
                                  size_t grouping_level) /**< grouping level */
 {
+  uint8_t token_flags = LEXER_STRING_LITERAL;
   /* Parse postfix part of a primary expression. */
   while (true)
   {
@@ -2534,13 +2535,14 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
 
           is_private = true;
           context_p->token.flags |= LEXER_NO_SKIP_SPACES;
+          token_flags = LEXER_PRIVATE_FIELD_LITERAL;
         }
 #endif /* JERRY_ESNEXT */
-
-        lexer_expect_identifier (context_p, LEXER_STRING_LITERAL);
+        lexer_expect_identifier (context_p, token_flags);
 
         JERRY_ASSERT (context_p->token.type == LEXER_LITERAL
-                      && context_p->lit_object.literal_p->type == LEXER_STRING_LITERAL);
+                      && (context_p->lit_object.literal_p->type == LEXER_STRING_LITERAL
+                          || context_p->lit_object.literal_p->type == LEXER_PRIVATE_FIELD_LITERAL));
         context_p->token.lit_location.type = LEXER_STRING_LITERAL;
 
 #if JERRY_ESNEXT

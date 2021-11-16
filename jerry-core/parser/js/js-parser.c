@@ -94,6 +94,7 @@ parser_compute_indicies (parser_context_t *context_p, /**< context */
         const_literal_count++;
         break;
       }
+      case LEXER_PRIVATE_FIELD_LITERAL:
       case LEXER_NUMBER_LITERAL:
       {
         const_literal_count++;
@@ -163,6 +164,7 @@ parser_compute_indicies (parser_context_t *context_p, /**< context */
         }
         break;
       }
+      case LEXER_PRIVATE_FIELD_LITERAL:
       case LEXER_STRING_LITERAL:
       case LEXER_NUMBER_LITERAL:
       {
@@ -231,6 +233,7 @@ parser_init_literal_pool (parser_context_t *context_p, /**< context */
         literal_pool_p[literal_p->prop.index] = lit_value;
         break;
       }
+      case LEXER_PRIVATE_FIELD_LITERAL:
       case LEXER_NUMBER_LITERAL:
       {
         JERRY_ASSERT (literal_p->prop.index >= context_p->register_count);
@@ -2821,11 +2824,18 @@ parser_parse_class_fields (parser_context_t *context_p) /**< context */
     if (class_field_type & PARSER_CLASS_FIELD_NORMAL)
     {
       scanner_set_location (context_p, &range.start_location);
+      uint32_t ident_opts = LEXER_OBJ_IDENT_ONLY_IDENTIFIERS;
       is_private = context_p->source_p[-1] == LIT_CHAR_HASHMARK;
+
+      if (is_private)
+      {
+        ident_opts |= LEXER_OBJ_IDENT_CLASS_PRIVATE;
+      }
+
       context_p->source_end_p = source_end_p;
       scanner_seek (context_p);
 
-      lexer_expect_object_literal_id (context_p, LEXER_OBJ_IDENT_ONLY_IDENTIFIERS);
+      lexer_expect_object_literal_id (context_p, ident_opts);
 
       literal_index = context_p->lit_object.index;
 

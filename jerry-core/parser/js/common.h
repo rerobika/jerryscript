@@ -58,6 +58,7 @@ typedef enum
                                  used by the byte code generator. */
   LEXER_NEW_IDENT_LITERAL = 6, /**< new local variable, can only be
                                     used by the byte code generator. */
+  LEXER_PRIVATE_FIELD_LITERAL = 7, /** private field literal */
 } lexer_literal_type_t;
 
 /**
