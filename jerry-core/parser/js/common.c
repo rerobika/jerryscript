@@ -19,6 +19,7 @@
 #include "ecma-bigint.h"
 #include "ecma-extended-info.h"
 #include "ecma-helpers.h"
+#include "ecma-symbol-object.h"
 
 #include "js-parser-internal.h"
 #include "lit-char-helpers.h"
@@ -120,6 +121,22 @@ util_print_bigint (ecma_value_t bigint) /**< bigint to print */
 } /* util_print_bigint */
 
 #endif /* JERRY_BUILTIN_BIGINT */
+
+static void
+util_print_private_field (ecma_value_t p_field)
+{
+  ecma_string_t *symbol_p = ecma_get_symbol_from_value (p_field);
+  ecma_value_t desc = ecma_get_symbol_description (symbol_p);
+
+  ecma_string_t *desc_p = ecma_get_string_from_value (desc);
+  const lit_utf8_size_t string_size = ecma_string_get_size (desc_p);
+
+  lit_utf8_byte_t *buffer_p = (uint8_t *) jmem_heap_alloc_block (string_size);
+  lit_utf8_size_t size = ecma_string_copy_to_cesu8_buffer (desc_p, (lit_utf8_byte_t *) buffer_p, string_size);
+
+  util_print_chars (buffer_p, size);
+  jmem_heap_free_block (buffer_p, string_size);
+}
 
 /**
  * Print literal
@@ -251,7 +268,9 @@ util_print_literal_value (ecma_compiled_code_t *compiled_code_p, /**< compiled c
 #if JERRY_ESNEXT
   else if (ecma_is_value_symbol (value))
   {
-    JERRY_DEBUG_MSG ("private_field( *debug msg not implemented yet* )");
+    JERRY_DEBUG_MSG ("private(");
+    util_print_private_field (value);
+    JERRY_DEBUG_MSG (")");
   }
 #endif /* JERRY_ESNEXT */
   else
