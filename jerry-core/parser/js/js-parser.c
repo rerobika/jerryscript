@@ -1513,7 +1513,7 @@ parser_free_private_fields (parser_context_t *context_p)
   {
     parser_private_context_t *prev_p = iter->prev_p;
     scanner_release_private_fields (iter->members_p);
-    ecma_compact_collection_free (iter->symbols_p);
+    ecma_compact_collection_destroy (iter->symbols_p);
     iter = prev_p;
   }
 } /* parser_free_private_fields */
@@ -1525,7 +1525,7 @@ void
 parser_restore_private_context (parser_context_t *context_p, parser_private_context_t *private_ctx_p)
 {
   scanner_release_private_fields (context_p->private_context_p->members_p);
-  ecma_compact_collection_free (context_p->private_context_p->symbols_p);
+  ecma_compact_collection_destroy (context_p->private_context_p->symbols_p);
   context_p->private_context_p = private_ctx_p->prev_p;
 } /* parser_restore_private_context */
 #endif /* JERRY_ESNEXT */

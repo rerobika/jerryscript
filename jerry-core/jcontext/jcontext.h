@@ -139,6 +139,7 @@ struct jerry_context_t
   jmem_cpointer_t string_list_first_cp; /**< first item of the literal string list */
 #if JERRY_ESNEXT
   jmem_cpointer_t symbol_list_first_cp; /**< first item of the global symbol list */
+  jmem_cpointer_t private_symbol_list_first_cp; /**< first item of the private symbol list */
 #endif /* JERRY_ESNEXT */
   jmem_cpointer_t number_list_first_cp; /**< first item of the literal number list */
 #if JERRY_BUILTIN_BIGINT

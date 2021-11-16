@@ -268,7 +268,7 @@ util_print_literal_value (ecma_compiled_code_t *compiled_code_p, /**< compiled c
 #if JERRY_ESNEXT
   else if (ecma_is_value_symbol (value))
   {
-    JERRY_DEBUG_MSG ("private(");
+    JERRY_DEBUG_MSG ("private( %p", (void *) ecma_get_prop_name_from_value (value));
     util_print_private_field (value);
     JERRY_DEBUG_MSG (")");
   }

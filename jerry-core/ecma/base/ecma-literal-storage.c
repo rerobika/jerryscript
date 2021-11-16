@@ -148,6 +148,7 @@ ecma_finalize_lit_storage (void)
 {
 #if JERRY_ESNEXT
   ecma_free_symbol_list (JERRY_CONTEXT (symbol_list_first_cp));
+  ecma_free_symbol_list (JERRY_CONTEXT (private_symbol_list_first_cp));
 #endif /* JERRY_ESNEXT */
   ecma_free_string_list (JERRY_CONTEXT (string_list_first_cp));
   ecma_free_number_list (JERRY_CONTEXT (number_list_first_cp));
@@ -155,6 +156,65 @@ ecma_finalize_lit_storage (void)
   ecma_free_bigint_list (JERRY_CONTEXT (bigint_list_first_cp));
 #endif /* JERRY_BUILTIN_BIGINT */
 } /* ecma_finalize_lit_storage */
+
+#if JERRY_ESNEXT
+/**
+ * TODO
+ *
+ * @return ecma_string_t compressed pointer
+ */
+ecma_value_t
+ecma_find_or_create_private_symbol (ecma_value_t descriptor)
+{
+  ecma_string_t *private_symbol_p = ecma_new_symbol_from_descriptor_string (ecma_copy_value (descriptor));
+
+  jmem_cpointer_t private_symbol_list_cp = JERRY_CONTEXT (private_symbol_list_first_cp);
+  jmem_cpointer_t *empty_cpointer_p = NULL;
+
+  while (private_symbol_list_cp != JMEM_CP_NULL)
+  {
+    ecma_lit_storage_item_t *private_symbol_list_p =
+      JMEM_CP_GET_NON_NULL_POINTER (ecma_lit_storage_item_t, private_symbol_list_cp);
+
+    for (int i = 0; i < ECMA_LIT_STORAGE_VALUE_COUNT; i++)
+    {
+      if (private_symbol_list_p->values[i] == JMEM_CP_NULL)
+      {
+        if (empty_cpointer_p == NULL)
+        {
+          empty_cpointer_p = private_symbol_list_p->values + i;
+        }
+      }
+    }
+
+    private_symbol_list_cp = private_symbol_list_p->next_cp;
+  }
+
+  jmem_cpointer_t result;
+  JMEM_CP_SET_NON_NULL_POINTER (result, private_symbol_p);
+
+  if (empty_cpointer_p != NULL)
+  {
+    *empty_cpointer_p = result;
+    return ecma_make_symbol_value (private_symbol_p);
+  }
+
+  ecma_lit_storage_item_t *new_item_p;
+  new_item_p = (ecma_lit_storage_item_t *) jmem_pools_alloc (sizeof (ecma_lit_storage_item_t));
+
+  new_item_p->values[0] = result;
+  for (int i = 1; i < ECMA_LIT_STORAGE_VALUE_COUNT; i++)
+  {
+    new_item_p->values[i] = JMEM_CP_NULL;
+  }
+
+  new_item_p->next_cp = JERRY_CONTEXT (private_symbol_list_first_cp);
+  JMEM_CP_SET_NON_NULL_POINTER (JERRY_CONTEXT (private_symbol_list_first_cp), new_item_p);
+
+  return ecma_make_symbol_value (private_symbol_p);
+} /* ecma_find_or_create_private_symbol */
+
+#endif /* JERRY_ESNEXT */
 
 /**
  * Find or create a literal string.

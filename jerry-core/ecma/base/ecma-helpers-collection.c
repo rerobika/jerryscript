@@ -418,6 +418,17 @@ ecma_compact_collection_free (ecma_value_t *compact_collection_p) /**< compact c
 } /* ecma_compact_collection_free */
 
 /**
+ * Destroy a compact collection
+ */
+void
+ecma_compact_collection_destroy (ecma_value_t *compact_collection_p) /**< compact collection */
+{
+  ecma_value_t size = ECMA_COMPACT_COLLECTION_GET_SIZE (compact_collection_p);
+
+  jmem_heap_free_block (compact_collection_p, size * sizeof (ecma_value_t));
+} /* ecma_compact_collection_destroy */
+
+/**
  * @}
  * @}
  */

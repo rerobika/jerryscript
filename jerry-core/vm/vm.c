@@ -250,7 +250,7 @@ vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
 
   if (property_p == NULL)
   {
-    return ecma_raise_type_error ("anyad");
+    return ecma_raise_type_error ("Internal obj NOPE");
   }
 
   ecma_object_t *internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
@@ -258,7 +258,7 @@ vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
 
   if (property_p == NULL)
   {
-    return ecma_raise_type_error ("anyad");
+    return ecma_raise_type_error ("Private prop NOPE");
   }
 
   return ecma_copy_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
