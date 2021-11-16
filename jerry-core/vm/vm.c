@@ -37,6 +37,7 @@
 
 #include "common.h"
 #include "jcontext.h"
+#include "jrt.h"
 #include "opcodes.h"
 #include "vm-stack.h"
 
@@ -245,26 +246,19 @@ vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
 
   ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
 
-  /*   if (ecma_op_object_is_fast_array (obj_p))
-    {
-      return jerry_return (ECMA_VALUE_UNDEFINED);
-    } */
-
-  // maybe not needed, bc. parser throws error on this case
   ecma_property_t *property_p = ecma_find_named_property (obj_p, internal_string_p);
 
   if (property_p == NULL)
   {
-    return ECMA_VALUE_UNDEFINED;
+    return ecma_raise_type_error ("anyad");
   }
 
-  // maybe faszom kivan, belepofázik ádám
   ecma_object_t *internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
   property_p = ecma_find_named_property (internal_object_p, ecma_get_prop_name_from_value (property));
 
   if (property_p == NULL)
   {
-    return ECMA_VALUE_UNDEFINED;
+    return ecma_raise_type_error ("anyad");
   }
 
   return ecma_copy_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
@@ -305,24 +299,14 @@ vm_op_set_private_field (ecma_value_t base, /**< this object */
 
   ecma_string_t *prop_name_p = ecma_get_prop_name_from_value (property);
 
-  // maybe not used
-  property_p = ecma_find_named_property (internal_object_p, prop_name_p);
+  JERRY_ASSERT (ecma_find_named_property (internal_object_p, prop_name_p) == NULL);
 
-  if (property_p == NULL)
-  {
-    ecma_property_value_t *value_p = ecma_create_named_data_property (internal_object_p,
-                                                                      prop_name_p,
-                                                                      ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE,
-                                                                      NULL);
+  ecma_property_value_t *value_p = ecma_create_named_data_property (internal_object_p,
+                                                                    prop_name_p,
+                                                                    ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE,
+                                                                    NULL);
 
-    value_p->value = ecma_copy_value_if_not_object (value);
-  }
-  else
-  {
-    ecma_named_data_property_assign_value (internal_object_p, ECMA_PROPERTY_VALUE_PTR (property_p), value);
-  }
-
-  // return true;
+  value_p->value = ecma_copy_value_if_not_object (value);
 }
 
 /** Compact bytecode define */
@@ -2115,13 +2099,13 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PRIVATE_PROP_GET:
         {
-          // TODO: this should be checked in "vm_op_get_private_field ()"
-          if (frame_ctx_p->this_binding != left_value)
+          result = vm_op_get_private_field (left_value, right_value);
+
+          if (ECMA_IS_VALUE_ERROR (result))
           {
             goto error;
           }
 
-          result = vm_op_get_private_field (left_value, right_value);
           *stack_top_p++ = result;
           goto free_both_values;
         }
