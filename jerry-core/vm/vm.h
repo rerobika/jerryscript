@@ -237,6 +237,7 @@ typedef enum
   VM_OC_BREAKPOINT_DISABLED, /**< disabled breakpoint for debugger */
 #endif /* JERRY_DEBUGGER */
 #if JERRY_ESNEXT
+  VM_OC_PRIVATE_PROP_REFERENCE, /* TODO */
   VM_OC_ASSIGN_PRIVATE, /**< assign to private field  */
   VM_OC_ASSIGN_PROP_THIS_PRIVATE, /**< init this.private field */
   VM_OC_PRIVATE_PROP_GET, /**< get private field */
@@ -331,6 +332,7 @@ typedef enum
   VM_OC_BREAKPOINT_DISABLED = VM_OC_NONE, /**< disabled breakpoint for debugger is unused */
 #endif /* !JERRY_DEBUGGER */
 #if !JERRY_ESNEXT
+  VM_OC_PRIVATE_PROP_REFERENCE = VM_OC_NONE, /* TODO */
   VM_OC_ASSIGN_PRIVATE = VM_OC_NONE, /**< assign to private field */
   VM_OC_ASSIGN_PROP_THIS_PRIVATE = VM_OC_NONE, /**< init this.private field */
   VM_OC_PRIVATE_PROP_GET = VM_OC_NONE, /**< get private field */

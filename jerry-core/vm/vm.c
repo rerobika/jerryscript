@@ -254,15 +254,16 @@ vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
   }
 
   ecma_object_t *internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
-  property_p = ecma_find_named_property (internal_object_p, ecma_get_prop_name_from_value (property));
+  ecma_value_t result = ecma_op_object_find (internal_object_p, ecma_get_prop_name_from_value (property));
 
-  if (property_p == NULL)
+  if (!ecma_is_value_found (result))
   {
     return ecma_raise_type_error ("Private prop NOPE");
   }
 
-  return ecma_copy_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
+  return result;
 } /* vm_op_get_private_field */
+
 /** TODO */
 static void
 vm_op_set_private_accessor (ecma_value_t base, /**< this object */
@@ -2187,7 +2188,6 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         {
           const int index = (int) (opcode_data >> VM_OC_NON_STATIC_SHIFT) - 2;
           vm_op_set_private_field (stack_top_p[index], right_value, left_value);
-
           goto free_both_values;
         }
         case VM_OC_PRIVATE_PROP_SETTER:
@@ -2201,6 +2201,19 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
           const int index = (int) (opcode_data >> VM_OC_NON_STATIC_SHIFT) - 2;
           vm_op_set_private_accessor (stack_top_p[index], left_value, ecma_get_object_from_value (right_value), NULL);
           goto free_both_values;
+        }
+        case VM_OC_PRIVATE_PROP_REFERENCE:
+        {
+          *stack_top_p++ = left_value;
+          result = vm_op_get_private_field (stack_top_p[-2], left_value);
+
+          if (ECMA_IS_VALUE_ERROR (result))
+          {
+            goto error;
+          }
+
+          *stack_top_p++ = result;
+          continue;
         }
         case VM_OC_INIT_CLASS:
         {

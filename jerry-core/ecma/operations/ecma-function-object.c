@@ -1668,6 +1668,8 @@ ecma_op_function_construct_constructor (ecma_object_t *func_obj_p, /**< Function
       return ret_value;
     }
 
+    ecma_op_set_private_prototype (new_this_object_p, proto_p);
+
     return new_this_value;
   }
 

@@ -2663,6 +2663,11 @@ parser_process_unary_expression (parser_context_t *context_p, /**< context */
             context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_SUPER_PROP_REFERENCE);
             opcode = CBC_CALL_PROP;
           }
+          else if (context_p->last_cbc_opcode == PARSER_TO_EXT_OPCODE (CBC_EXT_PUSH_PRIVATE_PROP_LITERAL))
+          {
+            context_p->last_cbc_opcode = PARSER_TO_EXT_OPCODE (CBC_EXT_PUSH_PRIVATE_PROP_LITERAL_REFERENCE);
+            opcode = CBC_CALL_PROP;
+          }
 #endif /* JERRY_ESNEXT */
           else if (JERRY_UNLIKELY (context_p->status_flags & PARSER_INSIDE_WITH)
                    && PARSER_IS_PUSH_LITERALS_WITH_THIS (context_p->last_cbc_opcode)
