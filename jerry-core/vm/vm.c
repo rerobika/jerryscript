@@ -309,6 +309,37 @@ vm_op_set_private_field (ecma_value_t base, /**< this object */
   value_p->value = ecma_copy_value_if_not_object (value);
 } /* vm_op_set_private_field */
 
+/**
+ * Private in
+ */
+static ecma_value_t
+vm_op_private_ident_in (ecma_value_t right, ecma_value_t property)
+{
+  if (!ecma_is_value_object (right))
+  {
+    return ecma_raise_type_error ("Cannot use 'in' operator to search in non object");
+  }
+  ecma_object_t *rref = ecma_get_object_from_value (right);
+  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
+
+  ecma_property_t *property_p = ecma_find_named_property (rref, internal_string_p);
+
+  if (property_p == NULL)
+  {
+    return ECMA_VALUE_FALSE;
+  }
+
+  ecma_object_t *internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
+  property_p = ecma_find_named_property (internal_object_p, ecma_get_prop_name_from_value (property));
+
+  if (property_p == NULL)
+  {
+    return ECMA_VALUE_FALSE;
+  }
+
+  return ECMA_VALUE_TRUE;
+} /* vm_op_private_ident_in */
+
 /** Compact bytecode define */
 #define CBC_OPCODE(arg1, arg2, arg3, arg4) arg4,
 
@@ -2111,7 +2142,8 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PRIVATE_PROP_IN:
         {
-          *stack_top_p++ = ECMA_VALUE_TRUE;
+          result = vm_op_private_ident_in (left_value, right_value);
+          *stack_top_p++ = result;
           goto free_both_values;
         }
         case VM_OC_SET_PRIVATE_METHOD:
