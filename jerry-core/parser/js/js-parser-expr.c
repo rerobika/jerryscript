@@ -961,7 +961,14 @@ parser_parse_class_body (parser_context_t *context_p, /**< context */
         {
           JERRY_ASSERT (context_p->token.lit_location.type == LEXER_IDENT_LITERAL
                         || context_p->token.lit_location.type == LEXER_STRING_LITERAL);
-          lexer_construct_literal_object (context_p, &context_p->token.lit_location, LEXER_STRING_LITERAL);
+          if (is_private)
+          {
+            parser_resolve_private_identifier (context_p);
+          }
+          else
+          {
+            lexer_construct_literal_object (context_p, &context_p->token.lit_location, LEXER_STRING_LITERAL);
+          }
         }
         else
         {
