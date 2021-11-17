@@ -2454,8 +2454,10 @@ lexer_construct_private_identifier (parser_context_t *context_p, /**< context */
     ecma_find_or_create_literal_string (char_p,
                                         lit_loc_p->length,
                                         (lit_loc_p->status_flags & LEXER_LIT_LOCATION_IS_ASCII) != 0);
-  ecma_compact_collection_push_back (context_p->private_context_p->symbols_p,
-                                     ecma_find_or_create_private_symbol (descriptor));
+
+  context_p->private_context_p->symbols_p =
+    ecma_compact_collection_push_back (context_p->private_context_p->symbols_p,
+                                       ecma_find_or_create_private_symbol (descriptor));
 
   if (char_p == context_p->u.allocated_buffer_p)
   {
