@@ -2106,14 +2106,14 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_PRIVATE_PROP_REFERENCE:
         {
-          *stack_top_p++ = left_value;
-          result = vm_op_get_private_field (stack_top_p[-2], left_value);
+          result = vm_op_get_private_field (stack_top_p[-1], left_value);
 
           if (ECMA_IS_VALUE_ERROR (result))
           {
             goto error;
           }
 
+          *stack_top_p++ = left_value;
           *stack_top_p++ = result;
           continue;
         }
