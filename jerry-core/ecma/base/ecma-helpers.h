@@ -442,7 +442,6 @@ ecma_object_t *ecma_create_decl_lex_env (ecma_object_t *outer_lexical_environmen
 ecma_object_t *ecma_create_object_lex_env (ecma_object_t *outer_lexical_environment_p, ecma_object_t *binding_obj_p);
 #if JERRY_ESNEXT
 ecma_object_t *ecma_create_lex_env_class (ecma_object_t *outer_lexical_environment_p, size_t lexical_env_size);
-void ecma_op_set_private_prototype (ecma_object_t *instance_p, ecma_object_t *proto_p);
 #endif /* JERRY_ESNEXT */
 bool JERRY_ATTR_PURE ecma_is_lexical_environment (const ecma_object_t *object_p);
 void ecma_op_ordinary_object_set_extensible (ecma_object_t *object_p);

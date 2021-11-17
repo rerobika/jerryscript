@@ -201,36 +201,6 @@ ecma_create_lex_env_class (ecma_object_t *outer_lexical_environment_p, /**< oute
   return new_lexical_environment_p;
 } /* ecma_create_lex_env_class */
 
-void
-ecma_op_set_private_prototype (ecma_object_t *instance_p, ecma_object_t *ctor_p)
-{
-  ecma_string_t *proto_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_STRING_CLASS_PROTOTYPE);
-
-  ecma_property_t *proto_property_p = ecma_find_named_property (ctor_p, proto_string_p);
-  JERRY_ASSERT (proto_property_p);
-
-  ecma_object_t *proto_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (proto_property_p)->value);
-
-  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
-  ecma_property_t *proto_internal_p = ecma_find_named_property (proto_p, internal_string_p);
-
-  if (proto_internal_p == NULL)
-  {
-    return;
-  }
-
-  ecma_property_t *instance_internal_p = ecma_find_named_property (instance_p, internal_string_p);
-
-  if (instance_internal_p)
-  {
-    ecma_object_t *instance_internal_object_p =
-      ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (instance_internal_p)->value);
-    ecma_value_t proto_internal_object = ECMA_PROPERTY_VALUE_PTR (proto_internal_p)->value;
-
-    ecma_op_ordinary_object_set_prototype_of (instance_internal_object_p, proto_internal_object);
-  }
-}
-
 #endif /* JERRY_ESNEXT */
 
 /**

@@ -244,17 +244,7 @@ vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
 {
   ecma_object_t *obj_p = ecma_get_object_from_value (obj_val);
 
-  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
-
-  ecma_property_t *property_p = ecma_find_named_property (obj_p, internal_string_p);
-
-  if (property_p == NULL)
-  {
-    return ecma_raise_type_error ("Internal obj NOPE");
-  }
-
-  ecma_object_t *internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
-  ecma_value_t result = ecma_op_object_find (internal_object_p, ecma_get_prop_name_from_value (property));
+  ecma_value_t result = ecma_op_object_find (obj_p, ecma_get_prop_name_from_value (property));
 
   if (!ecma_is_value_found (result))
   {
@@ -263,46 +253,6 @@ vm_op_get_private_field (ecma_value_t obj_val, ecma_value_t property)
 
   return result;
 } /* vm_op_get_private_field */
-
-/** TODO */
-static void
-vm_op_set_private_accessor (ecma_value_t base, /**< this object */
-                            ecma_value_t property, /**< property name */
-                            ecma_object_t *getter_p,
-                            ecma_object_t *setter_p) /**< ecma value */
-{
-  ecma_object_t *obj_p = ecma_get_object_from_value (base);
-  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
-
-  ecma_property_t *property_p = ecma_find_named_property (obj_p, internal_string_p);
-  ecma_object_t *internal_object_p;
-
-  if (property_p == NULL)
-  {
-    ecma_property_value_t *value_p =
-      ecma_create_named_data_property (obj_p, internal_string_p, ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE, NULL);
-
-    internal_object_p = ecma_create_object (NULL, sizeof (ecma_extended_object_t), ECMA_OBJECT_TYPE_CLASS);
-    {
-      ecma_extended_object_t *container_p = (ecma_extended_object_t *) internal_object_p;
-      container_p->u.cls.type = ECMA_OBJECT_CLASS_INTERNAL_OBJECT;
-    }
-
-    value_p->value = ecma_make_object_value (internal_object_p);
-    ecma_deref_object (internal_object_p);
-  }
-  else
-  {
-    internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
-  }
-
-  ecma_string_t *prop_name_p = ecma_get_prop_name_from_value (property);
-
-  JERRY_ASSERT (ecma_find_named_property (internal_object_p, prop_name_p) == NULL);
-
-  ecma_create_named_accessor_property (obj_p, prop_name_p, getter_p, setter_p, ECMA_PROPERTY_FIXED, NULL);
-
-} /* vm_op_set_private_accessor */
 
 /**
  * Set private field of class
@@ -313,36 +263,12 @@ vm_op_set_private_field (ecma_value_t base, /**< this object */
                          ecma_value_t value) /**< ecma value */
 {
   ecma_object_t *obj_p = ecma_get_object_from_value (base);
-  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
-
-  ecma_property_t *property_p = ecma_find_named_property (obj_p, internal_string_p);
-  ecma_object_t *internal_object_p;
-
-  if (property_p == NULL)
-  {
-    ecma_property_value_t *value_p =
-      ecma_create_named_data_property (obj_p, internal_string_p, ECMA_PROPERTY_CONFIGURABLE_ENUMERABLE_WRITABLE, NULL);
-
-    internal_object_p = ecma_create_object (NULL, sizeof (ecma_extended_object_t), ECMA_OBJECT_TYPE_CLASS);
-    {
-      ecma_extended_object_t *container_p = (ecma_extended_object_t *) internal_object_p;
-      container_p->u.cls.type = ECMA_OBJECT_CLASS_INTERNAL_OBJECT;
-    }
-
-    value_p->value = ecma_make_object_value (internal_object_p);
-    ecma_deref_object (internal_object_p);
-  }
-  else
-  {
-    internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
-  }
-
   ecma_string_t *prop_name_p = ecma_get_prop_name_from_value (property);
 
-  JERRY_ASSERT (ecma_find_named_property (internal_object_p, prop_name_p) == NULL);
+  JERRY_ASSERT (ecma_find_named_property (obj_p, prop_name_p) == NULL);
 
   ecma_property_value_t *value_p =
-    ecma_create_named_data_property (internal_object_p, prop_name_p, ECMA_PROPERTY_FLAG_WRITABLE, NULL);
+    ecma_create_named_data_property (obj_p, prop_name_p, ECMA_PROPERTY_FLAG_WRITABLE, NULL);
 
   value_p->value = ecma_copy_value_if_not_object (value);
 } /* vm_op_set_private_field */
@@ -357,25 +283,11 @@ vm_op_private_ident_in (ecma_value_t right, ecma_value_t property)
   {
     return ecma_raise_type_error ("Cannot use 'in' operator to search in non object");
   }
+
   ecma_object_t *rref = ecma_get_object_from_value (right);
-  ecma_string_t *internal_string_p = ecma_get_magic_string (LIT_INTERNAL_MAGIC_API_INTERNAL);
+  ecma_string_t *prop_name_p = ecma_get_prop_name_from_value (property);
 
-  ecma_property_t *property_p = ecma_find_named_property (rref, internal_string_p);
-
-  if (property_p == NULL)
-  {
-    return ECMA_VALUE_FALSE;
-  }
-
-  ecma_object_t *internal_object_p = ecma_get_object_from_value (ECMA_PROPERTY_VALUE_PTR (property_p)->value);
-  property_p = ecma_find_named_property (internal_object_p, ecma_get_prop_name_from_value (property));
-
-  if (property_p == NULL)
-  {
-    return ECMA_VALUE_FALSE;
-  }
-
-  return ECMA_VALUE_TRUE;
+  return ecma_make_boolean_value (ecma_find_named_property (rref, prop_name_p) != NULL);
 } /* vm_op_private_ident_in */
 
 /** Compact bytecode define */
@@ -2182,24 +2094,6 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         {
           result = vm_op_private_ident_in (left_value, right_value);
           *stack_top_p++ = result;
-          goto free_both_values;
-        }
-        case VM_OC_SET_PRIVATE_METHOD:
-        {
-          const int index = (int) (opcode_data >> VM_OC_NON_STATIC_SHIFT) - 2;
-          vm_op_set_private_field (stack_top_p[index], right_value, left_value);
-          goto free_both_values;
-        }
-        case VM_OC_PRIVATE_PROP_SETTER:
-        {
-          const int index = (int) (opcode_data >> VM_OC_NON_STATIC_SHIFT) - 2;
-          vm_op_set_private_accessor (stack_top_p[index], left_value, NULL, ecma_get_object_from_value (right_value));
-          goto free_both_values;
-        }
-        case VM_OC_PRIVATE_PROP_GETTER:
-        {
-          const int index = (int) (opcode_data >> VM_OC_NON_STATIC_SHIFT) - 2;
-          vm_op_set_private_accessor (stack_top_p[index], left_value, ecma_get_object_from_value (right_value), NULL);
           goto free_both_values;
         }
         case VM_OC_PRIVATE_PROP_REFERENCE:

@@ -2410,7 +2410,10 @@ ecma_op_object_own_property_keys (ecma_object_t *obj_p, /**< object */
 #if JERRY_ESNEXT
       else if (ecma_prop_name_is_symbol (name_p))
       {
-        symbol_named_props++;
+        if (!ECMA_STRING_IS_STATIC (name_p))
+        {
+          symbol_named_props++;
+        }
       }
 #endif /* JERRY_ESNEXT */
       else
@@ -2514,7 +2517,7 @@ ecma_op_object_own_property_keys (ecma_object_t *obj_p, /**< object */
 #if JERRY_ESNEXT
       else if (ecma_prop_name_is_symbol (name_p))
       {
-        if (!(filter & JERRY_PROPERTY_FILTER_EXCLUDE_SYMBOLS))
+        if (!(filter & JERRY_PROPERTY_FILTER_EXCLUDE_SYMBOLS) && !ECMA_STRING_IS_STATIC (name_p))
         {
           *(--symbol_current_p) = ecma_make_symbol_value (name_p);
           continue;

@@ -58,7 +58,6 @@ typedef enum
 
   LIT_INTERNAL_MAGIC_STRING_DELETED, /**< special value for deleted properties */
   LIT_INTERNAL_MAGIC_STRING_CLASS_FIELD_INIT, /**< function which initializes properties */
-  LIT_INTERNAL_MAGIC_STRING_CLASS_PROTOTYPE, /**< TODO */
 
   LIT_INTERNAL_MAGIC_STRING_NATIVE_POINTER, /**< native pointer info associated with an object */
   LIT_INTERNAL_MAGIC_STRING_FIRST_DATA = LIT_INTERNAL_MAGIC_STRING_NATIVE_POINTER, /**< first index of special

@@ -1339,13 +1339,6 @@ opfunc_finalize_class (vm_frame_ctx_t *frame_ctx_p, /**< frame context */
   ecma_object_t *proto_p = ecma_get_object_from_value (stack_top_p[-1]);
 
   ecma_object_t *class_env_p = frame_ctx_p->lex_env_p;
-  ecma_property_value_t *value_p =
-    ecma_create_named_data_property (ctor_p,
-                                     ecma_get_magic_string (LIT_INTERNAL_MAGIC_STRING_CLASS_PROTOTYPE),
-                                     ECMA_PROPERTY_FIXED,
-                                     NULL);
-
-  value_p->value = ecma_make_object_value (proto_p);
 
   /* 23.a */
   if (!ecma_is_value_undefined (class_name))
