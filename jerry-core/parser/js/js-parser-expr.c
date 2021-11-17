@@ -2106,8 +2106,7 @@ parser_parse_unary_expression (parser_context_t *context_p, /**< context */
         parser_raise_error (context_p, PARSER_ERR_INVALID_CHARACTER);
       }
 
-      parser_stack_push_uint16 (context_p, context_p->lit_object.index);
-      parser_stack_push_uint8 (context_p, LEXER_PRIVATE_PRIMARY_EXPR);
+      parser_emit_cbc_literal_from_token (context_p, CBC_PUSH_LITERAL);
       return false;
     }
     case LEXER_TEMPLATE_LITERAL:
@@ -3369,13 +3368,6 @@ parser_process_binary_opcodes (parser_context_t *context_p, /**< context */
       parser_branch_t branch;
       parser_stack_pop (context_p, &branch, sizeof (parser_branch_t));
       parser_set_branch_to_current_position (context_p, &branch);
-      continue;
-    }
-    else if (token == LEXER_KEYW_IN && context_p->stack_top_uint8 == LEXER_PRIVATE_PRIMARY_EXPR)
-    {
-      parser_stack_pop_uint8 (context_p);
-      uint16_t lit_id = parser_stack_pop_uint16 (context_p);
-      parser_emit_cbc_ext_literal (context_p, CBC_EXT_PUSH_PRIVATE_PROP_LITERAL_IN, lit_id);
       continue;
     }
 #endif /* JERRY_ESNEXT */

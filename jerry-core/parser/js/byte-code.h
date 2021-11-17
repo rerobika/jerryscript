@@ -587,10 +587,6 @@
               CBC_HAS_LITERAL_ARG,                                                                                     \
               0,                                                                                                       \
               VM_OC_PRIVATE_PROP_GET | VM_OC_GET_STACK_LITERAL | VM_OC_PUT_STACK)                                      \
-  CBC_OPCODE (CBC_EXT_PUSH_PRIVATE_PROP_LITERAL_IN,                                                                    \
-              CBC_HAS_LITERAL_ARG,                                                                                     \
-              0,                                                                                                       \
-              VM_OC_PRIVATE_PROP_IN | VM_OC_GET_STACK_LITERAL | VM_OC_PUT_STACK)                                       \
   CBC_OPCODE (CBC_EXT_ASSIGN_PROP_THIS_PRIVATE_LITERAL,                                                                \
               CBC_HAS_LITERAL_ARG,                                                                                     \
               -1,                                                                                                      \

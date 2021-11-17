@@ -281,23 +281,6 @@ vm_op_set_private_field (ecma_value_t base, /**< this object */
 
 } /* vm_op_set_private_field */
 
-/**
- * Private in
- */
-static ecma_value_t
-vm_op_private_ident_in (ecma_value_t right, ecma_value_t property)
-{
-  if (!ecma_is_value_object (right))
-  {
-    return ecma_raise_type_error ("Cannot use 'in' operator to search in non object");
-  }
-
-  ecma_object_t *rref = ecma_get_object_from_value (right);
-  ecma_string_t *prop_name_p = ecma_get_prop_name_from_value (property);
-
-  return ecma_make_boolean_value (ecma_find_named_property (rref, prop_name_p) != NULL);
-} /* vm_op_private_ident_in */
-
 /** Compact bytecode define */
 #define CBC_OPCODE(arg1, arg2, arg3, arg4) arg4,
 
@@ -2095,12 +2078,6 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
             goto error;
           }
 
-          *stack_top_p++ = result;
-          goto free_both_values;
-        }
-        case VM_OC_PRIVATE_PROP_IN:
-        {
-          result = vm_op_private_ident_in (left_value, right_value);
           *stack_top_p++ = result;
           goto free_both_values;
         }

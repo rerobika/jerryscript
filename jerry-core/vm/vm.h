@@ -241,7 +241,6 @@ typedef enum
   VM_OC_ASSIGN_PRIVATE, /**< assign to private field  */
   VM_OC_ASSIGN_PROP_THIS_PRIVATE, /**< init this.private field */
   VM_OC_PRIVATE_PROP_GET, /**< get private field */
-  VM_OC_PRIVATE_PROP_IN, /**< handle in operator with private field */
   VM_OC_CHECK_VAR, /**< check redeclared vars in the global scope */
   VM_OC_CHECK_LET, /**< check redeclared lets in the global scope */
   VM_OC_ASSIGN_LET_CONST, /**< assign values to let/const declarations */
@@ -333,7 +332,6 @@ typedef enum
   VM_OC_ASSIGN_PRIVATE = VM_OC_NONE, /**< assign to private field */
   VM_OC_ASSIGN_PROP_THIS_PRIVATE = VM_OC_NONE, /**< init this.private field */
   VM_OC_PRIVATE_PROP_GET = VM_OC_NONE, /**< get private field */
-  VM_OC_PRIVATE_PROP_IN = VM_OC_NONE, /**< handle in operator with private field */
   VM_OC_EXT_VAR_EVAL = VM_OC_NONE, /**< variable and function evaluation for
                                     *   functions with separate argument context */
   VM_OC_CHECK_VAR = VM_OC_NONE, /**< check redeclared vars in the global scope */
