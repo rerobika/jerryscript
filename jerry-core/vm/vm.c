@@ -265,12 +265,20 @@ vm_op_set_private_field (ecma_value_t base, /**< this object */
   ecma_object_t *obj_p = ecma_get_object_from_value (base);
   ecma_string_t *prop_name_p = ecma_get_prop_name_from_value (property);
 
-  JERRY_ASSERT (ecma_find_named_property (obj_p, prop_name_p) == NULL);
+  ecma_property_t *prop_p = ecma_find_named_property (obj_p, prop_name_p);
 
-  ecma_property_value_t *value_p =
-    ecma_create_named_data_property (obj_p, prop_name_p, ECMA_PROPERTY_FLAG_WRITABLE, NULL);
+  if (prop_p == NULL)
+  {
+    ecma_property_value_t *value_p =
+      ecma_create_named_data_property (obj_p, prop_name_p, ECMA_PROPERTY_FLAG_WRITABLE, NULL);
 
-  value_p->value = ecma_copy_value_if_not_object (value);
+    value_p->value = ecma_copy_value_if_not_object (value);
+  }
+  else
+  {
+    ecma_value_assign_value (&ECMA_PROPERTY_VALUE_PTR (prop_p)->value, value);
+  }
+
 } /* vm_op_set_private_field */
 
 /**
@@ -2054,24 +2062,24 @@ vm_loop (vm_frame_ctx_t *frame_ctx_p) /**< frame context */
         }
         case VM_OC_ASSIGN_PRIVATE:
         {
-          for (int32_t i = 0; i < 3; i++)
-          {
-            ecma_free_value (*(--stack_top_p));
-          }
+          left_value = stack_top_p[-3]; /* base */
+          right_value = stack_top_p[-2]; /* property */
+          result = stack_top_p[-1]; /* value */
+          vm_op_set_private_field (left_value, right_value, result);
 
-          result = ECMA_VALUE_UNDEFINED;
+          stack_top_p -= 3;
 
           if (opcode_data & VM_OC_PUT_STACK)
           {
             *stack_top_p++ = result;
           }
-          else if (opcode_data & VM_OC_PUT_BLOCK)
+          else
           {
-            ecma_fast_free_value (VM_GET_REGISTER (frame_ctx_p, 0));
-            VM_GET_REGISTERS (frame_ctx_p)[0] = result;
+            JERRY_ASSERT (!(opcode_data & VM_OC_PUT_BLOCK));
+            ecma_free_value (result);
           }
 
-          continue;
+          goto free_both_values;
         }
         case VM_OC_ASSIGN_PROP_THIS_PRIVATE:
         {

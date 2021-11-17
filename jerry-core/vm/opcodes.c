@@ -1272,26 +1272,39 @@ opfunc_set_class_attributes (ecma_object_t *obj_p, /**< object */
     for (uint32_t index = 0; index < ECMA_PROPERTY_PAIR_ITEM_COUNT; index++)
     {
       uint8_t property = property_pair_p->header.types[index];
+      uint8_t removable_flags = ECMA_PROPERTY_FLAG_ENUMERABLE;
 
-      if (!ECMA_PROPERTY_IS_RAW (property))
+      if (ECMA_PROPERTY_GET_NAME_TYPE (property) == ECMA_DIRECT_STRING_PTR)
       {
-        JERRY_ASSERT (property == ECMA_PROPERTY_TYPE_DELETED
-                      || (ECMA_PROPERTY_IS_INTERNAL (property)
-                          && property_pair_p->names_cp[index] == LIT_INTERNAL_MAGIC_STRING_CLASS_FIELD_COMPUTED));
-        continue;
+        ecma_string_t *prop_name_p = ECMA_GET_NON_NULL_POINTER (ecma_string_t, property_pair_p->names_cp[index]);
+
+        if (ecma_prop_name_is_symbol (prop_name_p) && ECMA_STRING_IS_STATIC (prop_name_p))
+        {
+          removable_flags = (uint8_t) (ECMA_PROPERTY_FLAG_ENUMERABLE | ECMA_PROPERTY_FLAG_CONFIGURABLE);
+        }
       }
+
+      if (property_pair_p->names_cp[index])
+
+        if (!ECMA_PROPERTY_IS_RAW (property))
+        {
+          JERRY_ASSERT (property == ECMA_PROPERTY_TYPE_DELETED
+                        || (ECMA_PROPERTY_IS_INTERNAL (property)
+                            && property_pair_p->names_cp[index] == LIT_INTERNAL_MAGIC_STRING_CLASS_FIELD_COMPUTED));
+          continue;
+        }
 
       if (property & ECMA_PROPERTY_FLAG_DATA)
       {
         if (ecma_is_value_object (property_pair_p->values[index].value) && ecma_is_property_enumerable (property))
         {
-          property_pair_p->header.types[index] = (uint8_t) (property & ~ECMA_PROPERTY_FLAG_ENUMERABLE);
+          property_pair_p->header.types[index] = (uint8_t) (property & ~removable_flags);
           opfunc_set_home_object (ecma_get_object_from_value (property_pair_p->values[index].value), parent_env_p);
         }
         continue;
       }
 
-      property_pair_p->header.types[index] = (uint8_t) (property & ~ECMA_PROPERTY_FLAG_ENUMERABLE);
+      property_pair_p->header.types[index] = (uint8_t) (property & ~removable_flags);
       ecma_property_value_t *accessor_objs_p = property_pair_p->values + index;
 
       ecma_getter_setter_pointers_t *get_set_pair_p = ecma_get_named_accessor_property (accessor_objs_p);
