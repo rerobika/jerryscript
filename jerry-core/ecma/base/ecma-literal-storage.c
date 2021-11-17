@@ -167,6 +167,7 @@ ecma_value_t
 ecma_find_or_create_private_symbol (ecma_value_t descriptor)
 {
   ecma_string_t *private_symbol_p = ecma_new_symbol_from_descriptor_string (ecma_copy_value (descriptor));
+  ECMA_SET_STRING_AS_STATIC (private_symbol_p);
 
   jmem_cpointer_t private_symbol_list_cp = JERRY_CONTEXT (private_symbol_list_first_cp);
   jmem_cpointer_t *empty_cpointer_p = NULL;

@@ -1668,7 +1668,7 @@ ecma_op_function_construct_constructor (ecma_object_t *func_obj_p, /**< Function
       return ret_value;
     }
 
-    ecma_op_set_private_prototype (new_this_object_p, proto_p);
+    ecma_op_set_private_prototype (new_this_object_p, func_obj_p);
 
     return new_this_value;
   }
@@ -1693,6 +1693,9 @@ ecma_op_function_construct_constructor (ecma_object_t *func_obj_p, /**< Function
       ecma_free_value (result);
       return fields_value;
     }
+
+    ecma_object_t *result_object_p = ecma_get_object_from_value (result);
+    ecma_op_set_private_prototype (result_object_p, func_obj_p);
   }
 
   return result;
