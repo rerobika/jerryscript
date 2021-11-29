@@ -1,0 +1,64 @@
+---
+
+name: Correctness
+
+on: [push, pull_request]
+
+env:
+  RUNNER: tools/run-tests.py
+
+jobs:
+  Linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config: [{cc: clang, lto: off},
+                 {cc: gcc, lto: on},
+                 {cc: gcc, lto: off},
+        ]
+        build-type: [debug, release]
+        build-options: [{dependecies: '', cmd: ''},
+                        {dependecies: 'gcc-multilib', cmd: ',--compile-flag=-m32,--cpointer-32bit=on'}
+        ]
+        tests-suite: [jerry-tests, unittests, buildoption-test]
+    env:
+      CC: ${{ matrix.config.cc }}
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          sudo apt update
+          sudo apt install ${{ matrix.build-options.dependecies }}
+        if: matrix.build-options.dependecies != ''
+      - run: >-
+          $RUNNER
+          --quiet
+          --${{ matrix.tests-suite }}
+          --build-type=${{ matrix.build-type }}
+          --buildoptions=--lto=${{matrix.config.lto}},--cmake-param=-DCMAKE_C_COMPILER=${{ matrix.config.cc }}${{ matrix.build-options.cmd }}
+
+  OSX:
+    strategy:
+      matrix:
+        build-type: [debug, release]
+        tests-suite: [jerry-tests, unittests, buildoption-test]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: >-
+          $RUNNER
+          --quiet
+          --${{ matrix.tests-suite }}
+          --build-type=${{ matrix.build-type }}
+
+  Debugger:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build-type: [debug, release]
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '2.7'  # needed by jerry-debugger
+      - run: $RUNNER -q --jerry-debugger --build-type=${{ matrix.build-type }}

@@ -1,0 +1,67 @@
+# ---
+
+# name: Linters
+
+# on: [push, pull_request]
+
+# env:
+#   RUNNER: tools/run-tests.py
+
+# jobs:
+#   Signed_Off:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#         with:
+#           fetch-depth: 0
+#       - run: $RUNNER --check-signed-off=gh-actions
+
+#   Doxygen:
+#     runs-on: ubuntu-18.04  # needed for checker version stability
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: sudo apt update
+#       - run: sudo apt install doxygen
+#       - run: $RUNNER --check-doxygen
+
+#   Clang_format_10:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: sudo apt update
+#       - run: sudo apt install clang-format-10
+#       - run: $RUNNER --check-format
+
+#   License:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: $RUNNER --check-license
+
+#   Strings:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: $RUNNER --check-strings
+
+#   Pylint:
+#     runs-on: ubuntu-18.04  # needed for checker version stability
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: actions/setup-python@v2
+#         with:
+#           python-version: '3.8'
+#       - run: sudo apt update
+#       - run: sudo apt install pylint python-serial
+#       - run: $RUNNER --check-pylint
+
+#   CppCheck:
+#     runs-on: ubuntu-18.04  # needed for checker version stability
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: actions/setup-python@v2
+#         with:
+#           python-version: '3.8'
+#       - run: sudo apt update
+#       - run: sudo apt install cppcheck
+#       - run: $RUNNER --check-cppcheck

@@ -1,0 +1,47 @@
+# ---
+
+# name: Qemu
+
+# on: [push, pull_request]
+
+# env:
+#   RUNNER: tools/run-tests.py
+
+# jobs:
+#   ARMv7l:
+#     runs-on: ubuntu-latest
+#     env:
+#       RUNTIME: qemu-arm-static
+#       TIMEOUT: 300
+#     strategy:
+#       matrix:
+#         build-type: [debug, release]
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: sudo apt update
+#       - run: sudo apt install gcc-arm-linux-gnueabihf libc6-dev-armhf-cross qemu-user-static
+#       - run: >-
+#           $RUNNER
+#           --quiet
+#           --jerry-tests
+#           --build-type=${{ matrix.build-type }}
+#           --buildoptions=--toolchain=cmake/toolchain_linux_armv7l.cmake,--linker-flag=-static
+
+#   AArch64:
+#     runs-on: ubuntu-latest
+#     env:
+#       RUNTIME: qemu-aarch64-static
+#       TIMEOUT: 300
+#     strategy:
+#       matrix:
+#         build-type: [debug, release]
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: sudo apt update
+#       - run: sudo apt install gcc-aarch64-linux-gnu libc6-dev-armhf-cross qemu-user-static
+#       - run: >-
+#           $RUNNER
+#           --quiet
+#           --jerry-tests
+#           --build-type=${{ matrix.build-type }}
+#           --buildoptions=--toolchain=cmake/toolchain_linux_aarch64.cmake,--linker-flag=-static

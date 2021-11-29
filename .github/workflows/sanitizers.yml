@@ -1,0 +1,47 @@
+# ---
+
+# name: Sanitizers
+
+# on: [push, pull_request]
+
+# env:
+#   RUNNER: tools/run-tests.py
+
+# jobs:
+#   ASAN:
+#     runs-on: ubuntu-latest
+#     env:
+#       ASAN_OPTIONS: detect_stack_use_after_return=1:check_initialization_order=true:strict_init_order=true
+#     strategy:
+#       matrix:
+#         build-type: [debug, release]
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: sudo apt update
+#       - run: sudo apt install gcc-multilib
+#       - run: >-
+#           $RUNNER
+#           --quiet
+#           --jerry-tests
+#           --build-type=${{ matrix.build-type }}
+#           --buildoptions=--stack-limit=0,--compile-flag=-fsanitize=address,--compile-flag=-m32,--compile-flag=-fno-omit-frame-pointer,--compile-flag=-fno-common,--compile-flag=-O2,--system-allocator=on,--linker-flag=-fuse-ld=gold
+#           --skip-list=parser-oom.js,parser-oom2.js,stack-limit.js,regression-test-issue-2190.js,regression-test-issue-2258-2963.js,regression-test-issue-2448.js,regression-test-issue-2905.js,regression-test-issue-3785.js,proxy-evil-recursion.js
+
+#   UBSAN:
+#     runs-on: ubuntu-latest
+#     env:
+#       UBSAN_OPTIONS: print_stacktrace=1
+#     strategy:
+#       matrix:
+#         build-type: [debug, release]
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: sudo apt update
+#       - run: sudo apt install gcc-multilib
+#       - run: >-
+#           $RUNNER
+#           --quiet
+#           --jerry-tests
+#           --build-type=${{ matrix.build-type }}
+#           --buildoptions=--compile-flag=-fsanitize=undefined,--compile-flag=-m32,--compile-flag=-fno-omit-frame-pointer,--compile-flag=-fno-common,--system-allocator=on,--linker-flag=-fuse-ld=gold
+#           --skip-list=parser-oom.js,parser-oom2.js

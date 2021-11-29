@@ -1,0 +1,13 @@
+# ---
+
+# name: YAML validator
+
+# on: [push, pull_request]
+
+# jobs:
+#   yamllint:
+#     runs-on: ubuntu-20.04
+#     steps:
+#       - uses: actions/checkout@v2
+#       - run: pip install --user yamllint
+#       - run: yamllint --config-file .yamllint --strict .github/workflows/*

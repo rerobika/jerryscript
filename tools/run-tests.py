@@ -194,8 +194,8 @@ def get_arguments():
                         help='Run license check')
     parser.add_argument('--check-strings', action='store_true',
                         help='Run "magic string source code generator should be executed" check')
-    parser.add_argument('--build-debug', action='store_true',
-                        help='Build debug version jerryscript')
+    parser.add_argument('--build-type', default='release', choices=['debug', 'release'],
+                        help='Build type of jerryscript')
     parser.add_argument('--jerry-debugger', action='store_true',
                         help='Run jerry-debugger tests')
     parser.add_argument('--jerry-tests', action='store_true',
@@ -256,7 +256,7 @@ def report_skip(job):
 def create_binary(job, options):
     build_args = job.build_args[:]
     build_dir_path = os.path.join(options.outdir, job.name)
-    if options.build_debug:
+    if options.build_type == 'debug':
         build_args.extend(OPTIONS_DEBUG)
         build_dir_path = os.path.join(options.outdir, job.name + '-debug')
     if options.buildoptions:
