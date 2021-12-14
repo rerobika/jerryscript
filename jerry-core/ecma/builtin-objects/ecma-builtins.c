@@ -23,6 +23,7 @@
 #include "ecma-helpers-number.h"
 #include "ecma-helpers.h"
 #include "ecma-objects.h"
+#include "ecma-ordinary-object.h"
 
 #include "jcontext.h"
 #include "jrt-bit-fields.h"
@@ -361,7 +362,7 @@ ecma_instantiate_builtin (ecma_global_object_t *global_object_p, /**< global obj
 
   if (JERRY_UNLIKELY (obj_builtin_id == ECMA_BUILTIN_ID_TYPE_ERROR_THROWER))
   {
-    ecma_op_ordinary_object_prevent_extensions (obj_p);
+    ecma_ordinary_object_prevent_extensions (obj_p);
   }
   else
   {
@@ -780,7 +781,7 @@ ecma_builtin_native_handler_try_to_instantiate_property (ecma_object_t *object_p
  * @return pointer property, if one was instantiated,
  *         NULL - otherwise.
  */
-ecma_property_t *
+static ecma_property_t *
 ecma_builtin_routine_try_to_instantiate_property (ecma_object_t *object_p, /**< object */
                                                   ecma_string_t *property_name_p) /**< property name */
 {
@@ -931,7 +932,7 @@ ecma_builtin_routine_try_to_instantiate_property (ecma_object_t *object_p, /**< 
  * @return pointer property, if one was instantiated,
  *         NULL - otherwise.
  */
-ecma_property_t *
+static ecma_property_t *
 ecma_builtin_try_to_instantiate_property (ecma_object_t *object_p, /**< object */
                                           ecma_string_t *property_name_p) /**< property's name */
 {
@@ -1182,130 +1183,208 @@ ecma_builtin_try_to_instantiate_property (ecma_object_t *object_p, /**< object *
   return prop_p;
 } /* ecma_builtin_try_to_instantiate_property */
 
-#if JERRY_ESNEXT
+/* internal routines */
 
 /**
- * Delete configurable properties of native handlers.
+ * [[GetOwnProperty]]
+ *
+ * @return ecma property t
  */
-static void
-ecma_builtin_native_handler_delete_built_in_property (ecma_object_t *object_p, /**< object */
-                                                      ecma_string_t *property_name_p) /**< property name */
-{
-  ecma_extended_object_t *extended_obj_p = (ecma_extended_object_t *) object_p;
-
-  if (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_LENGTH))
-  {
-    JERRY_ASSERT (!(extended_obj_p->u.built_in.u2.routine_flags & ECMA_NATIVE_HANDLER_FLAGS_LENGTH_INITIALIZED));
-
-    extended_obj_p->u.built_in.u2.routine_flags |= ECMA_NATIVE_HANDLER_FLAGS_LENGTH_INITIALIZED;
-    return;
-  }
-
-  JERRY_ASSERT (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_NAME));
-  JERRY_ASSERT (!(extended_obj_p->u.built_in.u2.routine_flags & ECMA_NATIVE_HANDLER_FLAGS_NAME_INITIALIZED));
-
-  extended_obj_p->u.built_in.u2.routine_flags |= ECMA_NATIVE_HANDLER_FLAGS_NAME_INITIALIZED;
-} /* ecma_builtin_native_handler_delete_built_in_property */
-
-/**
- * Delete configurable properties of built-in routines.
- */
-void
-ecma_builtin_routine_delete_built_in_property (ecma_object_t *object_p, /**< object */
+ecma_property_descriptor_t
+ecma_builtin_function_object_get_own_property (ecma_object_t *obj_p, /**< the object */
                                                ecma_string_t *property_name_p) /**< property name */
 {
-  JERRY_ASSERT (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION
-                && ecma_builtin_function_is_routine (object_p));
+  ecma_property_descriptor_t prop_desc = ecma_make_empty_property_descriptor ();
 
-  ecma_extended_object_t *extended_obj_p = (ecma_extended_object_t *) object_p;
+  prop_desc.u.property_p = ecma_find_named_property (obj_p, property_name_p);
 
-  if (JERRY_UNLIKELY (extended_obj_p->u.built_in.id == ECMA_BUILTIN_ID_HANDLER))
+  if (prop_desc.u.property_p == NULL)
   {
-    ecma_builtin_native_handler_delete_built_in_property (object_p, property_name_p);
-    return;
-  }
-
-  uint8_t *bitset_p = &extended_obj_p->u.built_in.u2.routine_flags;
-
-  if (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_LENGTH))
-  {
-    JERRY_ASSERT (!(*bitset_p & ECMA_BUILTIN_ROUTINE_LENGTH_INITIALIZED));
-
-    *bitset_p |= ECMA_BUILTIN_ROUTINE_LENGTH_INITIALIZED;
-    return;
-  }
-
-  JERRY_ASSERT (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_NAME));
-  JERRY_ASSERT (!(*bitset_p & ECMA_BUILTIN_ROUTINE_NAME_INITIALIZED));
-
-  *bitset_p |= ECMA_BUILTIN_ROUTINE_NAME_INITIALIZED;
-} /* ecma_builtin_routine_delete_built_in_property */
-
-#endif /* JERRY_ESNEXT */
-
-/**
- * Delete configurable properties of built-ins.
- */
-void
-ecma_builtin_delete_built_in_property (ecma_object_t *object_p, /**< object */
-                                       ecma_string_t *property_name_p) /**< property name */
-{
-  lit_magic_string_id_t magic_string_id = ecma_get_string_magic (property_name_p);
-
-#if JERRY_ESNEXT
-  if (JERRY_UNLIKELY (ecma_prop_name_is_symbol (property_name_p)))
-  {
-    if (property_name_p->u.hash & ECMA_SYMBOL_FLAG_GLOBAL)
+    if (ecma_builtin_function_is_routine (obj_p))
     {
-      magic_string_id = (property_name_p->u.hash >> ECMA_SYMBOL_FLAGS_SHIFT);
+      prop_desc.u.property_p = ecma_builtin_routine_try_to_instantiate_property (obj_p, property_name_p);
+    }
+    else
+    {
+      prop_desc.u.property_p = ecma_builtin_try_to_instantiate_property (obj_p, property_name_p);
+    }
+
+    if (prop_desc.u.property_p == NULL)
+    {
+      return prop_desc;
     }
   }
+
+  prop_desc.flags = ECMA_PROP_DESC_PROPERTY_FOUND | ECMA_PROPERTY_TO_PROPERTY_DESCRIPTOR_FLAGS (prop_desc.u.property_p);
+  return prop_desc;
+} /* ecma_builtin_function_object_get_own_property */
+
+/**
+ * [[GetOwnProperty]]
+ *
+ * @return ecma property t
+ */
+ecma_property_descriptor_t
+ecma_builtin_object_get_own_property (ecma_object_t *obj_p, /**< the object */
+                                      ecma_string_t *property_name_p) /**< property name */
+{
+  ecma_property_descriptor_t prop_desc = ecma_make_empty_property_descriptor ();
+
+  prop_desc.u.property_p = ecma_find_named_property (obj_p, property_name_p);
+
+  if (prop_desc.u.property_p == NULL)
+  {
+    prop_desc.u.property_p = ecma_builtin_try_to_instantiate_property (obj_p, property_name_p);
+
+    if (prop_desc.u.property_p == NULL)
+    {
+      return prop_desc;
+    }
+  }
+
+  prop_desc.flags = ECMA_PROP_DESC_PROPERTY_FOUND | ECMA_PROPERTY_TO_PROPERTY_DESCRIPTOR_FLAGS (prop_desc.u.property_p);
+  return prop_desc;
+} /* ecma_builtin_function_object_get_own_property */
+
+/**
+ * Handle calling [[Call]] of built-in object
+ *
+ * @return ecma value
+ */
+ecma_value_t
+ecma_builtin_function_object_call (ecma_object_t *obj_p, /**< built-in object */
+                                   ecma_value_t this_arg_value, /**< 'this' argument value */
+                                   const ecma_value_t *arguments_list_p, /**< arguments list */
+                                   uint32_t arguments_list_len) /**< arguments list length */
+{
+  JERRY_ASSERT (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION);
+
+  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
+
+#if JERRY_BUILTIN_REALMS
+  ecma_global_object_t *saved_global_object_p = JERRY_CONTEXT (global_object_p);
+
+  ecma_extended_object_t *ext_func_obj_p = (ecma_extended_object_t *) obj_p;
+  JERRY_CONTEXT (global_object_p) =
+    ECMA_GET_INTERNAL_VALUE_POINTER (ecma_global_object_t, ext_func_obj_p->u.built_in.realm_value);
+#endif /* JERRY_BUILTIN_REALMS */
+
+#if JERRY_ESNEXT
+  ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target_p);
+
+  if (JERRY_UNLIKELY (!(JERRY_CONTEXT (status_flags) & ECMA_STATUS_DIRECT_EVAL)))
+  {
+    JERRY_CONTEXT (current_new_target_p) = NULL;
+  }
 #endif /* JERRY_ESNEXT */
 
-  ecma_built_in_props_t *built_in_props_p;
-  ecma_object_type_t object_type = ecma_get_object_type (object_p);
+  ecma_value_t result;
 
-  JERRY_ASSERT (object_type == ECMA_OBJECT_TYPE_BUILT_IN_GENERAL || object_type == ECMA_OBJECT_TYPE_BUILT_IN_CLASS
-                || object_type == ECMA_OBJECT_TYPE_BUILT_IN_ARRAY
-                || (object_type == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION && !ecma_builtin_function_is_routine (object_p)));
-
-  if (ECMA_BUILTIN_IS_EXTENDED_BUILT_IN (object_type))
+  if (ecma_builtin_function_is_routine (obj_p))
   {
-    built_in_props_p = &((ecma_extended_built_in_object_t *) object_p)->built_in;
+#if JERRY_ESNEXT
+    if (JERRY_UNLIKELY (ext_obj_p->u.built_in.id == ECMA_BUILTIN_ID_HANDLER))
+    {
+      ecma_builtin_handler_t handler = ecma_builtin_handler_get (ext_obj_p->u.built_in.routine_id);
+      result = handler (obj_p, arguments_list_p, arguments_list_len);
+    }
+    else
+#endif /* !JERRY_ESNEXT */
+    {
+      ecma_value_t padded_arguments_list_p[3] = { ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED };
+
+      if (arguments_list_len <= 2)
+      {
+        switch (arguments_list_len)
+        {
+          case 2:
+          {
+            padded_arguments_list_p[1] = arguments_list_p[1];
+            /* FALLTHRU */
+          }
+          case 1:
+          {
+            padded_arguments_list_p[0] = arguments_list_p[0];
+            break;
+          }
+          default:
+          {
+            JERRY_ASSERT (arguments_list_len == 0);
+          }
+        }
+
+        arguments_list_p = padded_arguments_list_p;
+      }
+
+      result = ecma_builtin_routines[ext_obj_p->u.built_in.id](ext_obj_p->u.built_in.routine_id,
+                                                               this_arg_value,
+                                                               arguments_list_p,
+                                                               arguments_list_len);
+    }
   }
   else
   {
-    built_in_props_p = &((ecma_extended_object_t *) object_p)->u.built_in;
+    ecma_builtin_id_t builtin_object_id = ext_obj_p->u.built_in.id;
+    JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_call_functions) / sizeof (ecma_builtin_dispatch_call_t));
+    result = ecma_builtin_call_functions[builtin_object_id](arguments_list_p, arguments_list_len);
   }
 
-  ecma_builtin_id_t builtin_id = (ecma_builtin_id_t) built_in_props_p->id;
-
-  JERRY_ASSERT (builtin_id < ECMA_BUILTIN_ID__COUNT);
-
-  const ecma_builtin_property_descriptor_t *property_list_p = ecma_builtin_property_list_references[builtin_id];
-  const ecma_builtin_property_descriptor_t *curr_property_p = property_list_p;
-
-  while (curr_property_p->magic_string_id != magic_string_id)
-  {
-    JERRY_ASSERT (curr_property_p->magic_string_id != LIT_MAGIC_STRING__COUNT);
-    curr_property_p++;
-  }
-
-  uint32_t index = (uint32_t) (curr_property_p - property_list_p);
-  uint8_t *bitset_p = built_in_props_p->u2.instantiated_bitset + (index >> 3);
+#if JERRY_ESNEXT
+  JERRY_CONTEXT (current_new_target_p) = old_new_target_p;
+#endif /* JERRY_ESNEXT */
 
 #if JERRY_BUILTIN_REALMS
-  if (index >= 8 * sizeof (uint8_t))
-  {
-    bitset_p += sizeof (ecma_value_t);
-  }
+  JERRY_CONTEXT (global_object_p) = saved_global_object_p;
 #endif /* JERRY_BUILTIN_REALMS */
 
-  uint8_t bit_for_index = (uint8_t) (1u << (index & 0x7));
-  JERRY_ASSERT (!(*bitset_p & bit_for_index));
+  return result;
+} /* ecma_builtin_function_object_call */
 
-  *bitset_p |= bit_for_index;
-} /* ecma_builtin_delete_built_in_property */
+/**
+ * Handle calling [[Construct]] of built-in object
+ *
+ * @return ecma value
+ */
+ecma_value_t
+ecma_builtin_function_object_construct (ecma_object_t *obj_p, /**< built-in object */
+                                        ecma_object_t *new_target_p, /**< built-in object */
+                                        const ecma_value_t *arguments_list_p, /**< arguments list */
+                                        uint32_t arguments_list_len) /**< arguments list length */
+{
+  JERRY_UNUSED (new_target_p);
+
+  if (ecma_builtin_function_is_routine (obj_p))
+  {
+    return ecma_raise_type_error (ECMA_ERR_BULTIN_ROUTINES_HAVE_NO_CONSTRUCTOR);
+  }
+
+#if JERRY_BUILTIN_REALMS
+  ecma_global_object_t *saved_global_object_p = JERRY_CONTEXT (global_object_p);
+  ecma_value_t realm_value = ((ecma_extended_object_t *) obj_p)->u.built_in.realm_value;
+  JERRY_CONTEXT (global_object_p) = ECMA_GET_INTERNAL_VALUE_POINTER (ecma_global_object_t, realm_value);
+#endif /* JERRY_BUILTIN_REALMS */
+
+#if JERRY_ESNEXT
+  ecma_object_t *old_new_target = JERRY_CONTEXT (current_new_target_p);
+  JERRY_CONTEXT (current_new_target_p) = new_target_p;
+#endif /* JERRY_ESNEXT */
+
+  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
+  ecma_builtin_id_t builtin_object_id = ext_obj_p->u.built_in.id;
+  JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_construct_functions) / sizeof (ecma_builtin_dispatch_call_t));
+
+  ecma_value_t result = ecma_builtin_construct_functions[builtin_object_id](arguments_list_p, arguments_list_len);
+
+#if JERRY_ESNEXT
+  JERRY_CONTEXT (current_new_target_p) = old_new_target;
+#endif /* JERRY_ESNEXT */
+
+#if JERRY_BUILTIN_REALMS
+  JERRY_CONTEXT (global_object_p) = saved_global_object_p;
+#endif /* JERRY_BUILTIN_REALMS */
+
+  return result;
+} /* ecma_builtin_function_object_construct */
 
 #if JERRY_ESNEXT
 
@@ -1314,9 +1393,9 @@ ecma_builtin_delete_built_in_property (ecma_object_t *object_p, /**< object */
  * adding them to corresponding string collections
  */
 static void
-ecma_builtin_native_handler_list_lazy_property_names (ecma_object_t *object_p, /**< function object */
-                                                      ecma_collection_t *prop_names_p, /**< prop name collection */
-                                                      ecma_property_counter_t *prop_counter_p) /**< prop counter */
+ecma_builtin_native_handler_list_lazy_property_keys (ecma_object_t *object_p, /**< function object */
+                                                     ecma_collection_t *prop_names_p, /**< prop name collection */
+                                                     ecma_property_counter_t *prop_counter_p) /**< prop counter */
 {
   JERRY_ASSERT (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION);
   ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) object_p;
@@ -1332,21 +1411,18 @@ ecma_builtin_native_handler_list_lazy_property_names (ecma_object_t *object_p, /
     ecma_collection_push_back (prop_names_p, ecma_make_magic_string_value (LIT_MAGIC_STRING_LENGTH));
     prop_counter_p->string_named_props++;
   }
-} /* ecma_builtin_native_handler_list_lazy_property_names */
+} /* ecma_builtin_native_handler_list_lazy_property_keys */
 
 #endif /* JERRY_ESNEXT */
 
 /**
  * List names of a built-in function's lazy instantiated properties
- *
- * See also:
- *          ecma_builtin_routine_try_to_instantiate_property
  */
-void
-ecma_builtin_routine_list_lazy_property_names (ecma_object_t *object_p, /**< a built-in object */
-                                               ecma_collection_t *prop_names_p, /**< prop name collection */
-                                               ecma_property_counter_t *prop_counter_p, /**< property counters */
-                                               jerry_property_filter_t filter) /**< name filters */
+static void
+ecma_builtin_routine_list_lazy_property_keys (ecma_object_t *object_p, /**< a built-in object */
+                                              ecma_collection_t *prop_names_p, /**< prop name collection */
+                                              ecma_property_counter_t *prop_counter_p, /**< property counters */
+                                              jerry_property_filter_t filter) /**< name filters */
 {
   JERRY_ASSERT (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION);
   JERRY_ASSERT (ecma_builtin_function_is_routine (object_p));
@@ -1361,7 +1437,7 @@ ecma_builtin_routine_list_lazy_property_names (ecma_object_t *object_p, /**< a b
 
   if (JERRY_UNLIKELY (ext_func_p->u.built_in.id == ECMA_BUILTIN_ID_HANDLER))
   {
-    ecma_builtin_native_handler_list_lazy_property_names (object_p, prop_names_p, prop_counter_p);
+    ecma_builtin_native_handler_list_lazy_property_keys (object_p, prop_names_p, prop_counter_p);
     return;
   }
 
@@ -1382,7 +1458,7 @@ ecma_builtin_routine_list_lazy_property_names (ecma_object_t *object_p, /**< a b
   ecma_collection_push_back (prop_names_p, ecma_make_magic_string_value (LIT_MAGIC_STRING_LENGTH));
   prop_counter_p->string_named_props++;
 #endif /* JERRY_ESNEXT */
-} /* ecma_builtin_routine_list_lazy_property_names */
+} /* ecma_builtin_routine_list_lazy_property_keys */
 
 /**
  * List names of a built-in object's lazy instantiated properties
@@ -1391,10 +1467,10 @@ ecma_builtin_routine_list_lazy_property_names (ecma_object_t *object_p, /**< a b
  *          ecma_builtin_try_to_instantiate_property
  */
 void
-ecma_builtin_list_lazy_property_names (ecma_object_t *object_p, /**< a built-in object */
-                                       ecma_collection_t *prop_names_p, /**< prop name collection */
-                                       ecma_property_counter_t *prop_counter_p, /**< property counters */
-                                       jerry_property_filter_t filter) /**< name filters */
+ecma_builtin_object_list_lazy_property_keys (ecma_object_t *object_p, /**< a built-in object */
+                                             ecma_collection_t *prop_names_p, /**< prop name collection */
+                                             ecma_property_counter_t *prop_counter_p, /**< property counters */
+                                             jerry_property_filter_t filter) /**< name filters */
 {
   JERRY_ASSERT (ecma_get_object_type (object_p) != ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION
                 || !ecma_builtin_function_is_routine (object_p));
@@ -1499,109 +1575,167 @@ ecma_builtin_list_lazy_property_names (ecma_object_t *object_p, /**< a built-in 
     }
   }
 #endif /* JERRY_ESNEXT */
-} /* ecma_builtin_list_lazy_property_names */
+} /* ecma_builtin_routine_delete_built_in_property */
 
 /**
- * Dispatcher of built-in routines
- *
- * @return ecma value
- *         Returned value must be freed with ecma_free_value.
+ * List names of a built-in object's lazy instantiated properties
  */
-static ecma_value_t
-ecma_builtin_dispatch_routine (ecma_extended_object_t *func_obj_p, /**< builtin object */
-                               ecma_value_t this_arg_value, /**< 'this' argument value */
-                               const ecma_value_t *arguments_list_p, /**< list of arguments passed to routine */
-                               uint32_t arguments_list_len) /**< length of arguments' list */
+void
+ecma_builtin_function_list_lazy_property_keys (ecma_object_t *object_p, /**< a built-in object */
+                                               ecma_collection_t *prop_names_p, /**< prop name collection */
+                                               ecma_property_counter_t *prop_counter_p, /**< property counters */
+                                               jerry_property_filter_t filter) /**< name filters */
 {
-  JERRY_ASSERT (ecma_builtin_function_is_routine ((ecma_object_t *) func_obj_p));
-
-  ecma_value_t padded_arguments_list_p[3] = { ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED, ECMA_VALUE_UNDEFINED };
-
-  if (arguments_list_len <= 2)
+  if (ecma_builtin_function_is_routine (object_p))
   {
-    switch (arguments_list_len)
-    {
-      case 2:
-      {
-        padded_arguments_list_p[1] = arguments_list_p[1];
-        /* FALLTHRU */
-      }
-      case 1:
-      {
-        padded_arguments_list_p[0] = arguments_list_p[0];
-        break;
-      }
-      default:
-      {
-        JERRY_ASSERT (arguments_list_len == 0);
-      }
-    }
-
-    arguments_list_p = padded_arguments_list_p;
+    ecma_builtin_routine_list_lazy_property_keys (object_p, prop_names_p, prop_counter_p, filter);
+    return;
   }
 
-  return ecma_builtin_routines[func_obj_p->u.built_in.id](func_obj_p->u.built_in.routine_id,
-                                                          this_arg_value,
-                                                          arguments_list_p,
-                                                          arguments_list_len);
-} /* ecma_builtin_dispatch_routine */
+  ecma_builtin_object_list_lazy_property_keys (object_p, prop_names_p, prop_counter_p, filter);
+} /* ecma_builtin_function_list_lazy_property_keys */
 
-/**
- * Handle calling [[Call]] of built-in object
- *
- * @return ecma value
- */
-ecma_value_t
-ecma_builtin_dispatch_call (ecma_object_t *obj_p, /**< built-in object */
-                            ecma_value_t this_arg_value, /**< 'this' argument value */
-                            const ecma_value_t *arguments_list_p, /**< arguments list */
-                            uint32_t arguments_list_len) /**< arguments list length */
-{
-  JERRY_ASSERT (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION);
-
-  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
-
-  if (ecma_builtin_function_is_routine (obj_p))
-  {
 #if JERRY_ESNEXT
-    if (JERRY_UNLIKELY (ext_obj_p->u.built_in.id == ECMA_BUILTIN_ID_HANDLER))
-    {
-      ecma_builtin_handler_t handler = ecma_builtin_handler_get (ext_obj_p->u.built_in.routine_id);
-      return handler (obj_p, arguments_list_p, arguments_list_len);
-    }
-#endif /* !JERRY_ESNEXT */
+/**
+ * Delete configurable properties of native handlers.
+ */
+static void
+ecma_builtin_native_handler_delete_built_in_property (ecma_object_t *object_p, /**< object */
+                                                      ecma_string_t *property_name_p) /**< property name */
+{
+  ecma_extended_object_t *extended_obj_p = (ecma_extended_object_t *) object_p;
 
-    return ecma_builtin_dispatch_routine (ext_obj_p, this_arg_value, arguments_list_p, arguments_list_len);
+  if (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_LENGTH))
+  {
+    JERRY_ASSERT (!(extended_obj_p->u.built_in.u2.routine_flags & ECMA_NATIVE_HANDLER_FLAGS_LENGTH_INITIALIZED));
+
+    extended_obj_p->u.built_in.u2.routine_flags |= ECMA_NATIVE_HANDLER_FLAGS_LENGTH_INITIALIZED;
+    return;
   }
 
-  ecma_builtin_id_t builtin_object_id = ext_obj_p->u.built_in.id;
-  JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_call_functions) / sizeof (ecma_builtin_dispatch_call_t));
-  return ecma_builtin_call_functions[builtin_object_id](arguments_list_p, arguments_list_len);
-} /* ecma_builtin_dispatch_call */
+  JERRY_ASSERT (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_NAME));
+  JERRY_ASSERT (!(extended_obj_p->u.built_in.u2.routine_flags & ECMA_NATIVE_HANDLER_FLAGS_NAME_INITIALIZED));
+
+  extended_obj_p->u.built_in.u2.routine_flags |= ECMA_NATIVE_HANDLER_FLAGS_NAME_INITIALIZED;
+} /* ecma_builtin_native_handler_delete_built_in_property */
 
 /**
- * Handle calling [[Construct]] of built-in object
- *
- * @return ecma value
+ * Delete configurable properties of built-in routines.
  */
-ecma_value_t
-ecma_builtin_dispatch_construct (ecma_object_t *obj_p, /**< built-in object */
-                                 const ecma_value_t *arguments_list_p, /**< arguments list */
-                                 uint32_t arguments_list_len) /**< arguments list length */
+static void
+ecma_builtin_routine_delete_built_in_property (ecma_object_t *object_p, /**< object */
+                                               ecma_string_t *property_name_p) /**< property name */
 {
-  JERRY_ASSERT (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION);
+  JERRY_ASSERT (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION
+                && ecma_builtin_function_is_routine (object_p));
 
-  if (ecma_builtin_function_is_routine (obj_p))
+  ecma_extended_object_t *extended_obj_p = (ecma_extended_object_t *) object_p;
+
+  if (JERRY_UNLIKELY (extended_obj_p->u.built_in.id == ECMA_BUILTIN_ID_HANDLER))
   {
-    return ecma_raise_type_error (ECMA_ERR_BULTIN_ROUTINES_HAVE_NO_CONSTRUCTOR);
+    ecma_builtin_native_handler_delete_built_in_property (object_p, property_name_p);
+    return;
   }
 
-  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
-  ecma_builtin_id_t builtin_object_id = ext_obj_p->u.built_in.id;
-  JERRY_ASSERT (builtin_object_id < sizeof (ecma_builtin_construct_functions) / sizeof (ecma_builtin_dispatch_call_t));
+  uint8_t *bitset_p = &extended_obj_p->u.built_in.u2.routine_flags;
 
-  return ecma_builtin_construct_functions[builtin_object_id](arguments_list_p, arguments_list_len);
-} /* ecma_builtin_dispatch_construct */
+  if (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_LENGTH))
+  {
+    JERRY_ASSERT (!(*bitset_p & ECMA_BUILTIN_ROUTINE_LENGTH_INITIALIZED));
+
+    *bitset_p |= ECMA_BUILTIN_ROUTINE_LENGTH_INITIALIZED;
+    return;
+  }
+
+  JERRY_ASSERT (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_NAME));
+  JERRY_ASSERT (!(*bitset_p & ECMA_BUILTIN_ROUTINE_NAME_INITIALIZED));
+
+  *bitset_p |= ECMA_BUILTIN_ROUTINE_NAME_INITIALIZED;
+} /* ecma_builtin_routine_delete_built_in_property */
+
+#endif /* JERRY_ESNEXT */
+
+/**
+ * Delete configurable properties of built-ins.
+ */
+void
+ecma_builtin_object_detele_built_in_property (ecma_object_t *object_p, /**< object */
+                                              ecma_string_t *property_name_p) /**< property name */
+{
+  ecma_built_in_props_t *built_in_props_p;
+  ecma_object_type_t object_type = ecma_get_object_type (object_p);
+
+  JERRY_ASSERT (object_type == ECMA_OBJECT_TYPE_BUILT_IN_GENERAL || object_type == ECMA_OBJECT_TYPE_BUILT_IN_CLASS
+                || object_type == ECMA_OBJECT_TYPE_BUILT_IN_ARRAY
+                || (object_type == ECMA_OBJECT_TYPE_BUILT_IN_FUNCTION && !ecma_builtin_function_is_routine (object_p)));
+
+  if (ECMA_BUILTIN_IS_EXTENDED_BUILT_IN (object_type))
+  {
+    built_in_props_p = &((ecma_extended_built_in_object_t *) object_p)->built_in;
+  }
+  else
+  {
+    built_in_props_p = &((ecma_extended_object_t *) object_p)->u.built_in;
+  }
+
+  ecma_builtin_id_t builtin_id = (ecma_builtin_id_t) built_in_props_p->id;
+
+  JERRY_ASSERT (builtin_id < ECMA_BUILTIN_ID__COUNT);
+
+  const ecma_builtin_property_descriptor_t *property_list_p = ecma_builtin_property_list_references[builtin_id];
+  const ecma_builtin_property_descriptor_t *curr_property_p = property_list_p;
+
+  lit_magic_string_id_t magic_string_id = ecma_get_string_magic (property_name_p);
+
+#if JERRY_ESNEXT
+  if (JERRY_UNLIKELY (ecma_prop_name_is_symbol (property_name_p)))
+  {
+    if (property_name_p->u.hash & ECMA_SYMBOL_FLAG_GLOBAL)
+    {
+      magic_string_id = (property_name_p->u.hash >> ECMA_SYMBOL_FLAGS_SHIFT);
+    }
+  }
+#endif /* JERRY_ESNEXT */
+
+  while (curr_property_p->magic_string_id != magic_string_id)
+  {
+    JERRY_ASSERT (curr_property_p->magic_string_id != LIT_MAGIC_STRING__COUNT);
+    curr_property_p++;
+  }
+
+  uint32_t index = (uint32_t) (curr_property_p - property_list_p);
+  uint8_t *bitset_p = built_in_props_p->u2.instantiated_bitset + (index >> 3);
+
+#if JERRY_BUILTIN_REALMS
+  if (index >= 8 * sizeof (uint8_t))
+  {
+    bitset_p += sizeof (ecma_value_t);
+  }
+#endif /* JERRY_BUILTIN_REALMS */
+
+  uint8_t bit_for_index = (uint8_t) (1u << (index & 0x7));
+  JERRY_ASSERT (!(*bitset_p & bit_for_index));
+
+  *bitset_p |= bit_for_index;
+} /* ecma_builtin_delete_built_in_property */
+
+/**
+ * Delete configurable properties of built-ins.
+ */
+void
+ecma_builtin_function_delete_built_in_property (ecma_object_t *object_p, /**< object */
+                                                ecma_string_t *property_name_p) /**< property name */
+{
+#if JERRY_ESNEXT
+  if (ecma_builtin_function_is_routine (object_p))
+  {
+    ecma_builtin_routine_delete_built_in_property (object_p, property_name_p);
+    return;
+  }
+#endif /* JERRY_ESNEXT */
+
+  ecma_builtin_object_detele_built_in_property (object_p, property_name_p);
+} /* ecma_builtin_function_delete_built_in_property */
 
 /**
  * @}
