@@ -105,7 +105,7 @@ typedef enum
  */
 typedef enum
 {
-  VM_OC_POP, /**< pop from stack */
+  VM_OC_POP = 2000, /**< pop from stack */
   VM_OC_POP_BLOCK, /**< pop block */
   VM_OC_PUSH, /**< push one literal  */
   VM_OC_PUSH_TWO, /**< push two literals */
@@ -482,6 +482,23 @@ typedef enum
   VM_OC_PUT_STACK = VM_OC_PUT_RESULT_CREATE_FLAG (0x4),
   VM_OC_PUT_BLOCK = VM_OC_PUT_RESULT_CREATE_FLAG (0x8),
 } vm_oc_put_types;
+
+/**
+ * Specify where the result is stored
+ */
+typedef enum
+{
+  /* These 3 flags must be in this order */
+  VM_PUT_RESULT_NONE = 0,
+  VM_PUT_RESULT_STACK = 1 << 1,
+  VM_PUT_RESULT_BLOCK = 1 << 2,
+  VM_PUT_RESULT_IDENT = 1 << 3,
+  VM_PUT_RESULT_REFERENCE = 1 << 4,
+  VM_PUT_RESULT_DECR = 1 << 5,
+  VM_PUT_RESULT_POST = 1 << 6,
+} vm_put_result_flags_t;
+
+#define VM_PUT_RESULT_FROM_OPCODE(current_op, base_op) (1 << ((current_op) - (base_op)))
 
 /**
  * Non-recursive vm_loop: the vm_loop can be suspended

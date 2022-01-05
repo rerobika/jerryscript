@@ -128,7 +128,7 @@ ecma_value_t opfunc_init_static_class_fields (ecma_value_t function_object, ecma
 
 ecma_value_t opfunc_add_computed_field (ecma_value_t class_object, ecma_value_t name);
 
-ecma_value_t opfunc_create_implicit_class_constructor (uint8_t opcode, const ecma_compiled_code_t *bytecode_p);
+ecma_value_t opfunc_create_implicit_class_constructor (const ecma_compiled_code_t *bytecode_p, bool is_herigate);
 
 void opfunc_set_home_object (ecma_object_t *func_p, ecma_object_t *parent_env_p);
 
@@ -162,19 +162,21 @@ void opfunc_pop_lexical_environment (vm_frame_ctx_t *frame_ctx_p);
 
 void opfunc_finalize_class (vm_frame_ctx_t *frame_ctx_p, ecma_value_t **vm_stack_top_p, ecma_value_t class_name);
 
-ecma_value_t opfunc_form_super_reference (ecma_value_t **vm_stack_top_p,
-                                          vm_frame_ctx_t *frame_ctx_p,
-                                          ecma_value_t prop_name,
-                                          uint8_t opcode);
-
-ecma_value_t
-opfunc_assign_super_reference (ecma_value_t **vm_stack_top_p, vm_frame_ctx_t *frame_ctx_p, uint32_t opcode_data);
+ecma_value_t opfunc_resolve_super (vm_frame_ctx_t *frame_ctx_p);
 
 ecma_value_t
 opfunc_copy_data_properties (ecma_value_t target_object, ecma_value_t source_object, ecma_value_t filter_array);
 
 ecma_value_t opfunc_lexical_scope_has_restricted_binding (vm_frame_ctx_t *vm_frame_ctx_p, ecma_string_t *name_p);
+
+void opfunc_set_function_name (ecma_value_t function_object,
+                               ecma_value_t function_name,
+                               char *prefix_p,
+                               lit_utf8_size_t prefix_size);
 #endif /* JERRY_ESNEXT */
+
+ecma_value_t
+opfunc_set_property (ecma_value_t *stack_top_p, ecma_value_t prop_name, ecma_value_t value, bool is_static);
 
 /**
  * @}

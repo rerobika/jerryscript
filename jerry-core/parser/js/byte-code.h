@@ -473,10 +473,7 @@
   CBC_FORWARD_BRANCH (CBC_EXT_WITH_CREATE_CONTEXT, -1 + PARSER_WITH_CONTEXT_STACK_ALLOCATION, VM_OC_WITH)              \
   CBC_OPCODE (CBC_EXT_FOR_IN_GET_NEXT, CBC_NO_FLAG, 1, VM_OC_FOR_IN_GET_NEXT | VM_OC_PUT_STACK)                        \
   CBC_FORWARD_BRANCH (CBC_EXT_FOR_IN_INIT, -1 + PARSER_FOR_IN_CONTEXT_STACK_ALLOCATION, VM_OC_FOR_IN_INIT)             \
-  CBC_OPCODE (CBC_EXT_SET_GETTER,                                                                                      \
-              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
-              0,                                                                                                       \
-              VM_OC_SET_GETTER | VM_OC_NON_STATIC_FLAG | VM_OC_GET_LITERAL_LITERAL)                                    \
+  CBC_OPCODE (CBC_EXT_POP_REFERENCE, CBC_NO_FLAG, -2, VM_OC_POP_REFERENCE)                                             \
   CBC_BACKWARD_BRANCH (CBC_EXT_BRANCH_IF_FOR_IN_HAS_NEXT, 0, VM_OC_FOR_IN_HAS_NEXT)                                    \
   CBC_OPCODE (CBC_EXT_FOR_OF_GET_NEXT, CBC_NO_FLAG, 1, VM_OC_FOR_OF_GET_NEXT | VM_OC_PUT_STACK)                        \
   CBC_FORWARD_BRANCH (CBC_EXT_FOR_OF_INIT, -1 + PARSER_FOR_OF_CONTEXT_STACK_ALLOCATION, VM_OC_FOR_OF_INIT)             \
@@ -491,10 +488,7 @@
                       VM_OC_FOR_AWAIT_OF_INIT)                                                                         \
   CBC_OPCODE (CBC_EXT_CLONE_FULL_CONTEXT, CBC_NO_FLAG, 0, VM_OC_CLONE_CONTEXT)                                         \
   CBC_BACKWARD_BRANCH (CBC_EXT_BRANCH_IF_FOR_AWAIT_OF_HAS_NEXT, 0, VM_OC_FOR_AWAIT_OF_HAS_NEXT)                        \
-  CBC_OPCODE (CBC_EXT_SET_SETTER,                                                                                      \
-              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
-              0,                                                                                                       \
-              VM_OC_SET_SETTER | VM_OC_NON_STATIC_FLAG | VM_OC_GET_LITERAL_LITERAL)                                    \
+  CBC_OPCODE (CBC_EXT_CREATE_ARGUMENTS, CBC_HAS_LITERAL_ARG, 0, VM_OC_CREATE_ARGUMENTS)                                \
   CBC_FORWARD_BRANCH (CBC_EXT_TRY_CREATE_CONTEXT, PARSER_TRY_CONTEXT_STACK_ALLOCATION, VM_OC_TRY)                      \
   CBC_OPCODE (CBC_EXT_TRY_CREATE_ENV, CBC_NO_FLAG, 0, VM_OC_BLOCK_CREATE_CONTEXT)                                      \
   CBC_FORWARD_BRANCH (CBC_EXT_CATCH, 1, VM_OC_CATCH)                                                                   \
@@ -506,14 +500,13 @@
   CBC_FORWARD_BRANCH (CBC_EXT_BRANCH_IF_NULLISH, -1, VM_OC_BRANCH_IF_NULLISH)                                          \
                                                                                                                        \
   /* Basic opcodes. */                                                                                                 \
-  CBC_OPCODE (CBC_EXT_POP_REFERENCE, CBC_NO_FLAG, -2, VM_OC_POP_REFERENCE)                                             \
-  CBC_OPCODE (CBC_EXT_CREATE_ARGUMENTS, CBC_HAS_LITERAL_ARG, 0, VM_OC_CREATE_ARGUMENTS)                                \
   CBC_OPCODE (CBC_EXT_CREATE_VAR_EVAL, CBC_HAS_LITERAL_ARG, 0, VM_OC_EXT_VAR_EVAL)                                     \
   CBC_OPCODE (CBC_EXT_CREATE_VAR_FUNC_EVAL, CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2, 0, VM_OC_EXT_VAR_EVAL)         \
   CBC_OPCODE (CBC_EXT_COPY_FROM_ARG, CBC_HAS_LITERAL_ARG, 0, VM_OC_COPY_FROM_ARG)                                      \
   CBC_OPCODE (CBC_EXT_PUSH_REST_OBJECT, CBC_NO_FLAG, 1, VM_OC_PUSH_REST_OBJECT)                                        \
   CBC_OPCODE (CBC_EXT_MODULE_IMPORT, CBC_NO_FLAG, 0, VM_OC_MODULE_IMPORT)                                              \
   CBC_OPCODE (CBC_EXT_MODULE_IMPORT_META, CBC_NO_FLAG, 1, VM_OC_MODULE_IMPORT_META)                                    \
+  /*Note: These 3 opcodes must be in this order */                                                                     \
   CBC_OPCODE (CBC_EXT_STRING_CONCAT, CBC_NO_FLAG, -1, VM_OC_STRING_CONCAT | VM_OC_GET_STACK_STACK | VM_OC_PUT_STACK)   \
   CBC_OPCODE (CBC_EXT_STRING_CONCAT_RIGHT_LITERAL,                                                                     \
               CBC_HAS_LITERAL_ARG,                                                                                     \
@@ -543,33 +536,42 @@
               CBC_HAS_LITERAL_ARG,                                                                                     \
               -1,                                                                                                      \
               VM_OC_SET_COMPUTED_PROPERTY | VM_OC_NON_STATIC_FLAG | VM_OC_GET_STACK_LITERAL)                           \
+  CBC_OPCODE (CBC_EXT_SET_STATIC_COMPUTED_PROPERTY,                                                                    \
+              CBC_NO_FLAG,                                                                                             \
+              -2,                                                                                                      \
+              VM_OC_SET_COMPUTED_PROPERTY | VM_OC_GET_STACK_STACK)                                                     \
+  /* Note: These 8 opcodes must be in this order */                                                                    \
+  CBC_OPCODE (CBC_EXT_SET_GETTER,                                                                                      \
+              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
+              0,                                                                                                       \
+              VM_OC_SET_GETTER | VM_OC_NON_STATIC_FLAG | VM_OC_GET_LITERAL_LITERAL)                                    \
+  CBC_OPCODE (CBC_EXT_SET_STATIC_GETTER,                                                                               \
+              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
+              0,                                                                                                       \
+              VM_OC_SET_GETTER | VM_OC_GET_LITERAL_LITERAL)                                                            \
   CBC_OPCODE (CBC_EXT_SET_COMPUTED_GETTER,                                                                             \
               CBC_NO_FLAG,                                                                                             \
               -2,                                                                                                      \
               VM_OC_SET_GETTER | VM_OC_NON_STATIC_FLAG | VM_OC_GET_STACK_STACK)                                        \
+  CBC_OPCODE (CBC_EXT_SET_STATIC_COMPUTED_GETTER, CBC_NO_FLAG, -2, VM_OC_SET_GETTER | VM_OC_GET_STACK_STACK)           \
+  CBC_OPCODE (CBC_EXT_SET_SETTER,                                                                                      \
+              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
+              0,                                                                                                       \
+              VM_OC_SET_SETTER | VM_OC_NON_STATIC_FLAG | VM_OC_GET_LITERAL_LITERAL)                                    \
+  CBC_OPCODE (CBC_EXT_SET_STATIC_SETTER,                                                                               \
+              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
+              0,                                                                                                       \
+              VM_OC_SET_SETTER | VM_OC_GET_LITERAL_LITERAL)                                                            \
   CBC_OPCODE (CBC_EXT_SET_COMPUTED_SETTER,                                                                             \
               CBC_NO_FLAG,                                                                                             \
               -2,                                                                                                      \
               VM_OC_SET_SETTER | VM_OC_NON_STATIC_FLAG | VM_OC_GET_STACK_STACK)                                        \
+  CBC_OPCODE (CBC_EXT_SET_STATIC_COMPUTED_SETTER, CBC_NO_FLAG, -2, VM_OC_SET_SETTER | VM_OC_GET_STACK_STACK)           \
   CBC_OPCODE (CBC_EXT_SET_STATIC_PROPERTY, CBC_HAS_LITERAL_ARG, -1, VM_OC_SET_PROPERTY | VM_OC_GET_STACK_LITERAL)      \
   CBC_OPCODE (CBC_EXT_SET_STATIC_PROPERTY_LITERAL,                                                                     \
               CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
               0,                                                                                                       \
               VM_OC_SET_PROPERTY | VM_OC_GET_LITERAL_LITERAL)                                                          \
-  CBC_OPCODE (CBC_EXT_SET_STATIC_COMPUTED_PROPERTY,                                                                    \
-              CBC_NO_FLAG,                                                                                             \
-              -2,                                                                                                      \
-              VM_OC_SET_COMPUTED_PROPERTY | VM_OC_GET_STACK_STACK)                                                     \
-  CBC_OPCODE (CBC_EXT_SET_STATIC_GETTER,                                                                               \
-              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
-              0,                                                                                                       \
-              VM_OC_SET_GETTER | VM_OC_GET_LITERAL_LITERAL)                                                            \
-  CBC_OPCODE (CBC_EXT_SET_STATIC_SETTER,                                                                               \
-              CBC_HAS_LITERAL_ARG | CBC_HAS_LITERAL_ARG2,                                                              \
-              0,                                                                                                       \
-              VM_OC_SET_SETTER | VM_OC_GET_LITERAL_LITERAL)                                                            \
-  CBC_OPCODE (CBC_EXT_SET_STATIC_COMPUTED_GETTER, CBC_NO_FLAG, -2, VM_OC_SET_GETTER | VM_OC_GET_STACK_STACK)           \
-  CBC_OPCODE (CBC_EXT_SET_STATIC_COMPUTED_SETTER, CBC_NO_FLAG, -2, VM_OC_SET_SETTER | VM_OC_GET_STACK_STACK)           \
   CBC_OPCODE (CBC_EXT_SET__PROTO__, CBC_NO_FLAG, -1, VM_OC_SET__PROTO__ | VM_OC_GET_STACK)                             \
   CBC_OPCODE (CBC_EXT_PUSH_STATIC_FIELD_FUNC,                                                                          \
               CBC_HAS_LITERAL_ARG,                                                                                     \
@@ -650,15 +652,17 @@
   CBC_OPCODE (CBC_EXT_SET_NEXT_COMPUTED_FIELD, CBC_NO_FLAG, -1, VM_OC_SET_NEXT_COMPUTED_FIELD | VM_OC_PUT_REFERENCE)   \
   CBC_OPCODE (CBC_EXT_PUSH_SUPER, CBC_NO_FLAG, 1, VM_OC_NONE)                                                          \
   CBC_OPCODE (CBC_EXT_PUSH_SUPER_CONSTRUCTOR, CBC_NO_FLAG, 1, VM_OC_PUSH_SUPER_CONSTRUCTOR)                            \
+  /* Note: These 4 opcodes must be in this order */                                                                    \
   CBC_OPCODE (CBC_EXT_PUSH_SUPER_PROP, CBC_NO_FLAG, 0, VM_OC_SUPER_REFERENCE | VM_OC_GET_STACK)                        \
-  CBC_OPCODE (CBC_EXT_SUPER_PROP_REFERENCE, CBC_NO_FLAG, 2, VM_OC_SUPER_REFERENCE | VM_OC_GET_STACK)                   \
   CBC_OPCODE (CBC_EXT_PUSH_SUPER_PROP_LITERAL, CBC_HAS_LITERAL_ARG, 1, VM_OC_SUPER_REFERENCE | VM_OC_GET_LITERAL)      \
+  CBC_OPCODE (CBC_EXT_SUPER_PROP_REFERENCE, CBC_NO_FLAG, 2, VM_OC_SUPER_REFERENCE | VM_OC_GET_STACK)                   \
   CBC_OPCODE (CBC_EXT_SUPER_PROP_LITERAL_REFERENCE, CBC_HAS_LITERAL_ARG, 3, VM_OC_SUPER_REFERENCE | VM_OC_GET_LITERAL) \
   CBC_OPCODE (CBC_EXT_SUPER_PROP_ASSIGNMENT_REFERENCE, CBC_NO_FLAG, 1, VM_OC_SUPER_REFERENCE | VM_OC_GET_STACK)        \
   CBC_OPCODE (CBC_EXT_SUPER_PROP_LITERAL_ASSIGNMENT_REFERENCE,                                                         \
               CBC_HAS_LITERAL_ARG,                                                                                     \
               2,                                                                                                       \
               VM_OC_SUPER_REFERENCE | VM_OC_GET_LITERAL)                                                               \
+  /* Note: These 2 opcodes must be in this order */                                                                    \
   CBC_OPCODE (CBC_EXT_OBJECT_LITERAL_SET_HOME_OBJECT, CBC_NO_FLAG, 0, VM_OC_SET_HOME_OBJECT)                           \
   CBC_OPCODE (CBC_EXT_OBJECT_LITERAL_SET_HOME_OBJECT_COMPUTED, CBC_NO_FLAG, 0, VM_OC_SET_HOME_OBJECT)                  \
   CBC_OPCODE (CBC_EXT_PUSH_OBJECT_SUPER_ENVIRONMENT, CBC_NO_FLAG, 1, VM_OC_OBJECT_LITERAL_HOME_ENV)                    \
@@ -671,6 +675,7 @@
   CBC_OPCODE (CBC_EXT_ASSIGN_PRIVATE, CBC_NO_FLAG, -3, VM_OC_ASSIGN_PRIVATE)                                           \
   CBC_OPCODE (CBC_EXT_ASSIGN_PRIVATE_PUSH_RESULT, CBC_NO_FLAG, -2, VM_OC_ASSIGN_PRIVATE | VM_OC_PUT_STACK)             \
   CBC_OPCODE (CBC_EXT_ASSIGN_PRIVATE_BLOCK, CBC_NO_FLAG, -3, VM_OC_ASSIGN_PRIVATE | VM_OC_PUT_BLOCK)                   \
+  /* Note: These 6 opcodes must be in this order */                                                                    \
   CBC_OPCODE (CBC_EXT_SUPER_CALL, CBC_HAS_POP_STACK_BYTE_ARG, -1, VM_OC_SUPER_CALL)                                    \
   CBC_OPCODE (CBC_EXT_SUPER_CALL_PUSH_RESULT, CBC_HAS_POP_STACK_BYTE_ARG, 0, VM_OC_SUPER_CALL | VM_OC_PUT_STACK)       \
   CBC_OPCODE (CBC_EXT_SUPER_CALL_BLOCK, CBC_HAS_POP_STACK_BYTE_ARG, -1, VM_OC_SUPER_CALL | VM_OC_PUT_BLOCK)            \
@@ -682,6 +687,7 @@
   CBC_OPCODE (CBC_EXT_SPREAD_SUPER_CALL_BLOCK, CBC_HAS_POP_STACK_BYTE_ARG, -1, VM_OC_SUPER_CALL | VM_OC_PUT_BLOCK)     \
                                                                                                                        \
   /* Spread / rest operation related opcodes. */                                                                       \
+  /* Note: These 9 opcodes must be in this order */                                                                    \
   CBC_OPCODE (CBC_EXT_SPREAD_CALL, CBC_HAS_POP_STACK_BYTE_ARG, -1, VM_OC_SPREAD_ARGUMENTS)                             \
   CBC_OPCODE (CBC_EXT_SPREAD_CALL_PUSH_RESULT,                                                                         \
               CBC_HAS_POP_STACK_BYTE_ARG,                                                                              \
@@ -698,13 +704,13 @@
               -3,                                                                                                      \
               VM_OC_SPREAD_ARGUMENTS | VM_OC_PUT_BLOCK)                                                                \
   CBC_OPCODE (CBC_EXT_PUSH_SPREAD_ELEMENT, CBC_NO_FLAG, 1, VM_OC_PUSH_SPREAD_ELEMENT)                                  \
+  CBC_OPCODE (CBC_EXT_SPREAD_NEW, CBC_HAS_POP_STACK_BYTE_ARG, 0, VM_OC_SPREAD_ARGUMENTS | VM_OC_PUT_STACK)             \
   CBC_OPCODE (CBC_EXT_SPREAD_ARRAY_APPEND, CBC_HAS_POP_STACK_BYTE_ARG, 0, VM_OC_APPEND_ARRAY)                          \
   CBC_OPCODE (CBC_EXT_REST_INITIALIZER, CBC_NO_FLAG, 1, VM_OC_REST_INITIALIZER)                                        \
   CBC_OPCODE (CBC_EXT_INITIALIZER_PUSH_PROP_LITERAL,                                                                   \
               CBC_HAS_LITERAL_ARG,                                                                                     \
               1,                                                                                                       \
               VM_OC_INITIALIZER_PUSH_PROP | VM_OC_GET_LITERAL)                                                         \
-  CBC_OPCODE (CBC_EXT_SPREAD_NEW, CBC_HAS_POP_STACK_BYTE_ARG, 0, VM_OC_SPREAD_ARGUMENTS | VM_OC_PUT_STACK)             \
                                                                                                                        \
   /* Iterator related opcodes. */                                                                                      \
   CBC_OPCODE (CBC_EXT_ITERATOR_CONTEXT_CREATE,                                                                         \

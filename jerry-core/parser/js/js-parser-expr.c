@@ -1415,7 +1415,7 @@ parser_parse_object_literal (parser_context_t *context_p) /**< context */
         uint16_t function_literal_index = lexer_construct_function_object (context_p, status_flags);
 
 #if JERRY_ESNEXT
-        if (opcode >= CBC_EXT_SET_COMPUTED_GETTER)
+        if (is_computed)
         {
           literal_index = function_literal_index;
         }
