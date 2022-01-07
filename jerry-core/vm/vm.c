@@ -4388,42 +4388,41 @@ post_incr_decr:
           if (ecma_are_values_integer_numbers (left_value, right_value))
           {
             bool is_less = (ecma_integer_value_t) left_value < (ecma_integer_value_t) right_value;
-            // #if !JERRY_VM_HALT
-            //             /* This is a lookahead to the next opcode to improve performance.
-            //              * If it is CBC_BRANCH_IF_TRUE_BACKWARD, execute it. */
-            //             if (*byte_code_p <= CBC_BRANCH_IF_TRUE_BACKWARD_3 && *byte_code_p >=
-            //             CBC_BRANCH_IF_TRUE_BACKWARD)
-            //             {
-            //               byte_code_start_p = byte_code_p++;
-            //               uint8_t branch_offset_length = CBC_BRANCH_OFFSET_LENGTH (*byte_code_start_p);
-            //               JERRY_ASSERT (branch_offset_length >= 1 && branch_offset_length <= 3);
+#if !JERRY_VM_HALT
+            /* This is a lookahead to the next opcode to improve performance.
+             * If it is CBC_BRANCH_IF_TRUE_BACKWARD, execute it. */
+            if (*byte_code_p <= CBC_BRANCH_IF_TRUE_BACKWARD_3 && *byte_code_p >= CBC_BRANCH_IF_TRUE_BACKWARD)
+            {
+              byte_code_start_p = byte_code_p++;
+              uint8_t branch_offset_length = CBC_BRANCH_OFFSET_LENGTH (*byte_code_start_p);
+              JERRY_ASSERT (branch_offset_length >= 1 && branch_offset_length <= 3);
 
-            //               if (is_less)
-            //               {
-            //                 branch_offset = *(byte_code_p++);
+              if (is_less)
+              {
+                branch_offset = *(byte_code_p++);
 
-            //                 if (JERRY_UNLIKELY (branch_offset_length != 1))
-            //                 {
-            //                   branch_offset <<= 8;
-            //                   branch_offset |= *(byte_code_p++);
-            //                   if (JERRY_UNLIKELY (branch_offset_length == 3))
-            //                   {
-            //                     branch_offset <<= 8;
-            //                     branch_offset |= *(byte_code_p++);
-            //                   }
-            //                 }
+                if (JERRY_UNLIKELY (branch_offset_length != 1))
+                {
+                  branch_offset <<= 8;
+                  branch_offset |= *(byte_code_p++);
+                  if (JERRY_UNLIKELY (branch_offset_length == 3))
+                  {
+                    branch_offset <<= 8;
+                    branch_offset |= *(byte_code_p++);
+                  }
+                }
 
-            //                 /* Note: The opcode is a backward branch. */
-            //                 byte_code_p = byte_code_start_p - branch_offset;
-            //               }
-            //               else
-            //               {
-            //                 byte_code_p += branch_offset_length;
-            //               }
+                /* Note: The opcode is a backward branch. */
+                byte_code_p = byte_code_start_p - branch_offset;
+              }
+              else
+              {
+                byte_code_p += branch_offset_length;
+              }
 
-            //               continue;
-            //             }
-            // #endif /* !JERRY_VM_HALT */
+              continue;
+            }
+#endif /* !JERRY_VM_HALT */
             *stack_top_p++ = ecma_make_boolean_value (is_less);
             continue;
           }
