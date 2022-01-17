@@ -504,7 +504,7 @@ ecma_ordinary_object_set (ecma_object_t *object_p, /**< the object */
     if (parent_cp == JMEM_CP_NULL)
     {
       /* No property found on the prototype chain */
-      if (JERRY_UNLIKELY (ecma_get_object_type (obj_iter_p) != ECMA_OBJECT_TYPE_GENERAL
+      if (JERRY_UNLIKELY (ecma_get_object_base_type (object_p) != ECMA_OBJECT_BASE_TYPE_GENERAL
                           || ecma_make_object_value (object_p) != receiver))
       {
         own_desc.flags = ECMA_PROP_DESC_VIRTUAL | ECMA_PROP_DESC_DATA_CONFIGURABLE_ENUMERABLE_WRITABLE;
@@ -530,7 +530,7 @@ ecma_ordinary_object_set (ecma_object_t *object_p, /**< the object */
     /* OrdinarySetWithOwnDescriptor 2.a.b */
     obj_iter_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, parent_cp);
 
-    if (ecma_get_object_type (obj_iter_p) != ECMA_OBJECT_TYPE_GENERAL)
+    if (ecma_get_object_base_type (obj_iter_p) != ECMA_OBJECT_BASE_TYPE_GENERAL)
     {
       return call_set_internal_method (obj_iter_p, property_name_p, value, receiver, is_throw);
     }
