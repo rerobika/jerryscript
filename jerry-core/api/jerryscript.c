@@ -1450,15 +1450,14 @@ jerry_value_type (const jerry_value_t value) /**< input value to check */
  * Used by jerry_object_type to get the type of class objects
  */
 static const uint8_t jerry_class_object_type[] = {
-  /* These objects require custom property resolving. */
-  JERRY_OBJECT_TYPE_STRING, /**< type of ECMA_OBJECT_CLASS_STRING */
-  JERRY_OBJECT_TYPE_ARGUMENTS, /**< type of ECMA_OBJECT_CLASS_ARGUMENTS */
 #if JERRY_BUILTIN_TYPEDARRAY
   JERRY_OBJECT_TYPE_TYPEDARRAY, /**< type of ECMA_OBJECT_CLASS_TYPEDARRAY */
 #endif /* JERRY_BUILTIN_TYPEDARRAY */
 #if JERRY_MODULE_SYSTEM
   JERRY_OBJECT_TYPE_MODULE_NAMESPACE, /**< type of ECMA_OBJECT_CLASS_MODULE_NAMESPACE */
 #endif /* JERRY_MODULE_SYSTEM */
+  JERRY_OBJECT_TYPE_STRING, /**< type of ECMA_OBJECT_CLASS_STRING */
+  JERRY_OBJECT_TYPE_ARGUMENTS, /**< type of ECMA_OBJECT_CLASS_ARGUMENTS */
 
 /* These objects are marked by Garbage Collector. */
 #if JERRY_ESNEXT
@@ -3427,7 +3426,24 @@ jerry_object_find_own (const jerry_value_t object, /**< object value */
   ecma_object_t *object_p = ecma_get_object_from_value (object);
   ecma_string_t *property_name_p = ecma_get_prop_name_from_value (key);
 
+#if JERRY_BUILTIN_PROXY
+  if (ECMA_OBJECT_IS_PROXY (object_p))
+  {
+    if (found_p != NULL)
+    {
+      *found_p = true;
+    }
+
+    return jerry_return (ecma_proxy_object_get (object_p, property_name_p, receiver));
+  }
+#endif /* JERRY_BUILTIN_PROXY */
+
   ecma_property_descriptor_t prop_desc = call_get_own_property_internal_method (object_p, property_name_p);
+
+  if (ecma_property_descriptor_error (&prop_desc))
+  {
+    return jerry_return (ECMA_VALUE_ERROR);
+  }
 
   if (ecma_property_descriptor_found (&prop_desc))
   {
@@ -3436,14 +3452,7 @@ jerry_object_find_own (const jerry_value_t object, /**< object value */
       *found_p = true;
     }
 
-#if JERRY_BUILTIN_PROXY
-    if (!(prop_desc.flags & (ECMA_PROP_DESC_VIRTUAL | ECMA_PROP_DESC_PROPERTY)))
-    {
-      /* TODO */
-      ecma_free_property_descriptor (&prop_desc);
-      return ECMA_VALUE_UNDEFINED;
-    }
-#endif /* JERRY_BUILTIN_PROXY */
+    JERRY_ASSERT (prop_desc.flags & (ECMA_PROP_DESC_VIRTUAL | ECMA_PROP_DESC_PROPERTY));
 
     return jerry_return (ecma_property_descriptor_get (&prop_desc, receiver));
   }
@@ -3655,23 +3664,27 @@ jerry_property_descriptor (void)
 static jerry_property_descriptor_t
 jerry_property_descriptor_from_ecma (const ecma_property_descriptor_t *prop_desc_p) /**<[out] property_descriptor */
 {
+  JERRY_ASSERT (!(prop_desc_p->flags & (ECMA_PROP_DESC_PROPERTY | ECMA_PROP_DESC_VIRTUAL)));
+
   jerry_property_descriptor_t prop_desc = jerry_property_descriptor ();
 
-  prop_desc.flags = prop_desc_p->flags & ((1 << ECMA_PROP_DESC_FLAG_OFFSET) - 1);
+  prop_desc.flags = (uint16_t) (prop_desc_p->flags & ECMA_PROP_DESC_FLAG_MASK);
 
-  if (prop_desc.flags & (JERRY_PROP_IS_VALUE_DEFINED))
+  if (prop_desc_p->flags & JERRY_PROP_IS_VALUE_DEFINED)
   {
     prop_desc.value = prop_desc_p->value;
   }
 
   if (prop_desc_p->flags & JERRY_PROP_IS_GET_DEFINED)
   {
-    prop_desc.getter = prop_desc_p->u.accessor.get;
+    prop_desc.getter =
+      ecma_is_value_undefined (prop_desc_p->u.accessor.get) ? ECMA_VALUE_NULL : prop_desc_p->u.accessor.get;
   }
 
   if (prop_desc_p->flags & JERRY_PROP_IS_SET_DEFINED)
   {
-    prop_desc.getter = prop_desc_p->u.accessor.set;
+    prop_desc.setter =
+      ecma_is_value_undefined (prop_desc_p->u.accessor.set) ? ECMA_VALUE_NULL : prop_desc_p->u.accessor.set;
   }
 
   return prop_desc;
@@ -3856,45 +3869,44 @@ jerry_object_get_own_prop (const jerry_value_t object, /**< object value */
     return ECMA_VALUE_FALSE;
   }
 
-  /* The flags are always filled in the returned descriptor. */
-  JERRY_ASSERT (ecma_property_descriptor_is_configurable (&prop_desc)
-                && ecma_property_descriptor_is_enumerable (&prop_desc)
-                && (ecma_property_descriptor_is_writable (&prop_desc)
-                    || !ecma_property_descriptor_is_data_descriptor (&prop_desc)));
-
-  prop_desc_p->flags = 0;
+  prop_desc_p->flags = (JERRY_PROP_IS_ENUMERABLE_DEFINED | JERRY_PROP_IS_CONFIGURABLE_DEFINED);
   prop_desc_p->value = ECMA_VALUE_UNDEFINED;
   prop_desc_p->getter = ECMA_VALUE_UNDEFINED;
   prop_desc_p->setter = ECMA_VALUE_UNDEFINED;
 
-  if (prop_desc_p->flags & JERRY_PROP_IS_VALUE_DEFINED)
+  if (ecma_property_descriptor_is_data_descriptor (&prop_desc))
   {
+    prop_desc_p->flags |= (JERRY_PROP_IS_VALUE_DEFINED | JERRY_PROP_IS_WRITABLE_DEFINED);
     prop_desc_p->value = ecma_copy_value (ecma_property_descriptor_value (&prop_desc));
-  }
 
-  if (ecma_property_descriptor_is_writable (&prop_desc))
+    if (ecma_property_descriptor_is_writable (&prop_desc))
+    {
+      prop_desc_p->flags |= JERRY_PROP_IS_WRITABLE;
+    }
+  }
+  else
   {
-    prop_desc_p->flags |= (JERRY_PROP_IS_WRITABLE_DEFINED | JERRY_PROP_IS_WRITABLE);
+    if (prop_desc.flags & JERRY_PROP_IS_GET_DEFINED)
+    {
+      prop_desc_p->flags |= JERRY_PROP_IS_GET_DEFINED;
+      prop_desc_p->getter = ecma_copy_value (ecma_property_descriptor_accessor_getter_value (&prop_desc));
+    }
+
+    if (prop_desc.flags & JERRY_PROP_IS_SET_DEFINED)
+    {
+      prop_desc_p->flags |= JERRY_PROP_IS_SET_DEFINED;
+      prop_desc_p->getter = ecma_copy_value (ecma_property_descriptor_accessor_setter_value (&prop_desc));
+    }
   }
 
   if (ecma_property_descriptor_is_configurable (&prop_desc))
   {
-    prop_desc_p->flags |= (JERRY_PROP_IS_CONFIGURABLE_DEFINED | JERRY_PROP_IS_CONFIGURABLE);
+    prop_desc_p->flags |= JERRY_PROP_IS_CONFIGURABLE;
   }
 
   if (ecma_property_descriptor_is_enumerable (&prop_desc))
   {
-    prop_desc_p->flags |= (JERRY_PROP_IS_ENUMERABLE_DEFINED | JERRY_PROP_IS_ENUMERABLE);
-  }
-
-  if (prop_desc_p->flags & JERRY_PROP_IS_GET_DEFINED)
-  {
-    prop_desc_p->getter = ecma_copy_value (ecma_property_descriptor_accessor_getter_value (&prop_desc));
-  }
-
-  if (prop_desc_p->flags & JERRY_PROP_IS_SET_DEFINED)
-  {
-    prop_desc_p->getter = ecma_copy_value (ecma_property_descriptor_accessor_setter_value (&prop_desc));
+    prop_desc_p->flags |= JERRY_PROP_IS_ENUMERABLE;
   }
 
   ecma_free_property_descriptor (&prop_desc);

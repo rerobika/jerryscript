@@ -317,7 +317,7 @@ ecma_arguments_object_get_own_property (ecma_object_t *obj_p, /**< the object */
     {
       ecma_object_t *thrower_p = ecma_builtin_get (ECMA_BUILTIN_ID_TYPE_ERROR_THROWER);
 
-      prop_desc.flags = ECMA_PROP_DESC_PROPERTY_FOUND | ECMA_PROP_DESC_PROPERTY_FOUND;
+      prop_desc.flags = ECMA_PROP_DESC_PROPERTY_FOUND;
       ecma_create_named_accessor_property (obj_p,
                                            ecma_get_magic_string (LIT_MAGIC_STRING_CALLEE),
                                            thrower_p,

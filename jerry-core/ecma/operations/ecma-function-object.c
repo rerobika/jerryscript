@@ -1097,15 +1097,12 @@ ecma_function_object_get_own_property (ecma_object_t *obj_p, /**< the object */
 
   if (ecma_compare_ecma_string_to_magic_id (property_name_p, LIT_MAGIC_STRING_PROTOTYPE))
   {
-    ecma_builtin_id_t prototype_id = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE;
-
 #if JERRY_BUILTIN_REALMS
     const ecma_compiled_code_t *byte_code_p = ecma_op_function_get_compiled_code (ext_func_p);
     ecma_global_object_t *global_object_p = ecma_op_function_get_realm (byte_code_p);
 #endif /* JERRY_BUILTIN_REALMS */
 
-    ecma_object_t *proto_object_p = NULL;
-    bool init_constructor = true;
+    ecma_builtin_id_t prototype_id = ECMA_BUILTIN_ID_OBJECT_PROTOTYPE;
 
 #if JERRY_ESNEXT
     if (!CBC_FUNCTION_HAS_PROTOTYPE (byte_code_p->status_flags))
@@ -1116,12 +1113,10 @@ ecma_function_object_get_own_property (ecma_object_t *obj_p, /**< the object */
     if (CBC_FUNCTION_GET_TYPE (byte_code_p->status_flags) == CBC_FUNCTION_GENERATOR)
     {
       prototype_id = ECMA_BUILTIN_ID_GENERATOR_PROTOTYPE;
-      init_constructor = false;
     }
     else if (CBC_FUNCTION_GET_TYPE (byte_code_p->status_flags) == CBC_FUNCTION_ASYNC_GENERATOR)
     {
       prototype_id = ECMA_BUILTIN_ID_ASYNC_GENERATOR_PROTOTYPE;
-      init_constructor = false;
     }
 #endif /* JERRY_ESNEXT */
 
@@ -1131,9 +1126,9 @@ ecma_function_object_get_own_property (ecma_object_t *obj_p, /**< the object */
     ecma_object_t *prototype_p = ecma_builtin_get (prototype_id);
 #endif /* JERRY_BUILTIN_REALMS */
 
-    proto_object_p = ecma_create_object (prototype_p, 0, ECMA_OBJECT_TYPE_GENERAL);
+    ecma_object_t *proto_object_p = ecma_create_object (prototype_p, 0, ECMA_OBJECT_TYPE_GENERAL);
 
-    if (init_constructor)
+    if (prototype_id == ECMA_BUILTIN_ID_OBJECT_PROTOTYPE)
     {
       ecma_property_value_t *constructor_prop_value_p;
       constructor_prop_value_p = ecma_create_named_data_property (proto_object_p,

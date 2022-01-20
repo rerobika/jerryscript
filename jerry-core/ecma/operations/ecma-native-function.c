@@ -139,15 +139,15 @@ ecma_native_object_list_lazy_property_keys (ecma_object_t *object_p, /**< functi
 } /* ecma_native_object_list_lazy_property_keys */
 
 /**
- * Perform a native C method call which was registered via the API.
+ * Helper function to invoke native function with the prepaired jerry call info
  *
  * @return the result of the function call.
  */
-ecma_value_t
-ecma_native_function_call (ecma_object_t *func_obj_p, /**< Function object */
-                           ecma_value_t this_arg_value, /**< 'this' argument's value */
-                           const ecma_value_t *arguments_list_p, /**< arguments list */
-                           uint32_t arguments_list_len) /**< length of arguments list */
+static ecma_value_t
+ecma_native_function_call_helper (ecma_object_t *func_obj_p, /**< Function object */
+                                  jerry_call_info_t *call_info_p, /**< Function object */
+                                  const ecma_value_t *arguments_list_p, /**< arguments list */
+                                  uint32_t arguments_list_len) /**< length of arguments list */
 {
   ecma_native_function_t *native_function_p = (ecma_native_function_t *) func_obj_p;
 
@@ -157,19 +157,10 @@ ecma_native_function_call (ecma_object_t *func_obj_p, /**< Function object */
     ECMA_GET_INTERNAL_VALUE_POINTER (ecma_global_object_t, native_function_p->realm_value);
 #endif /* JERRY_BUILTIN_REALMS */
 
-  jerry_call_info_t call_info;
-  call_info.function = ecma_make_object_value (func_obj_p);
-  call_info.this_value = this_arg_value;
-
-#if JERRY_ESNEXT
-  ecma_object_t *new_target_p = JERRY_CONTEXT (current_new_target_p);
-  call_info.new_target = (new_target_p == NULL) ? ECMA_VALUE_UNDEFINED : ecma_make_object_value (new_target_p);
-#else /* JERRY_ESNEXT */
-  call_info.new_target = ECMA_VALUE_UNDEFINED;
-#endif /* JERRY_ESNEXT */
+  call_info_p->function = ecma_make_object_value (func_obj_p);
 
   JERRY_ASSERT (native_function_p->native_handler_cb != NULL);
-  ecma_value_t ret_value = native_function_p->native_handler_cb (&call_info, arguments_list_p, arguments_list_len);
+  ecma_value_t ret_value = native_function_p->native_handler_cb (call_info_p, arguments_list_p, arguments_list_len);
 #if JERRY_BUILTIN_REALMS
   JERRY_CONTEXT (global_object_p) = saved_global_object_p;
 #endif /* JERRY_BUILTIN_REALMS */
@@ -184,6 +175,24 @@ ecma_native_function_call (ecma_object_t *func_obj_p, /**< Function object */
   JERRY_DEBUGGER_CLEAR_FLAGS (JERRY_DEBUGGER_VM_EXCEPTION_THROWN);
 #endif /* JERRY_DEBUGGER */
   return ret_value;
+} /* ecma_native_function_call_helper */
+
+/**
+ * Perform a native C method call which was registered via the API.
+ *
+ * @return the result of the function call.
+ */
+ecma_value_t
+ecma_native_function_call (ecma_object_t *func_obj_p, /**< Function object */
+                           ecma_value_t this_arg_value, /**< 'this' argument's value */
+                           const ecma_value_t *arguments_list_p, /**< arguments list */
+                           uint32_t arguments_list_len) /**< length of arguments list */
+{
+  jerry_call_info_t call_info;
+  call_info.this_value = this_arg_value;
+  call_info.new_target = ECMA_VALUE_UNDEFINED;
+
+  return ecma_native_function_call_helper (func_obj_p, &call_info, arguments_list_p, arguments_list_len);
 } /* call_call_internal_method_native */
 
 /**
@@ -211,12 +220,19 @@ ecma_native_function_construct (ecma_object_t *func_obj_p, /**< Function object 
   ecma_value_t this_arg = ecma_make_object_value (new_this_obj_p);
   ecma_deref_object (proto_p);
 
+  jerry_call_info_t call_info;
+  call_info.this_value = this_arg;
+
 #if JERRY_ESNEXT
   ecma_object_t *old_new_target_p = JERRY_CONTEXT (current_new_target_p);
   JERRY_CONTEXT (current_new_target_p) = new_target_p;
+  call_info.new_target = ecma_make_object_value (new_target_p);
+#else /* JERRY_ESNEXT */
+  call_info.new_target = ECMA_VALUE_UNDEFINED;
 #endif /* JERRY_ESNEXT */
 
-  ecma_value_t ret_value = ecma_native_function_call (func_obj_p, this_arg, arguments_list_p, arguments_list_len);
+  ecma_value_t ret_value =
+    ecma_native_function_call_helper (func_obj_p, &call_info, arguments_list_p, arguments_list_len);
 
 #if JERRY_ESNEXT
   JERRY_CONTEXT (current_new_target_p) = old_new_target_p;

@@ -1227,6 +1227,7 @@ typedef struct
 } ecma_property_descriptor_t;
 
 #define ECMA_PROP_DESC_FLAG_OFFSET 16
+#define ECMA_PROP_DESC_FLAG_MASK   ((1 << ECMA_PROP_DESC_FLAG_OFFSET) - 1)
 
 /**
  * Flags to describe the property reference
